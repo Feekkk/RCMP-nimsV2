@@ -14,70 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
-      comments: {
-        Row: {
-          created_at: string
-          id: string
-          request_id: string
-          text: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          request_id: string
-          text: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          request_id?: string
-          text?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comments_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "feature_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feature_requests: {
+      inventory_items: {
         Row: {
           category: string | null
           created_at: string
-          description: string
+          created_by: string
+          description: string | null
           id: string
-          status: string
-          submitter_id: string
-          title: string
+          image_url: string | null
+          location: string | null
+          low_stock_threshold: number
+          name: string
+          quantity: number
+          sku: string
+          status: Database["public"]["Enums"]["item_status"]
+          supplier: string | null
+          unit_price: number
           updated_at: string
         }
         Insert: {
           category?: string | null
           created_at?: string
-          description: string
+          created_by: string
+          description?: string | null
           id?: string
-          status?: string
-          submitter_id: string
-          title: string
+          image_url?: string | null
+          location?: string | null
+          low_stock_threshold?: number
+          name: string
+          quantity?: number
+          sku: string
+          status?: Database["public"]["Enums"]["item_status"]
+          supplier?: string | null
+          unit_price?: number
           updated_at?: string
         }
         Update: {
           category?: string | null
           created_at?: string
-          description?: string
+          created_by?: string
+          description?: string | null
           id?: string
-          status?: string
-          submitter_id?: string
-          title?: string
+          image_url?: string | null
+          location?: string | null
+          low_stock_threshold?: number
+          name?: string
+          quantity?: number
+          sku?: string
+          status?: Database["public"]["Enums"]["item_status"]
+          supplier?: string | null
+          unit_price?: number
           updated_at?: string
         }
         Relationships: []
@@ -130,51 +116,11 @@ export type Database = {
         }
         Relationships: []
       }
-      votes: {
-        Row: {
-          created_at: string
-          id: string
-          request_id: string
-          user_id: string
-          vote_type: number
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          request_id: string
-          user_id: string
-          vote_type?: number
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          request_id?: string
-          user_id?: string
-          vote_type?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "votes_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "feature_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_vote_counts: {
-        Args: never
-        Returns: {
-          down_count: number
-          request_id: string
-          up_count: number
-        }[]
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -185,6 +131,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      item_status: "in_stock" | "low_stock" | "out_of_stock"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -313,6 +260,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      item_status: ["in_stock", "low_stock", "out_of_stock"],
     },
   },
 } as const

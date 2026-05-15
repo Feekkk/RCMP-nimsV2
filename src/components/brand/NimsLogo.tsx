@@ -1,7 +1,7 @@
-import { ChevronUp } from 'lucide-react';
+import { Boxes } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface UpvoteLogoProps {
+interface NimsLogoProps {
   size?: 'sm' | 'md' | 'lg';
   variant?: 'light' | 'dark';
   showText?: boolean;
@@ -14,7 +14,7 @@ const sizeMap = {
   lg: { box: 'h-10 w-10', icon: 'h-5 w-5', text: 'text-xl' },
 };
 
-export function UpvoteLogo({ size = 'md', variant = 'dark', showText = true, className }: UpvoteLogoProps) {
+export function NimsLogo({ size = 'md', variant = 'dark', showText = true, className }: NimsLogoProps) {
   const s = sizeMap[size];
   const isDark = variant === 'dark';
 
@@ -25,10 +25,7 @@ export function UpvoteLogo({ size = 'md', variant = 'dark', showText = true, cla
         s.box,
         isDark ? 'bg-lavender' : 'bg-foreground',
       )}>
-        <ChevronUp
-          className={cn(s.icon, 'text-white')}
-          strokeWidth={3}
-        />
+        <Boxes className={cn(s.icon, 'text-white')} strokeWidth={2.5} />
       </div>
       {showText && (
         <span className={cn(
@@ -36,7 +33,7 @@ export function UpvoteLogo({ size = 'md', variant = 'dark', showText = true, cla
           s.text,
           isDark ? 'text-white' : 'text-foreground',
         )}>
-          Upvote
+          NIMS
         </span>
       )}
     </div>

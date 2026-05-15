@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { LogOut, Plus, Menu, X } from 'lucide-react';
+import { LogOut, Plus, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { UpvoteLogo } from '@/components/brand/UpvoteLogo';
+import { NimsLogo } from '@/components/brand/NimsLogo';
 import {
   Sheet,
   SheetContent,
@@ -12,24 +12,25 @@ import {
 interface HeaderProps {
   userName: string | null;
   isAdmin: boolean;
-  onSubmitClick: () => void;
+  onAddClick: () => void;
   onSignOut: () => void;
 }
 
-export function Header({ userName, isAdmin, onSubmitClick, onSignOut }: HeaderProps) {
+export function Header({ userName, isAdmin, onAddClick, onSignOut }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4 sm:px-6">
-        <UpvoteLogo size="md" variant="light" />
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <NimsLogo size="md" variant="light" />
 
-        {/* Desktop actions */}
         <div className="hidden sm:flex items-center gap-4">
-          <Button onClick={onSubmitClick} size="sm" className="gap-1.5 bg-foreground text-background font-semibold hover:opacity-90">
-            <Plus className="h-4 w-4" />
-            Submit idea
-          </Button>
+          {isAdmin && (
+            <Button onClick={onAddClick} size="sm" className="gap-1.5 bg-foreground text-background font-semibold hover:opacity-90">
+              <Plus className="h-4 w-4" />
+              Add item
+            </Button>
+          )}
           <div className="flex items-center gap-2.5">
             <span className="text-sm text-muted-foreground">
               {userName ?? 'User'}
@@ -49,11 +50,12 @@ export function Header({ userName, isAdmin, onSubmitClick, onSignOut }: HeaderPr
           </div>
         </div>
 
-        {/* Mobile actions */}
         <div className="flex sm:hidden items-center gap-2">
-          <Button onClick={onSubmitClick} size="sm" className="gap-1.5 h-9 px-3 bg-foreground text-background font-semibold hover:opacity-90">
-            <Plus className="h-4 w-4" />
-          </Button>
+          {isAdmin && (
+            <Button onClick={onAddClick} size="sm" className="gap-1.5 h-9 px-3 bg-foreground text-background font-semibold hover:opacity-90">
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="flex h-10 w-10 items-center justify-center rounded-[8px] text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -63,7 +65,6 @@ export function Header({ userName, isAdmin, onSubmitClick, onSignOut }: HeaderPr
         </div>
       </div>
 
-      {/* Mobile menu sheet */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="right" className="w-72">
           <SheetHeader>
@@ -78,16 +79,6 @@ export function Header({ userName, isAdmin, onSubmitClick, onSignOut }: HeaderPr
                 </span>
               )}
             </div>
-            <Button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onSubmitClick();
-              }}
-              className="w-full gap-1.5 bg-foreground text-background font-semibold hover:opacity-90"
-            >
-              <Plus className="h-4 w-4" />
-              Submit idea
-            </Button>
             <Button
               variant="outline"
               onClick={() => {
