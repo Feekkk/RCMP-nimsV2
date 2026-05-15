@@ -5,7 +5,6 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { componentTagger } from "lovable-tagger";
 
 function devClientErrorLogger() {
   const VIRTUAL_ID = "virtual:dev-client-error-handler";
@@ -195,7 +194,6 @@ export default defineConfig(({ command, mode }) => {
       ...(useCloudflare ? [cloudflare({ viteEnvironment: { name: "ssr" } })] : []),
       tanstackStart(),
       viteReact(),
-      mode === "development" && componentTagger(),
     ].filter(Boolean),
   };
 });

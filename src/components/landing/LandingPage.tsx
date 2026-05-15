@@ -121,7 +121,7 @@ export function LandingPage() {
                   <NimsLogo size="lg" variant="light" />
                 </div>
                 <h1 className="text-3xl font-bold leading-[1.08] tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl lg:text-[56px]">
-                  Inventory, finally under control
+                  Nexcheck Inventory Management System
                 </h1>
                 <p className="mt-6 max-w-md text-base leading-[1.6] text-muted-foreground sm:mt-8 sm:text-lg">
                   NIMS gives your team a single source of truth for stock levels, locations, and suppliers — with low-stock alerts so nothing slips through.

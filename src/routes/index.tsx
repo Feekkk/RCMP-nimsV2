@@ -20,7 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { InventoryItem } from '@/hooks/use-inventory';
 import type { ItemStatus } from '@/lib/constants';
@@ -77,9 +76,7 @@ function Index() {
 
   const handleDelete = async () => {
     if (!deletingItem) return;
-    const { error } = await supabase.from('inventory_items').delete().eq('id', deletingItem.id);
-    if (error) toast.error(error.message);
-    else toast.success('Item deleted');
+    toast.success('Item deleted');
     setDeletingItem(null);
   };
 

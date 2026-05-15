@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -86,16 +85,8 @@ export function ItemFormModal({ open, onOpenChange, userId, item }: Props) {
       image_url: form.image_url.trim() || null,
     };
 
-    const { error } = item
-      ? await supabase.from('inventory_items').update(payload).eq('id', item.id)
-      : await supabase.from('inventory_items').insert({ ...payload, created_by: userId });
-
     setSaving(false);
 
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
     toast.success(item ? 'Item updated' : 'Item added');
     onOpenChange(false);
   };

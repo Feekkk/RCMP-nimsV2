@@ -31,14 +31,14 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NIMS — Inventory management for teams" },
+      { title: "NIMS — Nexcheck Inventory Management" },
       { name: "description", content: "Track stock levels, suppliers, and locations with real-time low-stock alerts." },
       { name: "author", content: "NIMS" },
-      { property: "og:title", content: "NIMS — Inventory management for teams" },
+      { property: "og:title", content: "NIMS — Nexcheck Inventory Management System" },
       { property: "og:description", content: "Track stock levels, suppliers, and locations with real-time low-stock alerts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "NIMS — Inventory management for teams" },
+      { name: "twitter:title", content: "NIMS — Nexcheck Inventory Management System" },
       { name: "twitter:description", content: "Track stock levels, suppliers, and locations with real-time low-stock alerts." },
     ],
     links: [
