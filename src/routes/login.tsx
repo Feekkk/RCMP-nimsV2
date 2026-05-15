@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Briefcase, IdCard, Lock, Mail, Phone, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
+import { TECHNICIAN_SESSION_KEY } from '@/lib/technician-session';
+
+/** Demo technician login — replace with real authentication. */
+const DEMO_STAFF_CREDENTIALS = {
+  staffId: '620820',
+  password: '123456',
+} as const;
 
 export const Route = createFileRoute('/login')({
   head: () => ({
@@ -22,11 +29,21 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
+  const [role, setRole] = useState<'staff' | 'user'>('user');
+  const [staffId, setStaffId] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'staff' | 'user'>('user');
+  const [userId, setUserId] = useState('');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const toggleLoginMode = () => {
+    setIsLogin((v) => !v);
+    if (!isLogin) {
+      setRole('user');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +51,24 @@ function LoginPage() {
 
     try {
       if (isLogin) {
-        toast.success(`Signed in as ${email}`);
-        navigate({ to: '/' });
+        if (role === 'staff') {
+          if (
+            staffId.trim() !== DEMO_STAFF_CREDENTIALS.staffId ||
+            password !== DEMO_STAFF_CREDENTIALS.password
+          ) {
+            toast.error('Invalid staff ID or password');
+            setIsLoading(false);
+            return;
+          }
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem(TECHNICIAN_SESSION_KEY, '1');
+          }
+          toast.success('Signed in as technician');
+          navigate({ to: '/technician/dashboard' });
+        } else {
+          toast.success(`Signed in as ${email}`);
+          navigate({ to: '/' });
+        }
       } else {
         toast.success('Account created successfully');
         navigate({ to: '/' });
@@ -109,43 +142,110 @@ function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            {!isLogin && (
-              <Input
-                placeholder="Full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required={!isLogin}
-                className="h-11 rounded-[8px] sm:h-9"
-              />
+            {isLogin ? (
+              <div>
+                <Label>Sign in as</Label>
+                <Select value={role} onValueChange={(v) => setRole(v as 'staff' | 'user')}>
+                  <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    autoComplete="name"
+                    className="h-11 rounded-[8px] pl-9 sm:h-9"
+                  />
+                </div>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    className="h-11 rounded-[8px] pl-9 sm:h-9"
+                  />
+                </div>
+                <div className="relative">
+                  <IdCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="ID"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    required
+                    autoComplete="username"
+                    className="h-11 rounded-[8px] pl-9 sm:h-9"
+                  />
+                </div>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="tel"
+                    placeholder="Phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    autoComplete="tel"
+                    className="h-11 rounded-[8px] pl-9 sm:h-9"
+                  />
+                </div>
+              </>
             )}
 
-            <div>
-              <Label>Role</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as 'staff' | 'user')}>
-                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                </SelectContent>
-              </Select>
+            {isLogin && role === 'staff' && (
+              <div className="relative">
+                <Briefcase className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Staff ID"
+                  value={staffId}
+                  onChange={(e) => setStaffId(e.target.value)}
+                  required
+                  autoComplete="username"
+                  className="h-11 rounded-[8px] pl-9 sm:h-9"
+                />
+              </div>
+            )}
+
+            {isLogin && role === 'user' && (
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  className="h-11 rounded-[8px] pl-9 sm:h-9"
+                />
+              </div>
+            )}
+
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                className="h-11 rounded-[8px] pl-9 sm:h-9"
+              />
             </div>
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="h-11 rounded-[8px] sm:h-9"
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="h-11 rounded-[8px] sm:h-9"
-            />
             <Button type="submit" className="w-full bg-foreground text-background font-semibold hover:opacity-90" disabled={isLoading}>
               {isLoading ? 'Loading...' : isLogin ? 'Sign in' : 'Sign up'}
             </Button>
@@ -154,7 +254,8 @@ function LoginPage() {
           <p className="text-center text-xs text-muted-foreground">
             {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              type="button"
+              onClick={toggleLoginMode}
               className="font-semibold text-[oklch(0.45_0.12_290)] hover:underline"
             >
               {isLogin ? 'Sign up' : 'Sign in'}
