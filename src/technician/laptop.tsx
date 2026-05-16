@@ -1,12 +1,5 @@
 import { useMemo, useState, type ElementType } from 'react';
-import { Laptop as LaptopIcon, Monitor, PackageCheck, PackageX, Search, Warehouse, Filter, PlusSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuTrigger,
-	DropdownMenuContent,
-	DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
+import { Laptop as LaptopIcon, Monitor, PackageCheck, PackageX, Search, Warehouse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,76 +12,8 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { TechnicianShell } from '@/technician/technician-shell';
-
-type FormFactor = 'laptop' | 'desktop';
-type StockStatus = 'in_stock' | 'out_of_stock';
-
-type ComputerAsset = {
-	id: string;
-	formFactor: FormFactor;
-	model: string;
-	assetTag: string;
-	serial: string;
-	location: string;
-	status: StockStatus;
-};
-
-const MOCK_COMPUTERS: ComputerAsset[] = [
-	{
-		id: 'c1',
-		formFactor: 'laptop',
-		model: 'Lenovo ThinkPad T14 Gen 3',
-		assetTag: 'AST-10432',
-		serial: 'PF4Z9DL2',
-		location: 'HQ — Equipment stores',
-		status: 'in_stock',
-	},
-	{
-		id: 'c2',
-		formFactor: 'laptop',
-		model: 'Dell Latitude 5440',
-		assetTag: 'AST-10411',
-		serial: 'DL-883104',
-		location: 'Records — Floor 2',
-		status: 'out_of_stock',
-	},
-	{
-		id: 'c3',
-		formFactor: 'desktop',
-		model: 'Dell OptiPlex 7010 SFF',
-		assetTag: 'AST-09102',
-		serial: 'OPX-22109',
-		location: 'Comms room A',
-		status: 'in_stock',
-	},
-	{
-		id: 'c4',
-		formFactor: 'desktop',
-		model: 'HP Elite Mini 800 G9',
-		assetTag: 'AST-09077',
-		serial: 'HP-77X12',
-		location: 'Visitor services',
-		status: 'in_stock',
-	},
-	{
-		id: 'c5',
-		formFactor: 'laptop',
-		model: 'Panasonic Toughbook FZ-55',
-		assetTag: 'AST-10455',
-		serial: 'TB-55102',
-		location: 'Mobile unit — Bay 3',
-		status: 'out_of_stock',
-	},
-	{
-		id: 'c6',
-		formFactor: 'laptop',
-		model: 'Microsoft Surface Laptop 5',
-		assetTag: 'AST-10402',
-		serial: 'MSL-50022',
-		location: 'HQ — Equipment stores',
-		status: 'in_stock',
-	},
-];
+import { RegisterAssetActions } from '@/technician/register-asset-actions';
+import { countStock, filterBySearch, type StockStatus, useAssets } from '@/hooks/assets';
 
 function StockCountCard({
 	icon: Icon,
@@ -124,24 +49,13 @@ function stockLabel(status: StockStatus) {
 
 export function TechnicianLaptopPage() {
 	const [search, setSearch] = useState('');
+	const { items } = useAssets('laptop');
 
 	const { inStockCount, outStockCount, filtered } = useMemo(() => {
-		const q = search.trim().toLowerCase();
-		const list = q
-			? MOCK_COMPUTERS.filter(
-					(c) =>
-						c.model.toLowerCase().includes(q) ||
-						c.assetTag.toLowerCase().includes(q) ||
-						c.serial.toLowerCase().includes(q) ||
-						c.location.toLowerCase().includes(q) ||
-						c.formFactor.toLowerCase().includes(q),
-				)
-			: MOCK_COMPUTERS;
-
-		const inStock = MOCK_COMPUTERS.filter((c) => c.status === 'in_stock').length;
-		const outStock = MOCK_COMPUTERS.filter((c) => c.status === 'out_of_stock').length;
-		return { inStockCount: inStock, outStockCount: outStock, filtered: list };
-	}, [search]);
+		const filteredList = filterBySearch(items, search, (c) => c.formFactor);
+		const { inStock, outStock } = countStock(items);
+		return { inStockCount: inStock, outStockCount: outStock, filtered: filteredList };
+	}, [items, search]);
 
 	return (
 		<TechnicianShell>
@@ -178,25 +92,7 @@ export function TechnicianLaptopPage() {
 							/>
 						</div>
 
-						<div className="ml-3 flex items-center gap-2">
-							<Button variant="outline" size="sm" onClick={() => {}}>
-								<Filter className="h-4 w-4" />
-								<span>Filter asset</span>
-							</Button>
-
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button size="sm">
-										<PlusSquare className="h-4 w-4" />
-										<span>Register asset</span>
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent>
-									<DropdownMenuItem onSelect={() => {}}>Single asset</DropdownMenuItem>
-									<DropdownMenuItem onSelect={() => {}}>Import bulk</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-						</div>
+						<RegisterAssetActions kind="laptop" />
 			</div>
 
 			<Card className="overflow-hidden rounded-[14px] border-border shadow-sm">
@@ -260,7 +156,7 @@ export function TechnicianLaptopPage() {
 					</div>
 					<p className="flex items-center gap-1.5 border-t border-border px-4 py-3 text-xs text-muted-foreground">
 						<PackageCheck className="h-3.5 w-3.5" />
-						Showing {filtered.length} of {MOCK_COMPUTERS.length} demo records
+						Showing {filtered.length} of {items.length} demo records
 					</p>
 				</CardContent>
 			</Card>

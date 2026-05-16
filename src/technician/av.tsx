@@ -1,12 +1,5 @@
 import { useMemo, useState, type ElementType } from 'react';
-import { Monitor, PackageCheck, PackageX, Projector, Search, Speaker, Video, Warehouse, Filter, PlusSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
+import { Monitor, PackageCheck, PackageX, Projector, Search, Speaker, Video, Warehouse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,19 +12,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TechnicianShell } from '@/technician/technician-shell';
-
-type AvCategory = 'display' | 'projector' | 'audio' | 'camera';
-type StockStatus = 'in_stock' | 'out_of_stock';
-
-type AvAsset = {
-  id: string;
-  category: AvCategory;
-  model: string;
-  assetTag: string;
-  serial: string;
-  location: string;
-  status: StockStatus;
-};
+import { RegisterAssetActions } from '@/technician/register-asset-actions';
+import {
+  AV_CATEGORY_LABEL,
+  countStock,
+  filterBySearch,
+  type AvCategory,
+  type StockStatus,
+  useAssets,
+} from '@/hooks/assets';
 
 const CATEGORY_ICONS: Record<AvCategory, ElementType> = {
   display: Monitor,
@@ -39,70 +28,6 @@ const CATEGORY_ICONS: Record<AvCategory, ElementType> = {
   audio: Speaker,
   camera: Video,
 };
-
-const CATEGORY_LABEL: Record<AvCategory, string> = {
-  display: 'Display',
-  projector: 'Projector',
-  audio: 'Audio',
-  camera: 'Camera',
-};
-
-const MOCK_AV: AvAsset[] = [
-  {
-    id: 'a1',
-    category: 'display',
-    model: 'Samsung QM85C 85" UHD signage',
-    assetTag: 'AV-20041',
-    serial: 'SM-QM85-9012',
-    location: 'Briefing hall A',
-    status: 'in_stock',
-  },
-  {
-    id: 'a2',
-    category: 'projector',
-    model: 'Epson PowerLite L735U',
-    assetTag: 'AV-20018',
-    serial: 'EPS-L735U-4401',
-    location: 'Training room — East',
-    status: 'in_stock',
-  },
-  {
-    id: 'a3',
-    category: 'audio',
-    model: 'Shure MXA920 ceiling array',
-    assetTag: 'AV-20055',
-    serial: 'SHR-MXA920-12',
-    location: 'Boardroom HQ',
-    status: 'out_of_stock',
-  },
-  {
-    id: 'a4',
-    category: 'camera',
-    model: 'Logitech Rally Bar',
-    assetTag: 'AV-20003',
-    serial: 'LG-RB-8831',
-    location: 'Visitor VC suite',
-    status: 'in_stock',
-  },
-  {
-    id: 'a5',
-    category: 'display',
-    model: 'LG 43" UL3J series',
-    assetTag: 'AV-20022',
-    serial: 'LG-UL3J-2210',
-    location: 'Records — reception',
-    status: 'out_of_stock',
-  },
-  {
-    id: 'a6',
-    category: 'projector',
-    model: 'BenQ LU935ST short throw',
-    assetTag: 'AV-20009',
-    serial: 'BQ-LU935-774',
-    location: 'Mobile pod — Kit 2',
-    status: 'in_stock',
-  },
-];
 
 function StockCountCard({
   icon: Icon,
@@ -138,25 +63,13 @@ function stockLabel(status: StockStatus) {
 
 export function TechnicianAvPage() {
   const [search, setSearch] = useState('');
+  const { items } = useAssets('av');
 
   const { inStockCount, outStockCount, filtered } = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const list = q
-      ? MOCK_AV.filter(
-          (item) =>
-            item.model.toLowerCase().includes(q) ||
-            item.assetTag.toLowerCase().includes(q) ||
-            item.serial.toLowerCase().includes(q) ||
-            item.location.toLowerCase().includes(q) ||
-            item.category.toLowerCase().includes(q) ||
-            CATEGORY_LABEL[item.category].toLowerCase().includes(q),
-        )
-      : MOCK_AV;
-
-    const inStock = MOCK_AV.filter((c) => c.status === 'in_stock').length;
-    const outStock = MOCK_AV.filter((c) => c.status === 'out_of_stock').length;
-    return { inStockCount: inStock, outStockCount: outStock, filtered: list };
-  }, [search]);
+    const filteredList = filterBySearch(items, search, (item) => AV_CATEGORY_LABEL[item.category]);
+    const { inStock, outStock } = countStock(items);
+    return { inStockCount: inStock, outStockCount: outStock, filtered: filteredList };
+  }, [items, search]);
 
   return (
     <TechnicianShell>
@@ -193,25 +106,7 @@ export function TechnicianAvPage() {
           />
         </div>
 
-        <div className="ml-3 flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => {}}>
-            <Filter className="h-4 w-4" />
-            <span>Filter asset</span>
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm">
-                <PlusSquare className="h-4 w-4" />
-                <span>Register asset</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onSelect={() => {}}>Single asset</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => {}}>Import bulk</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <RegisterAssetActions kind="av" />
       </div>
 
       <Card className="overflow-hidden rounded-[14px] border-border shadow-sm">
@@ -243,7 +138,7 @@ export function TechnicianAvPage() {
                         <TableCell>
                           <span className="inline-flex items-center gap-1.5 text-sm">
                             <Icon className="h-4 w-4 text-[oklch(0.45_0.12_290)]" />
-                            <span>{CATEGORY_LABEL[item.category]}</span>
+                            <span>{AV_CATEGORY_LABEL[item.category]}</span>
                           </span>
                         </TableCell>
                         <TableCell className="font-medium text-foreground">{item.model}</TableCell>
@@ -274,7 +169,7 @@ export function TechnicianAvPage() {
           </div>
           <p className="flex items-center gap-1.5 border-t border-border px-4 py-3 text-xs text-muted-foreground">
             <PackageCheck className="h-3.5 w-3.5" />
-            Showing {filtered.length} of {MOCK_AV.length} demo records
+            Showing {filtered.length} of {items.length} demo records
           </p>
         </CardContent>
       </Card>
