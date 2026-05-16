@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 .db 
 .cursorrules
+.cursorignore
 database
 
 node_modules
