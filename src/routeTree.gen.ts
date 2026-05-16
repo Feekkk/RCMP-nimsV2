@@ -11,7 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
+import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
 import { Route as TechnicianDashboardRouteImport } from './routes/technician/dashboard'
+import { Route as TechnicianAvRouteImport } from './routes/technician/av'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -23,40 +26,86 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicianNetworkRoute = TechnicianNetworkRouteImport.update({
+  id: '/technician/network',
+  path: '/technician/network',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianLaptopRoute = TechnicianLaptopRouteImport.update({
+  id: '/technician/laptop',
+  path: '/technician/laptop',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianDashboardRoute = TechnicianDashboardRouteImport.update({
   id: '/technician/dashboard',
   path: '/technician/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianAvRoute = TechnicianAvRouteImport.update({
+  id: '/technician/av',
+  path: '/technician/av',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/technician/av': typeof TechnicianAvRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
+  '/technician/laptop': typeof TechnicianLaptopRoute
+  '/technician/network': typeof TechnicianNetworkRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/technician/av': typeof TechnicianAvRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
+  '/technician/laptop': typeof TechnicianLaptopRoute
+  '/technician/network': typeof TechnicianNetworkRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/technician/av': typeof TechnicianAvRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
+  '/technician/laptop': typeof TechnicianLaptopRoute
+  '/technician/network': typeof TechnicianNetworkRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/technician/dashboard'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/technician/av'
+    | '/technician/dashboard'
+    | '/technician/laptop'
+    | '/technician/network'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/technician/dashboard'
-  id: '__root__' | '/' | '/login' | '/technician/dashboard'
+  to:
+    | '/'
+    | '/login'
+    | '/technician/av'
+    | '/technician/dashboard'
+    | '/technician/laptop'
+    | '/technician/network'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/technician/av'
+    | '/technician/dashboard'
+    | '/technician/laptop'
+    | '/technician/network'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  TechnicianAvRoute: typeof TechnicianAvRoute
   TechnicianDashboardRoute: typeof TechnicianDashboardRoute
+  TechnicianLaptopRoute: typeof TechnicianLaptopRoute
+  TechnicianNetworkRoute: typeof TechnicianNetworkRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,11 +124,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technician/network': {
+      id: '/technician/network'
+      path: '/technician/network'
+      fullPath: '/technician/network'
+      preLoaderRoute: typeof TechnicianNetworkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/laptop': {
+      id: '/technician/laptop'
+      path: '/technician/laptop'
+      fullPath: '/technician/laptop'
+      preLoaderRoute: typeof TechnicianLaptopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/dashboard': {
       id: '/technician/dashboard'
       path: '/technician/dashboard'
       fullPath: '/technician/dashboard'
       preLoaderRoute: typeof TechnicianDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/av': {
+      id: '/technician/av'
+      path: '/technician/av'
+      fullPath: '/technician/av'
+      preLoaderRoute: typeof TechnicianAvRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -88,7 +158,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  TechnicianAvRoute: TechnicianAvRoute,
   TechnicianDashboardRoute: TechnicianDashboardRoute,
+  TechnicianLaptopRoute: TechnicianLaptopRoute,
+  TechnicianNetworkRoute: TechnicianNetworkRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
