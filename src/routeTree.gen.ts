@@ -14,7 +14,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
 import { Route as TechnicianDashboardRouteImport } from './routes/technician/dashboard'
+import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bulk-import'
 import { Route as TechnicianAvRouteImport } from './routes/technician/av'
+import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -41,16 +43,28 @@ const TechnicianDashboardRoute = TechnicianDashboardRouteImport.update({
   path: '/technician/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicianBulkImportRoute = TechnicianBulkImportRouteImport.update({
+  id: '/technician/bulk-import',
+  path: '/technician/bulk-import',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianAvRoute = TechnicianAvRouteImport.update({
   id: '/technician/av',
   path: '/technician/av',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianAddAssetRoute = TechnicianAddAssetRouteImport.update({
+  id: '/technician/add-asset',
+  path: '/technician/add-asset',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
+  '/technician/bulk-import': typeof TechnicianBulkImportRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -58,7 +72,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
+  '/technician/bulk-import': typeof TechnicianBulkImportRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -67,7 +83,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
+  '/technician/bulk-import': typeof TechnicianBulkImportRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -77,7 +95,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/technician/add-asset'
     | '/technician/av'
+    | '/technician/bulk-import'
     | '/technician/dashboard'
     | '/technician/laptop'
     | '/technician/network'
@@ -85,7 +105,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/technician/add-asset'
     | '/technician/av'
+    | '/technician/bulk-import'
     | '/technician/dashboard'
     | '/technician/laptop'
     | '/technician/network'
@@ -93,7 +115,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/technician/add-asset'
     | '/technician/av'
+    | '/technician/bulk-import'
     | '/technician/dashboard'
     | '/technician/laptop'
     | '/technician/network'
@@ -102,7 +126,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  TechnicianAddAssetRoute: typeof TechnicianAddAssetRoute
   TechnicianAvRoute: typeof TechnicianAvRoute
+  TechnicianBulkImportRoute: typeof TechnicianBulkImportRoute
   TechnicianDashboardRoute: typeof TechnicianDashboardRoute
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
@@ -145,11 +171,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technician/bulk-import': {
+      id: '/technician/bulk-import'
+      path: '/technician/bulk-import'
+      fullPath: '/technician/bulk-import'
+      preLoaderRoute: typeof TechnicianBulkImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/av': {
       id: '/technician/av'
       path: '/technician/av'
       fullPath: '/technician/av'
       preLoaderRoute: typeof TechnicianAvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/add-asset': {
+      id: '/technician/add-asset'
+      path: '/technician/add-asset'
+      fullPath: '/technician/add-asset'
+      preLoaderRoute: typeof TechnicianAddAssetRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -158,7 +198,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  TechnicianAddAssetRoute: TechnicianAddAssetRoute,
   TechnicianAvRoute: TechnicianAvRoute,
+  TechnicianBulkImportRoute: TechnicianBulkImportRoute,
   TechnicianDashboardRoute: TechnicianDashboardRoute,
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
