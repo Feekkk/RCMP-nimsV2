@@ -1,2 +1,2 @@
-/** Session flag for hardcoded technician / staff gateway login */
-export const TECHNICIAN_SESSION_KEY = 'nims-technician-session';
+/** @deprecated Import from @/lib/auth-session */
+export { TECHNICIAN_SESSION_KEY, hasTechnicianSession, clearAllSessions } from '@/lib/auth-session';
