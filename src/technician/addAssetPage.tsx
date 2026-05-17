@@ -229,9 +229,6 @@ function AssetForm({
             Inserts into the <code className="text-[11px]">{kind}</code> table (see database/schema.sql)
           </p>
         </div>
-        <Button variant="outline" size="sm" className="rounded-[8px]" asChild>
-          <Link to={ASSET_LIST_PATH[kind]}>Cancel</Link>
-        </Button>
       </div>
 
       <Card className="rounded-[14px] border-border shadow-sm">
