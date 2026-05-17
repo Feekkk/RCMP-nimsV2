@@ -1,17 +1,13 @@
 import { useCallback, useState } from 'react';
 import {
-  createAvAsset,
-  createLaptopAsset,
-  createNetworkAsset,
+  BULK_IMPORT_COLUMNS,
+  INVENTORY_STATUSES,
   type AssetKind,
-  type AvCategory,
   type CreateAvInput,
   type CreateLaptopInput,
   type CreateNetworkInput,
-  type LaptopFormFactor,
-  type NetworkCategory,
-  type StockStatus,
-} from '@/hooks/assets';
+} from '@/lib/inventory-schema';
+import { bulkCreateAvFn, bulkCreateLaptopsFn, bulkCreateNetworkFn } from '@/server/assets.functions';
 
 export type BulkImportRowError = {
   row: number;
@@ -24,65 +20,25 @@ export type BulkImportPreview = {
   validCount: number;
   errorCount: number;
   errors: BulkImportRowError[];
-  /** Parsed rows ready to commit (1-based row numbers in errors only). */
   laptopRows?: CreateLaptopInput[];
   avRows?: CreateAvInput[];
   networkRows?: CreateNetworkInput[];
 };
 
-const LAPTOP_COLUMNS = [
-  'formFactor',
-  'model',
-  'assetTag',
-  'serial',
-  'location',
-  'status',
-  'cpu',
-  'ramGb',
-  'storageGb',
-  'os',
-] as const;
+export { BULK_IMPORT_COLUMNS };
 
-const AV_COLUMNS = [
-  'category',
-  'model',
-  'assetTag',
-  'serial',
-  'location',
-  'status',
-  'resolution',
-  'hdmiPorts',
-  'wattage',
-] as const;
-
-const NETWORK_COLUMNS = [
-  'category',
-  'model',
-  'assetTag',
-  'serial',
-  'location',
-  'status',
-  'portCount',
-  'firmware',
-  'ipAddress',
-] as const;
-
-export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
-  laptop: LAPTOP_COLUMNS,
-  av: AV_COLUMNS,
-  network: NETWORK_COLUMNS,
-};
+const VALID_STATUS_IDS = new Set(INVENTORY_STATUSES.map((s) => s.statusId));
 
 const MOCK_CSV: Record<AssetKind, string> = {
-  laptop: `formFactor,model,assetTag,serial,location,status,cpu,ramGb,storageGb,os
-laptop,Dell Latitude 5450,AST-10501,DL-5450-001,HQ — Staging,in_stock,Intel i5-1345U,16,512,Windows 11
-desktop,HP ProDesk 400 G9,AST-10502,HP-PD400-002,Records — Floor 1,in_stock,Intel i5-13500,16,256,Windows 11`,
-  av: `category,model,assetTag,serial,location,status,resolution,hdmiPorts,wattage
-display,Samsung QM65C,AV-20101,SM-QM65-100,Briefing B,in_stock,3840×2160,3,
-projector,Epson EB-L200F,AV-20102,EPS-L200F-88,Training West,in_stock,1920×1080,2,3600`,
-  network: `category,model,assetTag,serial,location,status,portCount,firmware,ipAddress
-switch,Cisco C9200-24P,NET-30101,CS-9200-24P,Rack 2,in_stock,24,17.9.4,10.10.1.20
-access_point,Aruba AP-505,NET-30102,AP-505-442,Lobby East,in_stock,2,8.12.0,10.10.2.60`,
+  laptop: `asset_id,serial_num,brand,model,category,part_number,processor,memory,os,storage,gpu,status_id,remarks
+10001,DL-5450-001,Dell,Latitude 5450,laptop,,Intel i5-1345U,16GB,Windows 11,512GB,,1,HQ staging
+10002,HP-PD400-002,HP,ProDesk 400 G9,desktop,,Intel i5-13500,16GB,Windows 11,256GB,,1,Records floor 1`,
+  av: `asset_id,category,brand,model,serial_num,asset_id_old,status_id,remarks
+20001,display,Samsung,QM65C,SM-QM65-100,,1,Briefing B
+20002,projector,Epson,EB-L200F,EPS-L200F-88,,1,Training West`,
+  network: `asset_id,serial_num,brand,model,mac_address,ip_address,status_id,remarks
+30001,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,7,Rack 2
+30002,AP-505-442,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,7,Lobby East`,
 };
 
 function normalizeHeader(h: string) {
@@ -127,12 +83,13 @@ function parseCsv(text: string): { headers: string[]; rows: string[][] } {
   return { headers, rows };
 }
 
-function parseStatus(raw: string, row: number, errors: BulkImportRowError[]): StockStatus | null {
-  const v = raw.trim().toLowerCase().replace(/\s+/g, '_');
-  if (v === 'in_stock' || v === 'instock' || v === 'in') return 'in_stock';
-  if (v === 'out_of_stock' || v === 'outofstock' || v === 'out') return 'out_of_stock';
-  errors.push({ row, message: `Invalid status "${raw}" (use in_stock or out_of_stock)` });
-  return null;
+function parseStatusId(raw: string, row: number, errors: BulkImportRowError[]): number | null {
+  const n = Number(raw.trim());
+  if (!raw.trim() || Number.isNaN(n) || !VALID_STATUS_IDS.has(n as (typeof INVENTORY_STATUSES)[number]['statusId'])) {
+    errors.push({ row, message: `Invalid status_id "${raw}" (use 1–11 per status table)` });
+    return null;
+  }
+  return n;
 }
 
 function requireCell(row: string[], index: number, name: string, rowNum: number, errors: BulkImportRowError[]) {
@@ -141,13 +98,18 @@ function requireCell(row: string[], index: number, name: string, rowNum: number,
   return val;
 }
 
-function parseNumber(raw: string, name: string, rowNum: number, errors: BulkImportRowError[]): number | null {
-  const n = Number(raw);
-  if (raw.trim() === '' || Number.isNaN(n)) {
-    errors.push({ row: rowNum, message: `Invalid ${name}` });
+function parseAssetId(raw: string, rowNum: number, errors: BulkImportRowError[]): number | null {
+  const n = Number(raw.trim());
+  if (!raw.trim() || Number.isNaN(n) || n <= 0) {
+    errors.push({ row: rowNum, message: 'Invalid asset_id' });
     return null;
   }
   return n;
+}
+
+function optionalCell(row: string[], index: number) {
+  const val = row[index]?.trim() ?? '';
+  return val || null;
 }
 
 function buildColumnIndex(headers: string[], expected: readonly string[], errors: BulkImportRowError[]) {
@@ -162,112 +124,70 @@ function buildColumnIndex(headers: string[], expected: readonly string[], errors
   return index;
 }
 
-function parseLaptopRows(
-  headers: string[],
-  rows: string[][],
-): Pick<BulkImportPreview, 'laptopRows' | 'errors' | 'validCount' | 'errorCount'> {
+function parseLaptopRows(headers: string[], rows: string[][]) {
   const errors: BulkImportRowError[] = [];
-  const col = buildColumnIndex(headers, LAPTOP_COLUMNS, errors);
+  const col = buildColumnIndex(headers, BULK_IMPORT_COLUMNS.laptop, errors);
   if (errors.some((e) => e.row === 0)) {
-    return { laptopRows: [], errors, validCount: 0, errorCount: 1 };
+    return { laptopRows: [] as CreateLaptopInput[], errors, validCount: 0, errorCount: 1 };
   }
 
   const laptopRows: CreateLaptopInput[] = [];
-  const formFactors: LaptopFormFactor[] = ['laptop', 'desktop'];
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
-    const ff = requireCell(row, col.get('formFactor')!, 'formFactor', rowNum, errors).toLowerCase();
-    if (ff && !formFactors.includes(ff as LaptopFormFactor)) {
-      errors.push({ row: rowNum, message: `formFactor must be laptop or desktop` });
-    }
-    const status = parseStatus(requireCell(row, col.get('status')!, 'status', rowNum, errors), rowNum, errors);
-    const ram = parseNumber(requireCell(row, col.get('ramGb')!, 'ramGb', rowNum, errors), 'ramGb', rowNum, errors);
-    const storage = parseNumber(
-      requireCell(row, col.get('storageGb')!, 'storageGb', rowNum, errors),
-      'storageGb',
-      rowNum,
-      errors,
-    );
-
+    const assetId = parseAssetId(requireCell(row, col.get('asset_id')!, 'asset_id', rowNum, errors), rowNum, errors);
+    const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
     const model = requireCell(row, col.get('model')!, 'model', rowNum, errors);
-    const assetTag = requireCell(row, col.get('assetTag')!, 'assetTag', rowNum, errors);
-    const serial = requireCell(row, col.get('serial')!, 'serial', rowNum, errors);
-    const location = requireCell(row, col.get('location')!, 'location', rowNum, errors);
-    const cpu = requireCell(row, col.get('cpu')!, 'cpu', rowNum, errors);
-    const os = requireCell(row, col.get('os')!, 'os', rowNum, errors);
 
-    if (errors.some((e) => e.row === rowNum) || !status || ram === null || storage === null) return;
+    if (errors.some((e) => e.row === rowNum) || assetId === null || statusId === null) return;
 
     laptopRows.push({
-      formFactor: ff as LaptopFormFactor,
+      assetId,
+      serialNum: optionalCell(row, col.get('serial_num')!),
+      brand: optionalCell(row, col.get('brand')!),
       model,
-      assetTag,
-      serial,
-      location,
-      status,
-      cpu,
-      ramGb: ram,
-      storageGb: storage,
-      os,
+      category: optionalCell(row, col.get('category')!),
+      partNumber: optionalCell(row, col.get('part_number')!),
+      processor: optionalCell(row, col.get('processor')!),
+      memory: optionalCell(row, col.get('memory')!),
+      os: optionalCell(row, col.get('os')!),
+      storage: optionalCell(row, col.get('storage')!),
+      gpu: optionalCell(row, col.get('gpu')!),
+      statusId,
+      remarks: optionalCell(row, col.get('remarks')!),
     });
   });
 
   const rowErrorRows = new Set(errors.map((e) => e.row).filter((r) => r > 0));
-  return {
-    laptopRows,
-    errors,
-    validCount: laptopRows.length,
-    errorCount: rowErrorRows.size,
-  };
+  return { laptopRows, errors, validCount: laptopRows.length, errorCount: rowErrorRows.size };
 }
 
-function parseAvRows(
-  headers: string[],
-  rows: string[][],
-): Pick<BulkImportPreview, 'avRows' | 'errors' | 'validCount' | 'errorCount'> {
+function parseAvRows(headers: string[], rows: string[][]) {
   const errors: BulkImportRowError[] = [];
-  const col = buildColumnIndex(headers, AV_COLUMNS, errors);
+  const col = buildColumnIndex(headers, BULK_IMPORT_COLUMNS.av, errors);
   if (errors.some((e) => e.row === 0)) {
-    return { avRows: [], errors, validCount: 0, errorCount: 1 };
+    return { avRows: [] as CreateAvInput[], errors, validCount: 0, errorCount: 1 };
   }
 
   const avRows: CreateAvInput[] = [];
-  const categories: AvCategory[] = ['display', 'projector', 'audio', 'camera'];
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
-    const cat = requireCell(row, col.get('category')!, 'category', rowNum, errors).toLowerCase();
-    if (cat && !categories.includes(cat as AvCategory)) {
-      errors.push({ row: rowNum, message: `Invalid AV category` });
-    }
-    const status = parseStatus(requireCell(row, col.get('status')!, 'status', rowNum, errors), rowNum, errors);
-    const hdmi = parseNumber(
-      requireCell(row, col.get('hdmiPorts')!, 'hdmiPorts', rowNum, errors),
-      'hdmiPorts',
-      rowNum,
-      errors,
-    );
-    const wattRaw = row[col.get('wattage')!]?.trim() ?? '';
-
+    const assetId = parseAssetId(requireCell(row, col.get('asset_id')!, 'asset_id', rowNum, errors), rowNum, errors);
+    const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
     const model = requireCell(row, col.get('model')!, 'model', rowNum, errors);
-    const assetTag = requireCell(row, col.get('assetTag')!, 'assetTag', rowNum, errors);
-    const serial = requireCell(row, col.get('serial')!, 'serial', rowNum, errors);
-    const location = requireCell(row, col.get('location')!, 'location', rowNum, errors);
-    const resolution = requireCell(row, col.get('resolution')!, 'resolution', rowNum, errors);
 
-    if (errors.some((e) => e.row === rowNum) || !status || hdmi === null) return;
+    if (errors.some((e) => e.row === rowNum) || assetId === null || statusId === null) return;
 
     avRows.push({
-      category: cat as AvCategory,
+      assetId,
+      category: optionalCell(row, col.get('category')!),
+      brand: optionalCell(row, col.get('brand')!),
       model,
-      assetTag,
-      serial,
-      location,
-      status,
-      resolution,
-      hdmiPorts: hdmi,
-      wattage: wattRaw ? Number(wattRaw) : undefined,
+      serialNum: optionalCell(row, col.get('serial_num')!),
+      assetIdOld: optionalCell(row, col.get('asset_id_old')!),
+      statusId,
+      remarks: optionalCell(row, col.get('remarks')!),
     });
   });
 
@@ -275,53 +195,32 @@ function parseAvRows(
   return { avRows, errors, validCount: avRows.length, errorCount: rowErrorRows.size };
 }
 
-function parseNetworkRows(
-  headers: string[],
-  rows: string[][],
-): Pick<BulkImportPreview, 'networkRows' | 'errors' | 'validCount' | 'errorCount'> {
+function parseNetworkRows(headers: string[], rows: string[][]) {
   const errors: BulkImportRowError[] = [];
-  const col = buildColumnIndex(headers, NETWORK_COLUMNS, errors);
+  const col = buildColumnIndex(headers, BULK_IMPORT_COLUMNS.network, errors);
   if (errors.some((e) => e.row === 0)) {
-    return { networkRows: [], errors, validCount: 0, errorCount: 1 };
+    return { networkRows: [] as CreateNetworkInput[], errors, validCount: 0, errorCount: 1 };
   }
 
   const networkRows: CreateNetworkInput[] = [];
-  const categories: NetworkCategory[] = ['switch', 'router', 'firewall', 'access_point'];
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
-    const cat = requireCell(row, col.get('category')!, 'category', rowNum, errors).toLowerCase();
-    const normalized = cat === 'accesspoint' ? 'access_point' : cat;
-    if (normalized && !categories.includes(normalized as NetworkCategory)) {
-      errors.push({ row: rowNum, message: `Invalid network category` });
-    }
-    const status = parseStatus(requireCell(row, col.get('status')!, 'status', rowNum, errors), rowNum, errors);
-    const ports = parseNumber(
-      requireCell(row, col.get('portCount')!, 'portCount', rowNum, errors),
-      'portCount',
-      rowNum,
-      errors,
-    );
-
+    const assetId = parseAssetId(requireCell(row, col.get('asset_id')!, 'asset_id', rowNum, errors), rowNum, errors);
+    const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
     const model = requireCell(row, col.get('model')!, 'model', rowNum, errors);
-    const assetTag = requireCell(row, col.get('assetTag')!, 'assetTag', rowNum, errors);
-    const serial = requireCell(row, col.get('serial')!, 'serial', rowNum, errors);
-    const location = requireCell(row, col.get('location')!, 'location', rowNum, errors);
-    const firmware = requireCell(row, col.get('firmware')!, 'firmware', rowNum, errors);
-    const ipAddress = requireCell(row, col.get('ipAddress')!, 'ipAddress', rowNum, errors);
 
-    if (errors.some((e) => e.row === rowNum) || !status || ports === null) return;
+    if (errors.some((e) => e.row === rowNum) || assetId === null || statusId === null) return;
 
     networkRows.push({
-      category: normalized as NetworkCategory,
+      assetId,
+      serialNum: optionalCell(row, col.get('serial_num')!),
+      brand: optionalCell(row, col.get('brand')!),
       model,
-      assetTag,
-      serial,
-      location,
-      status,
-      portCount: ports,
-      firmware,
-      ipAddress,
+      macAddress: optionalCell(row, col.get('mac_address')!),
+      ipAddress: optionalCell(row, col.get('ip_address')!),
+      statusId,
+      remarks: optionalCell(row, col.get('remarks')!),
     });
   });
 
@@ -334,24 +233,16 @@ export function parseBulkImportCsv(kind: AssetKind, csvText: string): BulkImport
   const base = { kind, headers };
 
   if (headers.length === 0) {
-    return {
-      ...base,
-      validCount: 0,
-      errorCount: 1,
-      errors: [{ row: 0, message: 'CSV is empty' }],
-    };
+    return { ...base, validCount: 0, errorCount: 1, errors: [{ row: 0, message: 'CSV is empty' }] };
   }
 
   if (kind === 'laptop') {
-    const parsed = parseLaptopRows(headers, rows);
-    return { ...base, ...parsed };
+    return { ...base, ...parseLaptopRows(headers, rows) };
   }
   if (kind === 'av') {
-    const parsed = parseAvRows(headers, rows);
-    return { ...base, ...parsed };
+    return { ...base, ...parseAvRows(headers, rows) };
   }
-  const parsed = parseNetworkRows(headers, rows);
-  return { ...base, ...parsed };
+  return { ...base, ...parseNetworkRows(headers, rows) };
 }
 
 export function getBulkImportTemplate(kind: AssetKind): string {
@@ -372,18 +263,15 @@ export function downloadCsvFile(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
-export function commitBulkImport(preview: BulkImportPreview): number {
-  if (preview.kind === 'laptop' && preview.laptopRows) {
-    preview.laptopRows.forEach((row) => createLaptopAsset(row));
-    return preview.laptopRows.length;
+export async function commitBulkImport(preview: BulkImportPreview): Promise<number> {
+  if (preview.kind === 'laptop' && preview.laptopRows?.length) {
+    return bulkCreateLaptopsFn({ data: preview.laptopRows });
   }
-  if (preview.kind === 'av' && preview.avRows) {
-    preview.avRows.forEach((row) => createAvAsset(row));
-    return preview.avRows.length;
+  if (preview.kind === 'av' && preview.avRows?.length) {
+    return bulkCreateAvFn({ data: preview.avRows });
   }
-  if (preview.kind === 'network' && preview.networkRows) {
-    preview.networkRows.forEach((row) => createNetworkAsset(row));
-    return preview.networkRows.length;
+  if (preview.kind === 'network' && preview.networkRows?.length) {
+    return bulkCreateNetworkFn({ data: preview.networkRows });
   }
   return 0;
 }
@@ -418,7 +306,7 @@ export function useBulkImport() {
 
   const clearPreview = useCallback(() => setPreview(null), []);
 
-  const commit = useCallback(() => {
+  const commit = useCallback(async () => {
     if (!preview || preview.validCount === 0) return 0;
     return commitBulkImport(preview);
   }, [preview]);
