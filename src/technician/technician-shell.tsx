@@ -5,19 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { TechSideBar } from '@/components/ui/techSideBar';
 import { Toaster } from '@/components/ui/sonner';
-import { TECHNICIAN_SESSION_KEY } from '@/lib/technician-session';
+import { clearAllSessions, hasTechnicianSession } from '@/lib/auth-session';
 
 export function TechnicianShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem(TECHNICIAN_SESSION_KEY) !== '1') {
+    if (typeof window !== 'undefined' && !hasTechnicianSession()) {
       void navigate({ to: '/login' });
     }
   }, [navigate]);
 
   const handleSignOut = () => {
-    sessionStorage.removeItem(TECHNICIAN_SESSION_KEY);
+    clearAllSessions();
     void navigate({ to: '/login' });
   };
 
