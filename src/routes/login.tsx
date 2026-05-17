@@ -1,20 +1,19 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
-import { ArrowLeft, Briefcase, IdCard, Lock, Mail, Phone, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Briefcase, CheckCircle2, IdCard, Lock, Mail, Phone, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { TECHNICIAN_SESSION_KEY } from '@/lib/technician-session';
+import { clearAllSessions, persistSession } from '@/lib/auth-session';
+import { loginStaffFn, loginUserFn, registerUserFn } from '@/server/auth.functions';
 
-/** Demo technician login — replace with real authentication. */
-const DEMO_STAFF_CREDENTIALS = {
-  staffId: '620820',
-  password: '123456',
-} as const;
+const REGISTER_REDIRECT_SECONDS = 5;
+const LOGIN_SUCCESS_DELAY_MS = 1500;
 
 export const Route = createFileRoute('/login')({
   head: () => ({
@@ -37,9 +36,50 @@ function LoginPage() {
   const [userId, setUserId] = useState('');
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [registerCountdown, setRegisterCountdown] = useState<number | null>(null);
+  const [registerSuccessName, setRegisterSuccessName] = useState<string | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [loginSuccessMessage, setLoginSuccessMessage] = useState<string | null>(null);
+
+  const isRegisterCooldown = registerCountdown !== null;
+
+  useEffect(() => {
+    if (registerCountdown === null || registerCountdown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setRegisterCountdown((prev) => {
+        if (prev === null || prev <= 1) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [registerCountdown]);
+
+  useEffect(() => {
+    if (registerCountdown !== 0) return;
+    setRegisterCountdown(null);
+    setRegisterSuccessName(null);
+    setIsLogin(true);
+    setRole('user');
+    setPassword('');
+    setName('');
+    setUserId('');
+    setPhone('');
+    if (registeredEmail) setEmail(registeredEmail);
+    toast.message('Please sign in with your new account');
+  }, [registerCountdown, registeredEmail]);
+
+  const resetRegisterForm = () => {
+    setName('');
+    setUserId('');
+    setEmail('');
+    setPhone('');
+    setPassword('');
+  };
 
   const toggleLoginMode = () => {
+    if (isRegisterCooldown) return;
     setIsLogin((v) => !v);
+    setLoginSuccessMessage(null);
     if (!isLogin) {
       setRole('user');
     }
@@ -52,43 +92,51 @@ function LoginPage() {
     try {
       if (isLogin) {
         if (role === 'staff') {
-          if (
-            staffId.trim() !== DEMO_STAFF_CREDENTIALS.staffId ||
-            password !== DEMO_STAFF_CREDENTIALS.password
-          ) {
-            toast.error('Invalid staff ID or password');
-            setIsLoading(false);
-            return;
-          }
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem(TECHNICIAN_SESSION_KEY, '1');
-          }
-          toast.success('Signed in as technician');
-          navigate({ to: '/technician/dashboard' });
+          const user = await loginStaffFn({
+            data: { staffId: staffId.trim(), password },
+          });
+          persistSession(user);
+          const message = `Signed in successfully as ${user.fullName} (${user.roleName}).`;
+          setLoginSuccessMessage(message);
+          toast.success(message);
+          window.setTimeout(() => {
+            void navigate({ to: '/technician/dashboard' });
+          }, LOGIN_SUCCESS_DELAY_MS);
         } else {
-          toast.success(`Signed in as ${email}`);
-          navigate({ to: '/' });
+          const user = await loginUserFn({
+            data: { email: email.trim(), password },
+          });
+          persistSession(user);
+          const message = `Welcome back, ${user.fullName}! Signed in successfully.`;
+          setLoginSuccessMessage(message);
+          toast.success(message);
+          window.setTimeout(() => {
+            void navigate({ to: '/' });
+          }, LOGIN_SUCCESS_DELAY_MS);
         }
       } else {
-        toast.success('Account created successfully');
-        navigate({ to: '/' });
+        const registered = await registerUserFn({
+          data: {
+            staffId: userId.trim(),
+            fullName: name.trim(),
+            email: email.trim(),
+            password,
+            phone: phone.trim() || undefined,
+          },
+        });
+        clearAllSessions();
+        setRegisteredEmail(email.trim());
+        resetRegisterForm();
+        setRegisterSuccessName(registered.fullName);
+        setRegisterCountdown(REGISTER_REDIRECT_SECONDS);
+        toast.success(`Account created for ${registered.fullName}`);
       }
     } catch (error) {
-      toast.error('Authentication failed');
+      const message = error instanceof Error ? error.message : 'Authentication failed';
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      toast.success('Microsoft sign in successful');
-      navigate({ to: '/' });
-    } catch (error) {
-      toast.error('Microsoft sign in failed');
-    }
-    setIsLoading(false);
   };
 
   return (
@@ -99,7 +147,10 @@ function LoginPage() {
       </div>
 
       <div className="relative flex min-h-screen items-center justify-center px-4 py-8">
-        <Link to="/" className="absolute left-6 top-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+        <Link
+          to="/"
+          className="absolute left-6 top-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back
         </Link>
@@ -109,10 +160,18 @@ function LoginPage() {
             <NimsLogo size="lg" variant="light" />
             <div>
               <h1 className="text-xl font-bold leading-[0.96] tracking-[-0.02em] text-foreground sm:text-2xl">
-                {isLogin ? 'Sign in to NIMS' : 'Create your NIMS account'}
+                {isRegisterCooldown
+                  ? 'Account created'
+                  : isLogin
+                    ? 'Sign in to NIMS'
+                    : 'Create your NIMS account'}
               </h1>
               <p className="mt-2 text-sm leading-[1.5] text-muted-foreground">
-                {isLogin ? 'Manage your inventory in one place' : 'Join your team on NIMS'}
+                {isRegisterCooldown
+                  ? 'You will be redirected to sign in shortly.'
+                  : isLogin
+                    ? 'Manage your inventory in one place'
+                    : 'User accounts only (role: user). Staff accounts are provisioned by an administrator.'}
               </p>
             </div>
           </div>
@@ -120,16 +179,20 @@ function LoginPage() {
           <Button
             variant="outline"
             className="w-full gap-2 rounded-[8px] border-border"
-            onClick={handleGoogleSignIn}
-            disabled={isLoading}
+            type="button"
+            disabled
+            title="Coming soon"
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="h-4 w-4 opacity-50" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
               <rect x="1" y="1" width="10.5" height="10.5" rx="1" fill="#f35325" />
               <rect x="12.5" y="1" width="10.5" height="10.5" rx="1" fill="#81bc06" />
               <rect x="1" y="12.5" width="10.5" height="10.5" rx="1" fill="#00a4ef" />
               <rect x="12.5" y="12.5" width="10.5" height="10.5" rx="1" fill="#ffba08" />
             </svg>
-            Continue with Microsoft SSO
+            <span className="text-muted-foreground">Continue with Microsoft SSO</span>
+            <span className="ml-auto rounded-[6px] bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Coming soon
+            </span>
           </Button>
 
           <div className="relative">
@@ -141,19 +204,42 @@ function LoginPage() {
             </div>
           </div>
 
+          {loginSuccessMessage && (
+            <Alert className="border-emerald-500/40 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <AlertTitle>Sign in successful</AlertTitle>
+              <AlertDescription>{loginSuccessMessage} Redirecting…</AlertDescription>
+            </Alert>
+          )}
+
+          {isRegisterCooldown && registerSuccessName && (
+            <Alert className="border-emerald-500/40 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <AlertTitle>Registration successful</AlertTitle>
+              <AlertDescription>
+                Your account for <span className="font-semibold">{registerSuccessName}</span> has been created.
+                Please sign in in{' '}
+                <span className="font-semibold tabular-nums">{registerCountdown}</span>{' '}
+                second{registerCountdown === 1 ? '' : 's'}.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-3">
-            {isLogin ? (
+            {!isRegisterCooldown && isLogin ? (
               <div>
                 <Label>Sign in as</Label>
                 <Select value={role} onValueChange={(v) => setRole(v as 'staff' | 'user')}>
-                  <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>
                     <SelectItem value="staff">Staff</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            ) : (
+            ) : !isRegisterCooldown ? (
               <>
                 <div className="relative">
                   <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -181,7 +267,7 @@ function LoginPage() {
                 <div className="relative">
                   <IdCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="ID"
+                    placeholder="User ID"
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
                     required
@@ -196,15 +282,14 @@ function LoginPage() {
                     placeholder="Phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    required
                     autoComplete="tel"
                     className="h-11 rounded-[8px] pl-9 sm:h-9"
                   />
                 </div>
               </>
-            )}
+            ) : null}
 
-            {isLogin && role === 'staff' && (
+            {!isRegisterCooldown && isLogin && role === 'staff' && (
               <div className="relative">
                 <Briefcase className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -218,7 +303,7 @@ function LoginPage() {
               </div>
             )}
 
-            {isLogin && role === 'user' && (
+            {!isRegisterCooldown && isLogin && role === 'user' && (
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -233,22 +318,31 @@ function LoginPage() {
               </div>
             )}
 
-            <div className="relative">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                className="h-11 rounded-[8px] pl-9 sm:h-9"
-              />
-            </div>
-            <Button type="submit" className="w-full bg-foreground text-background font-semibold hover:opacity-90" disabled={isLoading}>
-              {isLoading ? 'Loading...' : isLogin ? 'Sign in' : 'Sign up'}
-            </Button>
+            {!isRegisterCooldown && (
+              <>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    className="h-11 rounded-[8px] pl-9 sm:h-9"
+                    disabled={!!loginSuccessMessage}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-foreground font-semibold text-background hover:opacity-90"
+                  disabled={isLoading || !!loginSuccessMessage}
+                >
+                  {isLoading ? 'Loading...' : isLogin ? 'Sign in' : 'Sign up'}
+                </Button>
+              </>
+            )}
           </form>
 
           <p className="text-center text-xs text-muted-foreground">
@@ -256,7 +350,8 @@ function LoginPage() {
             <button
               type="button"
               onClick={toggleLoginMode}
-              className="font-semibold text-[oklch(0.45_0.12_290)] hover:underline"
+              disabled={isRegisterCooldown || !!loginSuccessMessage}
+              className="font-semibold text-[oklch(0.45_0.12_290)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLogin ? 'Sign up' : 'Sign in'}
             </button>
