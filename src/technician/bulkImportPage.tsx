@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { formatStatusLabel } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, type AssetKind } from '@/hooks/assets';
 import { BULK_IMPORT_COLUMNS, downloadCsvFile, useBulkImport } from '@/hooks/bulkImport';
 
@@ -127,17 +128,18 @@ function BulkImportWorkspace({
     }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!preview || preview.validCount === 0) {
       toast.error('Parse a valid CSV first');
       return;
     }
     setImporting(true);
     try {
-      const count = commit();
+      const count = await commit();
       onImported(kind, count);
-    } catch {
-      toast.error('Import failed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Import failed';
+      toast.error(message);
     } finally {
       setImporting(false);
     }
@@ -161,7 +163,9 @@ function BulkImportWorkspace({
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             Bulk import — {ASSET_KIND_LABEL[kind]}
           </h1>
-          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">Upload or paste CSV (demo parser)</p>
+          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+            Columns match database/schema.sql — imported rows are inserted into MySQL
+          </p>
         </div>
         <Button variant="outline" size="sm" className="rounded-[8px]" asChild>
           <Link to={ASSET_LIST_PATH[kind]}>Cancel</Link>
@@ -215,7 +219,7 @@ function BulkImportWorkspace({
         <Card className="rounded-[14px] border-border shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Upload file</CardTitle>
-            <CardDescription>.csv files only (mock import)</CardDescription>
+            <CardDescription>.csv files only</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <input
@@ -328,8 +332,9 @@ function BulkImportWorkspace({
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="font-semibold">Asset ID</TableHead>
                         <TableHead className="font-semibold">Model</TableHead>
-                        <TableHead className="font-semibold">Asset tag</TableHead>
+                        <TableHead className="font-semibold">Brand</TableHead>
                         <TableHead className="font-semibold">Serial</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
                       </TableRow>
@@ -337,14 +342,15 @@ function BulkImportWorkspace({
                     <TableBody>
                       {previewRows.slice(0, 20).map((row, i) => (
                         <TableRow key={i}>
-                          <TableCell className="font-medium">{row.model}</TableCell>
                           <TableCell>
-                            <code className="text-xs">{row.assetTag}</code>
+                            <code className="text-xs">{row.assetId}</code>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{row.serial}</TableCell>
+                          <TableCell className="font-medium">{row.model}</TableCell>
+                          <TableCell className="text-muted-foreground">{'brand' in row ? row.brand ?? '—' : '—'}</TableCell>
+                          <TableCell className="text-muted-foreground">{row.serialNum ?? '—'}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="rounded-[6px] text-[10px]">
-                              {row.status.replace('_', ' ')}
+                              {formatStatusLabel(row.statusId)}
                             </Badge>
                           </TableCell>
                         </TableRow>
