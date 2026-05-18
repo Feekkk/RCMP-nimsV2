@@ -1,6 +1,5 @@
 import { useMemo, useState, type ElementType } from 'react';
 import { PackageCheck, PackageX, Search, Tv } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -12,8 +11,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { AssetStatusActions } from '@/technician/asset-status-actions';
+import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
-import { countActiveAssets, filterBySearch, formatStatusLabel, isActiveStatus, useAssets } from '@/hooks/assets';
+import { countActiveAssets, filterBySearch, useAssets } from '@/hooks/assets';
 
 function StockCountCard({
   icon: Icon,
@@ -41,7 +42,7 @@ function StockCountCard({
 
 export function TechnicianAvPage() {
   const [search, setSearch] = useState('');
-  const { items, isLoading, error } = useAssets('av');
+  const { items, isLoading, error, updateStatus } = useAssets('av');
 
   const { activeCount, otherCount, filtered } = useMemo(() => {
     const filteredList = filterBySearch(items, search, (item) => item.category ?? '');
@@ -98,18 +99,19 @@ export function TechnicianAvPage() {
                   <TableHead className="whitespace-nowrap font-semibold">Brand</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Serial</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Status</TableHead>
+                  <TableHead className="min-w-[140px] font-semibold">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                       No assets match your search.
                     </TableCell>
                   </TableRow>
@@ -129,12 +131,16 @@ export function TechnicianAvPage() {
                       <TableCell className="text-muted-foreground">{item.brand ?? '—'}</TableCell>
                       <TableCell className="text-muted-foreground">{item.serialNum ?? '—'}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={isActiveStatus(item.statusId) ? 'default' : 'destructive'}
-                          className="rounded-[8px] text-[10px] font-semibold"
-                        >
-                          {formatStatusLabel(item.statusId)}
-                        </Badge>
+                        <AssetStatusBadge statusId={item.statusId} />
+                      </TableCell>
+                      <TableCell>
+                        <AssetStatusActions
+                          kind="av"
+                          assetId={item.assetId}
+                          statusId={item.statusId}
+                          onStatusChange={updateStatus}
+                          disabled={isLoading}
+                        />
                       </TableCell>
                     </TableRow>
                   ))

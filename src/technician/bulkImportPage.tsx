@@ -17,9 +17,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { DATE_FORMAT_DDMMYY, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
 import { formatStatusLabel } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, type AssetKind } from '@/hooks/assets';
-import { BULK_IMPORT_COLUMNS, downloadCsvFile, useBulkImport } from '@/hooks/bulkImport';
+import { BULK_IMPORT_REQUIRED, downloadCsvFile, useBulkImport } from '@/hooks/bulkImport';
 
 type BulkImportSearch = { kind?: AssetKind };
 
@@ -110,8 +111,9 @@ function BulkImportWorkspace({
   const fileRef = useRef<HTMLInputElement>(null);
   const [csvText, setCsvText] = useState('');
   const [importing, setImporting] = useState(false);
-  const { preview, isParsing, parseText, parseFile, loadMockSample, clearPreview, commit, getTemplate, getMockCsv, columns } =
+  const { preview, isParsing, parseText, loadMockSample, clearPreview, commit, getTemplate, getMockCsv, columns } =
     useBulkImport();
+  const requiredSet = new Set(BULK_IMPORT_REQUIRED[kind]);
 
   const handleParse = () => {
     if (!csvText.trim()) {
@@ -164,7 +166,7 @@ function BulkImportWorkspace({
             Bulk import — {ASSET_KIND_LABEL[kind]}
           </h1>
           <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-            Columns match database/schema.sql — imported rows are inserted into MySQL
+            Please follow the template and headers to ensure the data is imported correctly.
           </p>
         </div>
         <Button variant="outline" size="sm" className="rounded-[8px]" asChild>
@@ -176,13 +178,28 @@ function BulkImportWorkspace({
         <Card className="rounded-[14px] border-border shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">CSV template</CardTitle>
-            <CardDescription>Required columns for {ASSET_KIND_LABEL[kind].toLowerCase()}</CardDescription>
+            <CardDescription className="space-y-1">
+              <span className="block">
+                Headers with (<span className="text-destructive">*</span>) are required. Leave{' '}
+                <code className="text-[11px]">asset_id</code> blank to auto-generate from category.
+              </span>
+              <span className="block text-muted-foreground">
+                Date columns ({PURCHASE_DATE_COLUMNS.join(', ')}) must use{' '}
+                <code className="text-[11px]">{DATE_FORMAT_DDMMYY}</code> (e.g.{' '}
+                <code className="text-[11px]">150126</code> = 15 Jan 2026).
+              </span>
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-1.5">
               {columns[kind].map((col) => (
-                <Badge key={col} variant="secondary" className="rounded-[6px] font-mono text-[10px]">
+                <Badge
+                  key={col}
+                  variant={requiredSet.has(col) ? 'default' : 'secondary'}
+                  className="rounded-[6px] font-mono text-[10px]"
+                >
                   {col}
+                  {requiredSet.has(col) ? ' *' : ''}
                 </Badge>
               ))}
             </div>
@@ -253,7 +270,10 @@ function BulkImportWorkspace({
       <Card className="mb-4 rounded-[14px] border-border shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">CSV data</CardTitle>
-          <CardDescription>Paste rows below, then parse to validate</CardDescription>
+          <CardDescription>
+            Paste rows below, then parse to validate. Dates: {DATE_FORMAT_DDMMYY} only (
+            {PURCHASE_DATE_COLUMNS.join(', ')}).
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2">
@@ -343,7 +363,7 @@ function BulkImportWorkspace({
                       {previewRows.slice(0, 20).map((row, i) => (
                         <TableRow key={i}>
                           <TableCell>
-                            <code className="text-xs">{row.assetId}</code>
+                            <code className="text-xs">{row.assetId ?? 'auto'}</code>
                           </TableCell>
                           <TableCell className="font-medium">{row.model}</TableCell>
                           <TableCell className="text-muted-foreground">{'brand' in row ? row.brand ?? '—' : '—'}</TableCell>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, Laptop, Network, Tv } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,7 +16,14 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { INVENTORY_STATUSES } from '@/lib/inventory-schema';
+import { emptyPurchaseFormState, purchaseFormToInput } from '@/lib/purchase-field-utils';
+import {
+  formatAssetIdDisplay,
+  LAPTOP_CATEGORY_OPTIONS,
+  useNextAssetId,
+} from '@/hooks/assetid-generator';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { PurchaseFieldsSection } from '@/technician/asset-purchase-fields';
 import {
   ASSET_KIND_LABEL,
   ASSET_LIST_PATH,
@@ -29,9 +37,9 @@ import {
 type AddAssetSearch = { kind?: AssetKind };
 
 const KIND_OPTIONS: { kind: AssetKind; icon: typeof Laptop; description: string }[] = [
-  { kind: 'laptop', icon: Laptop, description: 'Laptop table — processor, memory, OS, storage' },
-  { kind: 'av', icon: Tv, description: 'AV table — category, brand, model, serial' },
-  { kind: 'network', icon: Network, description: 'Network table — MAC, IP, brand, model' },
+  { kind: 'laptop', icon: Laptop, description: 'Full laptop table incl. PO / DO / invoice fields' },
+  { kind: 'av', icon: Tv, description: 'Full av table incl. asset_id_old & procurement' },
+  { kind: 'network', icon: Network, description: 'Full network table incl. MAC, IP & procurement' },
 ];
 
 function isAssetKind(value: unknown): value is AssetKind {
@@ -56,7 +64,7 @@ export function TechnicianAddAssetPage() {
         <div className="mb-6">
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Register asset</h1>
           <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-            Choose a category. Records are saved to the MySQL tables in database/schema.sql.
+            Choose a category. All columns from database/schema.sql (lines 55–131) are supported.
           </p>
         </div>
 
@@ -125,14 +133,14 @@ function AssetForm({
   createNetwork: (input: CreateNetworkInput) => Promise<unknown>;
 }) {
   const [saving, setSaving] = useState(false);
-  const [assetId, setAssetId] = useState('');
   const [model, setModel] = useState('');
   const [brand, setBrand] = useState('');
   const [serialNum, setSerialNum] = useState('');
   const [statusId, setStatusId] = useState('1');
   const [remarks, setRemarks] = useState('');
+  const [purchase, setPurchase] = useState(emptyPurchaseFormState);
 
-  const [category, setCategory] = useState('laptop');
+  const [category, setCategory] = useState<string>(LAPTOP_CATEGORY_OPTIONS[0]);
   const [partNumber, setPartNumber] = useState('');
   const [processor, setProcessor] = useState('');
   const [memory, setMemory] = useState('');
@@ -146,15 +154,18 @@ function AssetForm({
   const [macAddress, setMacAddress] = useState('');
   const [ipAddress, setIpAddress] = useState('');
 
+  const {
+    assetId: generatedAssetId,
+    isLoading: assetIdLoading,
+    error: assetIdError,
+    refetch: refetchAssetId,
+  } = useNextAssetId(kind, kind === 'laptop' ? category : undefined);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = Number(assetId);
-    if (!assetId.trim() || Number.isNaN(id) || id <= 0) {
-      toast.error('Asset ID is required (numeric, matches asset_id column)');
-      return;
-    }
-    if (!model.trim()) {
-      toast.error('Model is required');
+    const id = await refetchAssetId();
+    if (id == null || id <= 0) {
+      toast.error(assetIdError ?? 'Could not generate asset ID');
       return;
     }
 
@@ -164,43 +175,63 @@ function AssetForm({
       return;
     }
 
+    const purchaseInput = purchaseFormToInput(purchase);
+
     setSaving(true);
     try {
       if (kind === 'laptop') {
+        if (!serialNum.trim()) {
+          toast.error('Serial number (serial_num) is required');
+          setSaving(false);
+          return;
+        }
+        if (!category.trim()) {
+          toast.error('Category is required');
+          setSaving(false);
+          return;
+        }
         await createLaptop({
           assetId: id,
-          model: model.trim(),
+          serialNum: serialNum.trim(),
+          category: category.trim(),
           brand: brand.trim() || null,
-          serialNum: serialNum.trim() || null,
-          category: category.trim() || null,
+          model: model.trim() || null,
           partNumber: partNumber.trim() || null,
           processor: processor.trim() || null,
           memory: memory.trim() || null,
           os: os.trim() || null,
           storage: storage.trim() || null,
           gpu: gpu.trim() || null,
+          ...purchaseInput,
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
         });
       } else if (kind === 'av') {
+        if (!assetIdOld.trim()) {
+          toast.error('Legacy ID (asset_id_old) is required');
+          setSaving(false);
+          return;
+        }
         await createAv({
           assetId: id,
-          model: model.trim(),
-          brand: brand.trim() || null,
-          serialNum: serialNum.trim() || null,
+          assetIdOld: assetIdOld.trim(),
           category: avCategory.trim() || null,
-          assetIdOld: assetIdOld.trim() || null,
+          brand: brand.trim() || null,
+          model: model.trim() || null,
+          serialNum: serialNum.trim() || null,
+          ...purchaseInput,
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
         });
       } else {
         await createNetwork({
           assetId: id,
-          model: model.trim(),
-          brand: brand.trim() || null,
           serialNum: serialNum.trim() || null,
+          brand: brand.trim() || null,
+          model: model.trim() || null,
           macAddress: macAddress.trim() || null,
           ipAddress: ipAddress.trim() || null,
+          ...purchaseInput,
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
         });
@@ -226,65 +257,100 @@ function AssetForm({
             Add {ASSET_KIND_LABEL[kind]}
           </h1>
           <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-            Inserts into the <code className="text-[11px]">{kind}</code> table (see database/schema.sql)
+            Maps to the <code className="text-[11px]">{kind}</code> table in database/schema.sql
           </p>
         </div>
+        <Button variant="outline" size="sm" className="rounded-[8px]" asChild>
+          <Link to={ASSET_LIST_PATH[kind]}>Cancel</Link>
+        </Button>
       </div>
 
       <Card className="rounded-[14px] border-border shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Asset details</CardTitle>
-          <CardDescription>Fields match MySQL column names.</CardDescription>
+          <CardDescription>Fields marked * match schema COMMENT &quot;required&quot;.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Asset ID (asset_id)" required>
-                <Input
-                  type="number"
-                  min={1}
-                  value={assetId}
-                  onChange={(e) => setAssetId(e.target.value)}
-                  required
-                  className="rounded-[8px]"
-                />
-              </Field>
-              <Field label="Status (status_id)" required>
-                <Select value={statusId} onValueChange={setStatusId}>
-                  <SelectTrigger className="rounded-[8px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INVENTORY_STATUSES.map((s) => (
-                      <SelectItem key={s.statusId} value={String(s.statusId)}>
-                        {s.statusId} — {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Model" required>
-                <Input value={model} onChange={(e) => setModel(e.target.value)} required className="rounded-[8px]" />
-              </Field>
-              <Field label="Brand">
-                <Input value={brand} onChange={(e) => setBrand(e.target.value)} className="rounded-[8px]" />
-              </Field>
-              <Field label="Serial (serial_num)">
-                <Input value={serialNum} onChange={(e) => setSerialNum(e.target.value)} className="rounded-[8px]" />
-              </Field>
-              <Field label="Remarks">
-                <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[72px] rounded-[8px]" />
-              </Field>
-            </div>
+            <section className="space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Core</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Asset ID (auto-generated)" required>
+                  <div className="flex h-10 items-center gap-2 rounded-[8px] border border-input bg-muted/40 px-3 font-mono text-sm">
+                    {assetIdLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        <span className="text-muted-foreground">Checking database…</span>
+                      </>
+                    ) : generatedAssetId != null ? (
+                      <>
+                        <span>{generatedAssetId}</span>
+                        <span className="text-muted-foreground">({formatAssetIdDisplay(generatedAssetId)})</span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {kind === 'laptop' ? 'Select a category to generate ID' : 'Unavailable'}
+                      </span>
+                    )}
+                  </div>
+                </Field>
+                <Field label="Status (status_id)" required>
+                  <Select value={statusId} onValueChange={setStatusId}>
+                    <SelectTrigger className="rounded-[8px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INVENTORY_STATUSES.map((s) => (
+                        <SelectItem key={s.statusId} value={String(s.statusId)}>
+                          {s.statusId} — {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Brand">
+                  <Input value={brand} onChange={(e) => setBrand(e.target.value)} className="rounded-[8px]" />
+                </Field>
+                <Field label="Model">
+                  <Input value={model} onChange={(e) => setModel(e.target.value)} className="rounded-[8px]" />
+                </Field>
+                <Field label="Serial (serial_num)" required={kind === 'laptop'}>
+                  <Input
+                    value={serialNum}
+                    onChange={(e) => setSerialNum(e.target.value)}
+                    required={kind === 'laptop'}
+                    className="rounded-[8px]"
+                  />
+                </Field>
+                <Field label="Remarks">
+                  <Textarea
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    className="min-h-[72px] rounded-[8px]"
+                  />
+                </Field>
+              </div>
+            </section>
 
             {kind === 'laptop' && (
               <section className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Laptop columns</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Laptop</p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Category (e.g. laptop, desktop)">
-                    <Input value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-[8px]" />
+                  <Field label="Category" required>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger className="rounded-[8px]">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LAPTOP_CATEGORY_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </Field>
-                  <Field label="Part number">
+                  <Field label="Part number (part_number)">
                     <Input value={partNumber} onChange={(e) => setPartNumber(e.target.value)} className="rounded-[8px]" />
                   </Field>
                   <Field label="Processor">
@@ -308,18 +374,18 @@ function AssetForm({
 
             {kind === 'av' && (
               <section className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AV columns</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AV</p>
                 <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Legacy ID (asset_id_old)" required>
+                    <Input value={assetIdOld} onChange={(e) => setAssetIdOld(e.target.value)} required className="rounded-[8px]" />
+                  </Field>
                   <Field label="Category">
                     <Input
                       value={avCategory}
                       onChange={(e) => setAvCategory(e.target.value)}
-                      placeholder="display, projector, audio…"
+                      placeholder="display, projector…"
                       className="rounded-[8px]"
                     />
-                  </Field>
-                  <Field label="Legacy ID (asset_id_old)">
-                    <Input value={assetIdOld} onChange={(e) => setAssetIdOld(e.target.value)} className="rounded-[8px]" />
                   </Field>
                 </div>
               </section>
@@ -327,17 +393,19 @@ function AssetForm({
 
             {kind === 'network' && (
               <section className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Network columns</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Network</p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="MAC address">
+                  <Field label="MAC address (mac_address)">
                     <Input value={macAddress} onChange={(e) => setMacAddress(e.target.value)} className="rounded-[8px]" />
                   </Field>
-                  <Field label="IP address">
+                  <Field label="IP address (ip_address)">
                     <Input value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} className="rounded-[8px]" />
                   </Field>
                 </div>
               </section>
             )}
+
+            <PurchaseFieldsSection values={purchase} onChange={(patch) => setPurchase((p) => ({ ...p, ...patch }))} />
 
             <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" className="rounded-[8px]" asChild>
