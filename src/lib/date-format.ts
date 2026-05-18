@@ -60,3 +60,41 @@ export function formatIsoToDdMmYy(iso: string | Date | null | undefined): string
 export function isValidDdMmYy(raw: string): boolean {
   return parseDdMmYyToIso(raw) !== null;
 }
+
+const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Accept ISO (YYYY-MM-DD) or DDMMYY from legacy input; returns ISO for MySQL. */
+export function normalizeToIsoDate(raw: string): string | null {
+  const val = raw.trim();
+  if (!val) return null;
+  if (ISO_DATE_RE.test(val)) return val;
+  return parseDdMmYyToIso(val);
+}
+
+export function isoToLocalDate(iso: string): Date | undefined {
+  const normalized = normalizeToIsoDate(iso);
+  if (!normalized) return undefined;
+  const [y, m, d] = normalized.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) {
+    return undefined;
+  }
+  return date;
+}
+
+export function localDateToIso(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function formatDateLabel(iso: string): string {
+  const date = isoToLocalDate(iso);
+  if (!date) return iso;
+  return date.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}

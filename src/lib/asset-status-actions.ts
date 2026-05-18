@@ -28,10 +28,20 @@ export const STATUS_ID = {
 export type AssetStatusAction = {
   key: string;
   label: string;
-  targetStatusId: StatusId;
   icon: LucideIcon;
   /** Tailwind classes for icon button (outline-style, semantic color). */
   buttonClassName: string;
+  /** Direct status update (faulty, lost, etc.) */
+  mode: 'status';
+  targetStatusId: StatusId;
+} | {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  buttonClassName: string;
+  /** Open deploy / return form */
+  mode: 'navigate';
+  href: '/technician/deploy' | '/technician/return';
 };
 
 const actionBtn =
@@ -43,13 +53,15 @@ const LAPTOP_AV_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'deploy',
       label: 'Deploy',
-      targetStatusId: STATUS_ID.DEPLOY,
+      mode: 'navigate',
+      href: '/technician/deploy',
       icon: Truck,
       buttonClassName: `${actionBtn} border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200 dark:hover:bg-sky-900`,
     },
     {
       key: 'faulty',
       label: 'Mark faulty',
+      mode: 'status',
       targetStatusId: STATUS_ID.FAULTY,
       icon: AlertCircle,
       buttonClassName: `${actionBtn} border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900`,
@@ -57,6 +69,7 @@ const LAPTOP_AV_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'lost',
       label: 'Mark lost',
+      mode: 'status',
       targetStatusId: STATUS_ID.LOST,
       icon: PackageX,
       buttonClassName: `${actionBtn} border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900`,
@@ -64,6 +77,7 @@ const LAPTOP_AV_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'non-active',
       label: 'Set non-active',
+      mode: 'status',
       targetStatusId: STATUS_ID.NON_ACTIVE,
       icon: Archive,
       buttonClassName: `${actionBtn} border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800`,
@@ -73,6 +87,7 @@ const LAPTOP_AV_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'active',
       label: 'Activate',
+      mode: 'status',
       targetStatusId: STATUS_ID.ACTIVE,
       icon: Power,
       buttonClassName: `${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900`,
@@ -82,7 +97,8 @@ const LAPTOP_AV_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'return',
       label: 'Return',
-      targetStatusId: STATUS_ID.ACTIVE,
+      mode: 'navigate',
+      href: '/technician/return',
       icon: Reply,
       buttonClassName: `${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900`,
     },
@@ -91,6 +107,7 @@ const LAPTOP_AV_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'repair',
       label: 'Repair complete',
+      mode: 'status',
       targetStatusId: STATUS_ID.ACTIVE,
       icon: Hammer,
       buttonClassName: `${actionBtn} border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200 dark:hover:bg-violet-900`,
@@ -104,13 +121,15 @@ const NETWORK_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'deploy',
       label: 'Deploy',
-      targetStatusId: STATUS_ID.DEPLOY,
+      mode: 'navigate',
+      href: '/technician/deploy',
       icon: Truck,
       buttonClassName: `${actionBtn} border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200 dark:hover:bg-sky-900`,
     },
     {
       key: 'faulty',
       label: 'Mark faulty',
+      mode: 'status',
       targetStatusId: STATUS_ID.FAULTY,
       icon: AlertCircle,
       buttonClassName: `${actionBtn} border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900`,
@@ -118,6 +137,7 @@ const NETWORK_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'lost',
       label: 'Mark lost',
+      mode: 'status',
       targetStatusId: STATUS_ID.LOST,
       icon: PackageX,
       buttonClassName: `${actionBtn} border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900`,
@@ -125,6 +145,7 @@ const NETWORK_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'offline',
       label: 'Set offline',
+      mode: 'status',
       targetStatusId: STATUS_ID.OFFLINE,
       icon: SignalZero,
       buttonClassName: `${actionBtn} border-yellow-200 bg-yellow-50 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200 dark:hover:bg-yellow-900`,
@@ -134,6 +155,7 @@ const NETWORK_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'online',
       label: 'Set online',
+      mode: 'status',
       targetStatusId: STATUS_ID.ONLINE,
       icon: Signal,
       buttonClassName: `${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900`,
@@ -143,7 +165,8 @@ const NETWORK_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'return',
       label: 'Return',
-      targetStatusId: STATUS_ID.ONLINE,
+      mode: 'navigate',
+      href: '/technician/return',
       icon: PackageCheck,
       buttonClassName: `${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900`,
     },
@@ -152,6 +175,7 @@ const NETWORK_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
     {
       key: 'repair',
       label: 'Repair complete',
+      mode: 'status',
       targetStatusId: STATUS_ID.ONLINE,
       icon: Hammer,
       buttonClassName: `${actionBtn} border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200 dark:hover:bg-violet-900`,
@@ -169,5 +193,7 @@ export function isAllowedStatusTransition(
   fromStatusId: number,
   toStatusId: number,
 ): boolean {
-  return getAssetStatusActions(kind, fromStatusId).some((a) => a.targetStatusId === toStatusId);
+  return getAssetStatusActions(kind, fromStatusId).some(
+    (a) => a.mode === 'status' && a.targetStatusId === toStatusId,
+  );
 }
