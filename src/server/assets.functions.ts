@@ -5,6 +5,12 @@ import type {
   CreateLaptopInput,
   CreateNetworkInput,
 } from '@/lib/inventory-schema';
+import type { NextAssetIdRequest } from '@/server/asset-id.server';
+import type {
+  BulkAvImportRow,
+  BulkLaptopImportRow,
+  BulkNetworkImportRow,
+} from '@/server/assets-repo.server';
 
 export const listAssetsFn = createServerFn({ method: 'GET' })
   .inputValidator((kind: AssetKind) => kind)
@@ -53,4 +59,45 @@ export const bulkCreateNetworkFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: rows }) => {
     const { bulkCreateNetwork } = await import('@/server/assets-repo.server');
     return bulkCreateNetwork(rows);
+  });
+
+export const getNextAssetIdFn = createServerFn({ method: 'GET' })
+  .inputValidator((input: NextAssetIdRequest) => input)
+  .handler(async ({ data: input }) => {
+    const { getNextAssetIdFromDb } = await import('@/server/asset-id.server');
+    return getNextAssetIdFromDb(input);
+  });
+
+export const bulkCreateLaptopsImportFn = createServerFn({ method: 'POST' })
+  .inputValidator((rows: BulkLaptopImportRow[]) => rows)
+  .handler(async ({ data: rows }) => {
+    const { bulkCreateLaptopsWithGeneratedIds } = await import('@/server/assets-repo.server');
+    return bulkCreateLaptopsWithGeneratedIds(rows);
+  });
+
+export const bulkCreateAvImportFn = createServerFn({ method: 'POST' })
+  .inputValidator((rows: BulkAvImportRow[]) => rows)
+  .handler(async ({ data: rows }) => {
+    const { bulkCreateAvWithGeneratedIds } = await import('@/server/assets-repo.server');
+    return bulkCreateAvWithGeneratedIds(rows);
+  });
+
+export const bulkCreateNetworkImportFn = createServerFn({ method: 'POST' })
+  .inputValidator((rows: BulkNetworkImportRow[]) => rows)
+  .handler(async ({ data: rows }) => {
+    const { bulkCreateNetworkWithGeneratedIds } = await import('@/server/assets-repo.server');
+    return bulkCreateNetworkWithGeneratedIds(rows);
+  });
+
+export type UpdateAssetStatusInput = {
+  kind: AssetKind;
+  assetId: number;
+  statusId: number;
+};
+
+export const updateAssetStatusFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: UpdateAssetStatusInput) => input)
+  .handler(async ({ data: input }) => {
+    const { updateAssetStatus } = await import('@/server/assets-repo.server');
+    return updateAssetStatus(input.kind, input.assetId, input.statusId);
   });
