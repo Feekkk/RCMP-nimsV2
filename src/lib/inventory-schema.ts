@@ -14,7 +14,35 @@ export const ASSET_LIST_PATH: Record<AssetKind, string> = {
   network: '/technician/network',
 };
 
-/** status table seed rows from schema.sql */
+/** Columns shared by laptop, network, av (schema PO_* / purchase) */
+export const PURCHASE_FIELD_COLUMNS = [
+  'po_date',
+  'po_num',
+  'do_date',
+  'do_num',
+  'invoice_date',
+  'invoice_num',
+  'purchase_cost',
+] as const;
+
+export type PurchaseFields = {
+  poDate?: string | null;
+  poNum?: string | null;
+  doDate?: string | null;
+  doNum?: string | null;
+  invoiceDate?: string | null;
+  invoiceNum?: string | null;
+  purchaseCost?: number | null;
+};
+
+/** CSV / form fields marked required in schema COMMENT */
+/** asset_id omitted — auto-generated when CSV cell is blank (see assetid-flow.md). */
+export const BULK_IMPORT_REQUIRED: Record<AssetKind, readonly string[]> = {
+  laptop: ['serial_num', 'category', 'status_id'],
+  network: ['status_id'],
+  av: ['asset_id_old', 'status_id'],
+};
+
 export const INVENTORY_STATUSES = [
   { statusId: 1, name: 'active' },
   { statusId: 2, name: 'non-active' },
@@ -54,7 +82,7 @@ export type LaptopAsset = {
   gpu: string | null;
   statusId: number;
   remarks: string | null;
-};
+} & PurchaseFields;
 
 export type AvAsset = {
   kind: 'av';
@@ -66,7 +94,7 @@ export type AvAsset = {
   serialNum: string | null;
   statusId: number;
   remarks: string | null;
-};
+} & PurchaseFields;
 
 export type NetworkAsset = {
   kind: 'network';
@@ -78,14 +106,14 @@ export type NetworkAsset = {
   ipAddress: string | null;
   statusId: number;
   remarks: string | null;
-};
+} & PurchaseFields;
 
 export type CreateLaptopInput = {
   assetId: number;
-  serialNum?: string | null;
+  serialNum: string;
   brand?: string | null;
-  model: string;
-  category?: string | null;
+  model?: string | null;
+  category: string;
   partNumber?: string | null;
   processor?: string | null;
   memory?: string | null;
@@ -94,29 +122,29 @@ export type CreateLaptopInput = {
   gpu?: string | null;
   statusId: number;
   remarks?: string | null;
-};
+} & PurchaseFields;
 
 export type CreateAvInput = {
   assetId: number;
-  assetIdOld?: string | null;
+  assetIdOld: string;
   category?: string | null;
   brand?: string | null;
-  model: string;
+  model?: string | null;
   serialNum?: string | null;
   statusId: number;
   remarks?: string | null;
-};
+} & PurchaseFields;
 
 export type CreateNetworkInput = {
   assetId: number;
   serialNum?: string | null;
   brand?: string | null;
-  model: string;
+  model?: string | null;
   macAddress?: string | null;
   ipAddress?: string | null;
   statusId: number;
   remarks?: string | null;
-};
+} & PurchaseFields;
 
 export type AssetRecord = LaptopAsset | AvAsset | NetworkAsset;
 
@@ -133,13 +161,38 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
     'os',
     'storage',
     'gpu',
+    ...PURCHASE_FIELD_COLUMNS,
     'status_id',
     'remarks',
   ],
-  av: ['asset_id', 'category', 'brand', 'model', 'serial_num', 'asset_id_old', 'status_id', 'remarks'],
-  network: ['asset_id', 'serial_num', 'brand', 'model', 'mac_address', 'ip_address', 'status_id', 'remarks'],
+  av: [
+    'asset_id',
+    'asset_id_old',
+    'category',
+    'brand',
+    'model',
+    'serial_num',
+    ...PURCHASE_FIELD_COLUMNS,
+    'status_id',
+    'remarks',
+  ],
+  network: [
+    'asset_id',
+    'serial_num',
+    'brand',
+    'model',
+    'mac_address',
+    'ip_address',
+    ...PURCHASE_FIELD_COLUMNS,
+    'status_id',
+    'remarks',
+  ],
 };
 
 export function isActiveStatus(statusId: number): boolean {
   return statusId === 1;
+}
+
+export function isBulkImportRequiredColumn(kind: AssetKind, column: string): boolean {
+  return BULK_IMPORT_REQUIRED[kind].includes(column);
 }
