@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TechnicianReturnRouteImport } from './routes/technician/return'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
+import { Route as TechnicianDeployRouteImport } from './routes/technician/deploy'
 import { Route as TechnicianDashboardRouteImport } from './routes/technician/dashboard'
 import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bulk-import'
 import { Route as TechnicianAvRouteImport } from './routes/technician/av'
@@ -28,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicianReturnRoute = TechnicianReturnRouteImport.update({
+  id: '/technician/return',
+  path: '/technician/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianNetworkRoute = TechnicianNetworkRouteImport.update({
   id: '/technician/network',
   path: '/technician/network',
@@ -36,6 +43,11 @@ const TechnicianNetworkRoute = TechnicianNetworkRouteImport.update({
 const TechnicianLaptopRoute = TechnicianLaptopRouteImport.update({
   id: '/technician/laptop',
   path: '/technician/laptop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianDeployRoute = TechnicianDeployRouteImport.update({
+  id: '/technician/deploy',
+  path: '/technician/deploy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TechnicianDashboardRoute = TechnicianDashboardRouteImport.update({
@@ -66,8 +78,10 @@ export interface FileRoutesByFullPath {
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
+  '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/return': typeof TechnicianReturnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,8 +90,10 @@ export interface FileRoutesByTo {
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
+  '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/return': typeof TechnicianReturnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,8 +103,10 @@ export interface FileRoutesById {
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
   '/technician/dashboard': typeof TechnicianDashboardRoute
+  '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/return': typeof TechnicianReturnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -99,8 +117,10 @@ export interface FileRouteTypes {
     | '/technician/av'
     | '/technician/bulk-import'
     | '/technician/dashboard'
+    | '/technician/deploy'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/return'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,8 +129,10 @@ export interface FileRouteTypes {
     | '/technician/av'
     | '/technician/bulk-import'
     | '/technician/dashboard'
+    | '/technician/deploy'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/return'
   id:
     | '__root__'
     | '/'
@@ -119,8 +141,10 @@ export interface FileRouteTypes {
     | '/technician/av'
     | '/technician/bulk-import'
     | '/technician/dashboard'
+    | '/technician/deploy'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/return'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,8 +154,10 @@ export interface RootRouteChildren {
   TechnicianAvRoute: typeof TechnicianAvRoute
   TechnicianBulkImportRoute: typeof TechnicianBulkImportRoute
   TechnicianDashboardRoute: typeof TechnicianDashboardRoute
+  TechnicianDeployRoute: typeof TechnicianDeployRoute
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
+  TechnicianReturnRoute: typeof TechnicianReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -150,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technician/return': {
+      id: '/technician/return'
+      path: '/technician/return'
+      fullPath: '/technician/return'
+      preLoaderRoute: typeof TechnicianReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/network': {
       id: '/technician/network'
       path: '/technician/network'
@@ -162,6 +195,13 @@ declare module '@tanstack/react-router' {
       path: '/technician/laptop'
       fullPath: '/technician/laptop'
       preLoaderRoute: typeof TechnicianLaptopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/deploy': {
+      id: '/technician/deploy'
+      path: '/technician/deploy'
+      fullPath: '/technician/deploy'
+      preLoaderRoute: typeof TechnicianDeployRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/dashboard': {
@@ -202,8 +242,10 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianAvRoute: TechnicianAvRoute,
   TechnicianBulkImportRoute: TechnicianBulkImportRoute,
   TechnicianDashboardRoute: TechnicianDashboardRoute,
+  TechnicianDeployRoute: TechnicianDeployRoute,
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
+  TechnicianReturnRoute: TechnicianReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
