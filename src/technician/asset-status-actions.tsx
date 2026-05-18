@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ export function AssetStatusActions({
     return <span className="text-xs text-muted-foreground">—</span>;
   }
 
-  const handleAction = async (actionKey: string, targetStatusId: number, label: string) => {
+  const handleStatusAction = async (actionKey: string, targetStatusId: number, label: string) => {
     setPendingKey(actionKey);
     try {
       await onStatusChange(assetId, targetStatusId);
@@ -47,6 +48,31 @@ export function AssetStatusActions({
         {actions.map((action) => {
           const Icon = action.icon;
           const isPending = pendingKey === action.key;
+          const btnClass = `h-8 w-8 shrink-0 rounded-[8px] ${action.buttonClassName}`;
+
+          if (action.mode === 'navigate') {
+            return (
+              <Tooltip key={action.key}>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className={btnClass}
+                    disabled={disabled}
+                    aria-label={action.label}
+                    asChild
+                  >
+                    <Link to={action.href} search={{ kind, assetId }}>
+                      <Icon className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{action.label}</TooltipContent>
+              </Tooltip>
+            );
+          }
+
           return (
             <Tooltip key={action.key}>
               <TooltipTrigger asChild>
@@ -54,10 +80,12 @@ export function AssetStatusActions({
                   type="button"
                   size="icon"
                   variant="outline"
-                  className={`h-8 w-8 shrink-0 rounded-[8px] ${action.buttonClassName}`}
+                  className={btnClass}
                   disabled={disabled || pendingKey !== null}
                   aria-label={action.label}
-                  onClick={() => void handleAction(action.key, action.targetStatusId, action.label)}
+                  onClick={() =>
+                    void handleStatusAction(action.key, action.targetStatusId, action.label)
+                  }
                 >
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
                 </Button>
