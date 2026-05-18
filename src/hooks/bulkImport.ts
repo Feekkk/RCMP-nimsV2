@@ -1,13 +1,24 @@
 import { useCallback, useState } from 'react';
 import {
   BULK_IMPORT_COLUMNS,
+  BULK_IMPORT_REQUIRED,
   INVENTORY_STATUSES,
   type AssetKind,
   type CreateAvInput,
   type CreateLaptopInput,
   type CreateNetworkInput,
 } from '@/lib/inventory-schema';
-import { bulkCreateAvFn, bulkCreateLaptopsFn, bulkCreateNetworkFn } from '@/server/assets.functions';
+import { getLaptopAssetIdPrefix } from '@/hooks/assetid-generator';
+import { parsePurchaseFromRow } from '@/lib/purchase-field-utils';
+import {
+  bulkCreateAvImportFn,
+  bulkCreateLaptopsImportFn,
+  bulkCreateNetworkImportFn,
+} from '@/server/assets.functions';
+
+export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & { assetId?: number };
+export type BulkAvImportRow = Omit<CreateAvInput, 'assetId'> & { assetId?: number };
+export type BulkNetworkImportRow = Omit<CreateNetworkInput, 'assetId'> & { assetId?: number };
 
 export type BulkImportRowError = {
   row: number;
@@ -20,25 +31,25 @@ export type BulkImportPreview = {
   validCount: number;
   errorCount: number;
   errors: BulkImportRowError[];
-  laptopRows?: CreateLaptopInput[];
-  avRows?: CreateAvInput[];
-  networkRows?: CreateNetworkInput[];
+  laptopRows?: BulkLaptopImportRow[];
+  avRows?: BulkAvImportRow[];
+  networkRows?: BulkNetworkImportRow[];
 };
 
-export { BULK_IMPORT_COLUMNS };
+export { BULK_IMPORT_COLUMNS, BULK_IMPORT_REQUIRED };
 
 const VALID_STATUS_IDS = new Set(INVENTORY_STATUSES.map((s) => s.statusId));
 
 const MOCK_CSV: Record<AssetKind, string> = {
-  laptop: `asset_id,serial_num,brand,model,category,part_number,processor,memory,os,storage,gpu,status_id,remarks
-10001,DL-5450-001,Dell,Latitude 5450,laptop,,Intel i5-1345U,16GB,Windows 11,512GB,,1,HQ staging
-10002,HP-PD400-002,HP,ProDesk 400 G9,desktop,,Intel i5-13500,16GB,Windows 11,256GB,,1,Records floor 1`,
-  av: `asset_id,category,brand,model,serial_num,asset_id_old,status_id,remarks
-20001,display,Samsung,QM65C,SM-QM65-100,,1,Briefing B
-20002,projector,Epson,EB-L200F,EPS-L200F-88,,1,Training West`,
-  network: `asset_id,serial_num,brand,model,mac_address,ip_address,status_id,remarks
-30001,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,7,Rack 2
-30002,AP-505-442,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,7,Lobby East`,
+  laptop: `asset_id,serial_num,brand,model,category,part_number,processor,memory,os,storage,gpu,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks
+,DL-5450-001,Dell,Latitude 5450,Notebook,PN-5450,Intel i5-1345U,16GB,Windows 11,512GB,,150124,PO-2024-001,010224,DO-9001,100224,INV-7788,1299.00,1,HQ staging (auto 12-xx-xxx)
+,HP-PD400-002,HP,ProDesk 400 G9,Desktop AIO,,Intel i5-13500,16GB,Windows 11,256GB,,,,,,,,,1,Records floor 1 (auto 14-xx-xxx)`,
+  av: `asset_id,asset_id_old,category,brand,model,serial_num,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks
+,AV-LEG-001,display,Samsung,QM65C,SM-QM65-100,010623,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx)
+,AV-LEG-002,projector,Epson,EB-L200F,EPS-L200F-88,,,,,,,,,1,Training West`,
+  network: `asset_id,serial_num,brand,model,mac_address,ip_address,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks
+,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,100323,PO-NET-55,010423,DO-N-12,,,4500.00,7,Rack 2 (auto 24-xx-xxx)
+,AP-505-442,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,,,,,,,,7,Lobby East`,
 };
 
 function normalizeHeader(h: string) {
@@ -94,15 +105,22 @@ function parseStatusId(raw: string, row: number, errors: BulkImportRowError[]): 
 
 function requireCell(row: string[], index: number, name: string, rowNum: number, errors: BulkImportRowError[]) {
   const val = row[index]?.trim() ?? '';
-  if (!val) errors.push({ row: rowNum, message: `Missing ${name}` });
+  if (!val) errors.push({ row: rowNum, message: `Missing required column: ${name}` });
   return val;
 }
 
-function parseAssetId(raw: string, rowNum: number, errors: BulkImportRowError[]): number | null {
-  const n = Number(raw.trim());
-  if (!raw.trim() || Number.isNaN(n) || n <= 0) {
+/** Blank cell → auto-generate on import; otherwise use provided ID. */
+function parseOptionalAssetId(
+  raw: string,
+  rowNum: number,
+  errors: BulkImportRowError[],
+): number | undefined {
+  const val = raw?.trim() ?? '';
+  if (!val) return undefined;
+  const n = Number(val);
+  if (Number.isNaN(n) || n <= 0) {
     errors.push({ row: rowNum, message: 'Invalid asset_id' });
-    return null;
+    return undefined;
   }
   return n;
 }
@@ -124,6 +142,10 @@ function buildColumnIndex(headers: string[], expected: readonly string[], errors
   return index;
 }
 
+function rowHasErrors(errors: BulkImportRowError[], rowNum: number) {
+  return errors.some((e) => e.row === rowNum);
+}
+
 function parseLaptopRows(headers: string[], rows: string[][]) {
   const errors: BulkImportRowError[] = [];
   const col = buildColumnIndex(headers, BULK_IMPORT_COLUMNS.laptop, errors);
@@ -131,28 +153,42 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
     return { laptopRows: [] as CreateLaptopInput[], errors, validCount: 0, errorCount: 1 };
   }
 
-  const laptopRows: CreateLaptopInput[] = [];
+  const laptopRows: BulkLaptopImportRow[] = [];
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
-    const assetId = parseAssetId(requireCell(row, col.get('asset_id')!, 'asset_id', rowNum, errors), rowNum, errors);
+    const assetId = parseOptionalAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
+    const serialNum = requireCell(row, col.get('serial_num')!, 'serial_num', rowNum, errors);
+    const category = requireCell(row, col.get('category')!, 'category', rowNum, errors);
     const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
-    const model = requireCell(row, col.get('model')!, 'model', rowNum, errors);
+    const purchase = parsePurchaseFromRow(row, col, rowNum, errors);
 
-    if (errors.some((e) => e.row === rowNum) || assetId === null || statusId === null) return;
+    if (category) {
+      try {
+        getLaptopAssetIdPrefix(category);
+      } catch (e) {
+        errors.push({
+          row: rowNum,
+          message: e instanceof Error ? e.message : 'Invalid laptop category for asset ID',
+        });
+      }
+    }
+
+    if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
     laptopRows.push({
-      assetId,
-      serialNum: optionalCell(row, col.get('serial_num')!),
+      ...(assetId !== undefined ? { assetId } : {}),
+      serialNum,
       brand: optionalCell(row, col.get('brand')!),
-      model,
-      category: optionalCell(row, col.get('category')!),
+      model: optionalCell(row, col.get('model')!),
+      category,
       partNumber: optionalCell(row, col.get('part_number')!),
       processor: optionalCell(row, col.get('processor')!),
       memory: optionalCell(row, col.get('memory')!),
       os: optionalCell(row, col.get('os')!),
       storage: optionalCell(row, col.get('storage')!),
       gpu: optionalCell(row, col.get('gpu')!),
+      ...purchase,
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
     });
@@ -169,23 +205,25 @@ function parseAvRows(headers: string[], rows: string[][]) {
     return { avRows: [] as CreateAvInput[], errors, validCount: 0, errorCount: 1 };
   }
 
-  const avRows: CreateAvInput[] = [];
+  const avRows: BulkAvImportRow[] = [];
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
-    const assetId = parseAssetId(requireCell(row, col.get('asset_id')!, 'asset_id', rowNum, errors), rowNum, errors);
+    const assetId = parseOptionalAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
+    const assetIdOld = requireCell(row, col.get('asset_id_old')!, 'asset_id_old', rowNum, errors);
     const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
-    const model = requireCell(row, col.get('model')!, 'model', rowNum, errors);
+    const purchase = parsePurchaseFromRow(row, col, rowNum, errors);
 
-    if (errors.some((e) => e.row === rowNum) || assetId === null || statusId === null) return;
+    if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
     avRows.push({
-      assetId,
+      ...(assetId !== undefined ? { assetId } : {}),
+      assetIdOld,
       category: optionalCell(row, col.get('category')!),
       brand: optionalCell(row, col.get('brand')!),
-      model,
+      model: optionalCell(row, col.get('model')!),
       serialNum: optionalCell(row, col.get('serial_num')!),
-      assetIdOld: optionalCell(row, col.get('asset_id_old')!),
+      ...purchase,
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
     });
@@ -202,23 +240,24 @@ function parseNetworkRows(headers: string[], rows: string[][]) {
     return { networkRows: [] as CreateNetworkInput[], errors, validCount: 0, errorCount: 1 };
   }
 
-  const networkRows: CreateNetworkInput[] = [];
+  const networkRows: BulkNetworkImportRow[] = [];
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
-    const assetId = parseAssetId(requireCell(row, col.get('asset_id')!, 'asset_id', rowNum, errors), rowNum, errors);
+    const assetId = parseOptionalAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
     const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
-    const model = requireCell(row, col.get('model')!, 'model', rowNum, errors);
+    const purchase = parsePurchaseFromRow(row, col, rowNum, errors);
 
-    if (errors.some((e) => e.row === rowNum) || assetId === null || statusId === null) return;
+    if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
     networkRows.push({
-      assetId,
+      ...(assetId !== undefined ? { assetId } : {}),
       serialNum: optionalCell(row, col.get('serial_num')!),
       brand: optionalCell(row, col.get('brand')!),
-      model,
+      model: optionalCell(row, col.get('model')!),
       macAddress: optionalCell(row, col.get('mac_address')!),
       ipAddress: optionalCell(row, col.get('ip_address')!),
+      ...purchase,
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
     });
@@ -265,13 +304,13 @@ export function downloadCsvFile(filename: string, content: string) {
 
 export async function commitBulkImport(preview: BulkImportPreview): Promise<number> {
   if (preview.kind === 'laptop' && preview.laptopRows?.length) {
-    return bulkCreateLaptopsFn({ data: preview.laptopRows });
+    return bulkCreateLaptopsImportFn({ data: preview.laptopRows });
   }
   if (preview.kind === 'av' && preview.avRows?.length) {
-    return bulkCreateAvFn({ data: preview.avRows });
+    return bulkCreateAvImportFn({ data: preview.avRows });
   }
   if (preview.kind === 'network' && preview.networkRows?.length) {
-    return bulkCreateNetworkFn({ data: preview.networkRows });
+    return bulkCreateNetworkImportFn({ data: preview.networkRows });
   }
   return 0;
 }
@@ -322,5 +361,6 @@ export function useBulkImport() {
     getTemplate: getBulkImportTemplate,
     getMockCsv: getBulkImportMockCsv,
     columns: BULK_IMPORT_COLUMNS,
+    requiredColumns: BULK_IMPORT_REQUIRED,
   };
 }

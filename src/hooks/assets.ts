@@ -20,6 +20,7 @@ import {
   createLaptopFn,
   createNetworkFn,
   listAssetsFn,
+  updateAssetStatusFn,
 } from '@/server/assets.functions';
 
 export type {
@@ -97,7 +98,15 @@ export function useAssets<K extends AssetKind>(kind: K) {
     [kind, refetch],
   );
 
-  return { items, create, bulkCreate, isLoading, error, refetch };
+  const updateStatus = useCallback(
+    async (assetId: number, statusId: number) => {
+      await updateAssetStatusFn({ data: { kind, assetId, statusId } });
+      await refetch();
+    },
+    [kind, refetch],
+  );
+
+  return { items, create, bulkCreate, updateStatus, isLoading, error, refetch };
 }
 
 export function filterBySearch<
