@@ -24,6 +24,8 @@ const DASH = '/technician/dashboard' as const;
 const LAPTOP = '/technician/laptop' as const;
 const AV = '/technician/av' as const;
 const NETWORK = '/technician/network' as const;
+const REQUEST_ASSETS = '/technician/request-assets' as const;
+const REQUESTS = '/technician/requests' as const;
 
 const HASH = {
   dashboard: '',
@@ -117,6 +119,8 @@ function TechSideBarNav() {
   const laptopActive = pathname === '/technician/laptop';
   const avActive = pathname === '/technician/av';
   const networkActive = pathname === '/technician/network';
+  const requestAssetsActive = pathname === REQUEST_ASSETS;
+  const requestsActive = pathname === REQUESTS;
 
   return (
     <nav className="flex flex-col gap-1 p-3" aria-label="Technician navigation">
@@ -137,10 +141,10 @@ function TechSideBarNav() {
       </NavCollapsible>
 
       <NavCollapsible title="Request" icon={Inbox} defaultOpen>
-        <NavLink to={`${DASH}#${HASH.requestAssign}`} icon={UserPlus} active={h === HASH.requestAssign}>
+        <NavLink to={REQUEST_ASSETS} icon={UserPlus} active={requestAssetsActive}>
           Assign Assets
         </NavLink>
-        <NavLink to={`${DASH}#${HASH.requestUser}`} icon={ClipboardList} active={h === HASH.requestUser}>
+        <NavLink to={REQUESTS} icon={ClipboardList} active={requestsActive}>
           User Request
         </NavLink>
       </NavCollapsible>
