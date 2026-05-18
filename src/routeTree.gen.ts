@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TechnicianReturnRouteImport } from './routes/technician/return'
+import { Route as TechnicianRequestsRouteImport } from './routes/technician/requests'
+import { Route as TechnicianRequestViewRouteImport } from './routes/technician/request-view'
+import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
 import { Route as TechnicianDeployRouteImport } from './routes/technician/deploy'
@@ -33,6 +36,21 @@ const IndexRoute = IndexRouteImport.update({
 const TechnicianReturnRoute = TechnicianReturnRouteImport.update({
   id: '/technician/return',
   path: '/technician/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianRequestsRoute = TechnicianRequestsRouteImport.update({
+  id: '/technician/requests',
+  path: '/technician/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianRequestViewRoute = TechnicianRequestViewRouteImport.update({
+  id: '/technician/request-view',
+  path: '/technician/request-view',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianRequestAssetsRoute = TechnicianRequestAssetsRouteImport.update({
+  id: '/technician/request-assets',
+  path: '/technician/request-assets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TechnicianNetworkRoute = TechnicianNetworkRouteImport.update({
@@ -81,6 +99,9 @@ export interface FileRoutesByFullPath {
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/request-assets': typeof TechnicianRequestAssetsRoute
+  '/technician/request-view': typeof TechnicianRequestViewRoute
+  '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +114,9 @@ export interface FileRoutesByTo {
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/request-assets': typeof TechnicianRequestAssetsRoute
+  '/technician/request-view': typeof TechnicianRequestViewRoute
+  '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
 }
 export interface FileRoutesById {
@@ -106,6 +130,9 @@ export interface FileRoutesById {
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/request-assets': typeof TechnicianRequestAssetsRoute
+  '/technician/request-view': typeof TechnicianRequestViewRoute
+  '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +147,9 @@ export interface FileRouteTypes {
     | '/technician/deploy'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/request-assets'
+    | '/technician/request-view'
+    | '/technician/requests'
     | '/technician/return'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +162,9 @@ export interface FileRouteTypes {
     | '/technician/deploy'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/request-assets'
+    | '/technician/request-view'
+    | '/technician/requests'
     | '/technician/return'
   id:
     | '__root__'
@@ -144,6 +177,9 @@ export interface FileRouteTypes {
     | '/technician/deploy'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/request-assets'
+    | '/technician/request-view'
+    | '/technician/requests'
     | '/technician/return'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +193,9 @@ export interface RootRouteChildren {
   TechnicianDeployRoute: typeof TechnicianDeployRoute
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
+  TechnicianRequestAssetsRoute: typeof TechnicianRequestAssetsRoute
+  TechnicianRequestViewRoute: typeof TechnicianRequestViewRoute
+  TechnicianRequestsRoute: typeof TechnicianRequestsRoute
   TechnicianReturnRoute: typeof TechnicianReturnRoute
 }
 
@@ -181,6 +220,27 @@ declare module '@tanstack/react-router' {
       path: '/technician/return'
       fullPath: '/technician/return'
       preLoaderRoute: typeof TechnicianReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/requests': {
+      id: '/technician/requests'
+      path: '/technician/requests'
+      fullPath: '/technician/requests'
+      preLoaderRoute: typeof TechnicianRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/request-view': {
+      id: '/technician/request-view'
+      path: '/technician/request-view'
+      fullPath: '/technician/request-view'
+      preLoaderRoute: typeof TechnicianRequestViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/request-assets': {
+      id: '/technician/request-assets'
+      path: '/technician/request-assets'
+      fullPath: '/technician/request-assets'
+      preLoaderRoute: typeof TechnicianRequestAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/network': {
@@ -245,6 +305,9 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianDeployRoute: TechnicianDeployRoute,
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
+  TechnicianRequestAssetsRoute: TechnicianRequestAssetsRoute,
+  TechnicianRequestViewRoute: TechnicianRequestViewRoute,
+  TechnicianRequestsRoute: TechnicianRequestsRoute,
   TechnicianReturnRoute: TechnicianReturnRoute,
 }
 export const routeTree = rootRouteImport
