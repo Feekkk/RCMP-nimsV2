@@ -111,7 +111,7 @@ function LoginPage() {
           setLoginSuccessMessage(message);
           toast.success(message);
           window.setTimeout(() => {
-            void navigate({ to: '/' });
+            void navigate({ to: '/user/request' });
           }, LOGIN_SUCCESS_DELAY_MS);
         }
       } else {
