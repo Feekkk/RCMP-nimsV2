@@ -6,6 +6,7 @@ import {
   ClipboardList,
   History,
   Inbox,
+  ScrollText,
   Laptop,
   LayoutDashboard,
   Network,
@@ -26,6 +27,7 @@ const AV = '/technician/av' as const;
 const NETWORK = '/technician/network' as const;
 const REQUEST_ASSETS = '/technician/request-assets' as const;
 const REQUESTS = '/technician/requests' as const;
+const REQUEST_LOG = '/technician/request-log' as const;
 
 const HASH = {
   dashboard: '',
@@ -121,6 +123,7 @@ function TechSideBarNav() {
   const networkActive = pathname === '/technician/network';
   const requestAssetsActive = pathname === REQUEST_ASSETS;
   const requestsActive = pathname === REQUESTS;
+  const requestLogActive = pathname === REQUEST_LOG;
 
   return (
     <nav className="flex flex-col gap-1 p-3" aria-label="Technician navigation">
@@ -146,6 +149,9 @@ function TechSideBarNav() {
         </NavLink>
         <NavLink to={REQUESTS} icon={ClipboardList} active={requestsActive}>
           User Request
+        </NavLink>
+        <NavLink to={REQUEST_LOG} icon={ScrollText} active={requestLogActive}>
+          Request Log
         </NavLink>
       </NavCollapsible>
 
