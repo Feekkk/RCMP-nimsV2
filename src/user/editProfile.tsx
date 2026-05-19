@@ -1,0 +1,217 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { IdCard, Lock, Mail, Phone, User } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Toaster } from '@/components/ui/sonner';
+import {
+  clearAllSessions,
+  persistSession,
+  readUserSession,
+  type SessionUser,
+} from '@/lib/auth-session';
+import { getUserProfileFn, updateUserProfileFn } from '@/server/auth.functions';
+import { FormField } from '@/technician/deploy-return-fields';
+import { UserPageChrome } from '@/user/user-chrome';
+
+export function UserEditProfilePage() {
+  const navigate = useNavigate();
+  const [session, setSession] = useState<SessionUser | null>(readUserSession);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  useEffect(() => {
+    const user = readUserSession();
+    if (!user) {
+      void navigate({ to: '/login' });
+      return;
+    }
+    setSession(user);
+    void getUserProfileFn({ data: { staffId: user.staffId } })
+      .then((profile) => {
+        setFullName(profile.fullName);
+        setEmail(profile.email);
+        setPhone(profile.phone ?? '');
+      })
+      .catch((e) => {
+        toast.error(e instanceof Error ? e.message : 'Failed to load profile');
+        setFullName(user.fullName);
+        setEmail(user.email);
+        setPhone(user.phone ?? '');
+      })
+      .finally(() => setLoading(false));
+  }, [navigate]);
+
+  const handleSignOut = () => {
+    clearAllSessions();
+    void navigate({ to: '/login' });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session) return;
+
+    if (password && password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updated = await updateUserProfileFn({
+        data: {
+          staffId: session.staffId,
+          fullName: fullName.trim(),
+          email: email.trim(),
+          phone: phone.trim() || null,
+          password: password || undefined,
+        },
+      });
+      const nextSession: SessionUser = {
+        staffId: updated.staffId,
+        fullName: updated.fullName,
+        email: updated.email,
+        roleId: updated.roleId,
+        roleName: updated.roleName,
+        phone: updated.phone,
+      };
+      persistSession(nextSession);
+      setSession(nextSession);
+      setPassword('');
+      setConfirmPassword('');
+      toast.success('Profile updated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-screen bg-background">
+      <UserPageChrome session={session} onSignOut={handleSignOut} active="profile" />
+
+      <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Edit profile</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Update your account details.</p>
+        </div>
+
+        <Card className="rounded-[16px] border-border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">Account</CardTitle>
+            <CardDescription>User ID cannot be changed</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+            ) : (
+              <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+                <FormField label="User ID">
+                  <div className="relative">
+                    <IdCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={session.staffId}
+                      disabled
+                      className="rounded-[8px] bg-muted/50 pl-9"
+                    />
+                  </div>
+                </FormField>
+                <FormField label="Full name" required>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      className="rounded-[8px] pl-9"
+                    />
+                  </div>
+                </FormField>
+                <FormField label="Email" required>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      autoComplete="email"
+                      className="rounded-[8px] pl-9"
+                    />
+                  </div>
+                </FormField>
+                <FormField label="Phone">
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      autoComplete="tel"
+                      className="rounded-[8px] pl-9"
+                    />
+                  </div>
+                </FormField>
+
+                <div className="border-t border-border pt-4">
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Leave blank to keep your current password.
+                  </p>
+                  <FormField label="New password">
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        minLength={6}
+                        autoComplete="new-password"
+                        className="rounded-[8px] pl-9"
+                      />
+                    </div>
+                  </FormField>
+                  <FormField label="Confirm new password">
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        minLength={6}
+                        autoComplete="new-password"
+                        className="rounded-[8px] pl-9"
+                      />
+                    </div>
+                  </FormField>
+                </div>
+
+                <Button type="submit" className="w-full rounded-[8px]" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save changes'}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+      <Toaster />
+    </div>
+  );
+}
+
