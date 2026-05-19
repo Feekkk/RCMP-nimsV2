@@ -11,9 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UserRequestRouteImport } from './routes/user/request'
+import { Route as UserHistoryRouteImport } from './routes/user/history'
+import { Route as UserEditProfileRouteImport } from './routes/user/edit-profile'
 import { Route as TechnicianReturnRouteImport } from './routes/technician/return'
 import { Route as TechnicianRequestsRouteImport } from './routes/technician/requests'
 import { Route as TechnicianRequestViewRouteImport } from './routes/technician/request-view'
+import { Route as TechnicianRequestLogRouteImport } from './routes/technician/request-log'
 import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
@@ -33,6 +37,21 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UserRequestRoute = UserRequestRouteImport.update({
+  id: '/user/request',
+  path: '/user/request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserHistoryRoute = UserHistoryRouteImport.update({
+  id: '/user/history',
+  path: '/user/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserEditProfileRoute = UserEditProfileRouteImport.update({
+  id: '/user/edit-profile',
+  path: '/user/edit-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianReturnRoute = TechnicianReturnRouteImport.update({
   id: '/technician/return',
   path: '/technician/return',
@@ -46,6 +65,11 @@ const TechnicianRequestsRoute = TechnicianRequestsRouteImport.update({
 const TechnicianRequestViewRoute = TechnicianRequestViewRouteImport.update({
   id: '/technician/request-view',
   path: '/technician/request-view',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianRequestLogRoute = TechnicianRequestLogRouteImport.update({
+  id: '/technician/request-log',
+  path: '/technician/request-log',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TechnicianRequestAssetsRoute = TechnicianRequestAssetsRouteImport.update({
@@ -100,9 +124,13 @@ export interface FileRoutesByFullPath {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
+  '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
+  '/user/edit-profile': typeof UserEditProfileRoute
+  '/user/history': typeof UserHistoryRoute
+  '/user/request': typeof UserRequestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -115,9 +143,13 @@ export interface FileRoutesByTo {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
+  '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
+  '/user/edit-profile': typeof UserEditProfileRoute
+  '/user/history': typeof UserHistoryRoute
+  '/user/request': typeof UserRequestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -131,9 +163,13 @@ export interface FileRoutesById {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
+  '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
+  '/user/edit-profile': typeof UserEditProfileRoute
+  '/user/history': typeof UserHistoryRoute
+  '/user/request': typeof UserRequestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -148,9 +184,13 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/request-assets'
+    | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
+    | '/user/edit-profile'
+    | '/user/history'
+    | '/user/request'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -163,9 +203,13 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/request-assets'
+    | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
+    | '/user/edit-profile'
+    | '/user/history'
+    | '/user/request'
   id:
     | '__root__'
     | '/'
@@ -178,9 +222,13 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/request-assets'
+    | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
+    | '/user/edit-profile'
+    | '/user/history'
+    | '/user/request'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -194,9 +242,13 @@ export interface RootRouteChildren {
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
   TechnicianRequestAssetsRoute: typeof TechnicianRequestAssetsRoute
+  TechnicianRequestLogRoute: typeof TechnicianRequestLogRoute
   TechnicianRequestViewRoute: typeof TechnicianRequestViewRoute
   TechnicianRequestsRoute: typeof TechnicianRequestsRoute
   TechnicianReturnRoute: typeof TechnicianReturnRoute
+  UserEditProfileRoute: typeof UserEditProfileRoute
+  UserHistoryRoute: typeof UserHistoryRoute
+  UserRequestRoute: typeof UserRequestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -213,6 +265,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/request': {
+      id: '/user/request'
+      path: '/user/request'
+      fullPath: '/user/request'
+      preLoaderRoute: typeof UserRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/history': {
+      id: '/user/history'
+      path: '/user/history'
+      fullPath: '/user/history'
+      preLoaderRoute: typeof UserHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/edit-profile': {
+      id: '/user/edit-profile'
+      path: '/user/edit-profile'
+      fullPath: '/user/edit-profile'
+      preLoaderRoute: typeof UserEditProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/return': {
@@ -234,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/technician/request-view'
       fullPath: '/technician/request-view'
       preLoaderRoute: typeof TechnicianRequestViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/request-log': {
+      id: '/technician/request-log'
+      path: '/technician/request-log'
+      fullPath: '/technician/request-log'
+      preLoaderRoute: typeof TechnicianRequestLogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/request-assets': {
@@ -306,9 +386,13 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
   TechnicianRequestAssetsRoute: TechnicianRequestAssetsRoute,
+  TechnicianRequestLogRoute: TechnicianRequestLogRoute,
   TechnicianRequestViewRoute: TechnicianRequestViewRoute,
   TechnicianRequestsRoute: TechnicianRequestsRoute,
   TechnicianReturnRoute: TechnicianReturnRoute,
+  UserEditProfileRoute: UserEditProfileRoute,
+  UserHistoryRoute: UserHistoryRoute,
+  UserRequestRoute: UserRequestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
