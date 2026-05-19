@@ -137,3 +137,64 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthUserRo
   }
   return mapUser(created);
 }
+
+export type UpdateUserProfileInput = {
+  staffId: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  password?: string;
+};
+
+export async function getUserProfile(staffId: string): Promise<AuthUserRow> {
+  const row = await findUserByStaffId(staffId);
+  if (!row) throw new Error('User not found');
+  if (row.role_id !== ROLE_USER) {
+    throw new Error('Only user accounts can access this profile');
+  }
+  return mapUser(row);
+}
+
+export async function updateUserProfile(input: UpdateUserProfileInput): Promise<AuthUserRow> {
+  const staffId = input.staffId.trim();
+  const fullName = input.fullName.trim();
+  const email = input.email.trim().toLowerCase();
+  const phone = input.phone?.trim() || null;
+
+  if (!fullName || !email) {
+    throw new Error('Name and email are required');
+  }
+
+  const row = await findUserByStaffId(staffId);
+  if (!row) throw new Error('User not found');
+  if (row.role_id !== ROLE_USER) {
+    throw new Error('Only user accounts can update this profile');
+  }
+
+  if (input.password != null && input.password.length > 0 && input.password.length < 6) {
+    throw new Error('Password must be at least 6 characters');
+  }
+
+  const emailOwner = await findUserByEmail(email);
+  if (emailOwner && emailOwner.staff_id !== staffId) {
+    throw new Error('This email is already registered');
+  }
+
+  const pool = getDbPool();
+  if (input.password != null && input.password.length > 0) {
+    const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+    await pool.execute(
+      `UPDATE users SET full_name = ?, email = ?, phone = ?, password_hash = ? WHERE staff_id = ?`,
+      [fullName, email, phone, passwordHash, staffId],
+    );
+  } else {
+    await pool.execute(`UPDATE users SET full_name = ?, email = ?, phone = ? WHERE staff_id = ?`, [
+      fullName,
+      email,
+      phone,
+      staffId,
+    ]);
+  }
+
+  return getUserProfile(staffId);
+}

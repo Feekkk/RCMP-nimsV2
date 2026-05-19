@@ -1,8 +1,14 @@
 import { createServerFn } from '@tanstack/react-start';
 import type {
   AssignAssetToRequestInput,
+  ChangeBookedAssignmentInput,
+  CheckoutRequestAssignmentInput,
+  ReturnRequestAssignmentInput,
+  ReturnUserRequestInput,
   MarkAssetForRequestInput,
   MarkAssetsForRequestInput,
+  RejectUserRequestInput,
+  SubmitUserRequestInput,
 } from '@/lib/request-schema';
 
 export const listActiveForRequestPoolFn = createServerFn({ method: 'GET' }).handler(async () => {
@@ -30,6 +36,11 @@ export const listPendingRequestsFn = createServerFn({ method: 'GET' }).handler(a
   return listPendingRequests();
 });
 
+export const listRequestLogFn = createServerFn({ method: 'GET' }).handler(async () => {
+  const { listRequestLog } = await import('@/server/request-repo.server');
+  return listRequestLog();
+});
+
 export const markAssetForRequestFn = createServerFn({ method: 'POST' })
   .inputValidator((input: MarkAssetForRequestInput) => input)
   .handler(async ({ data: input }) => {
@@ -44,15 +55,67 @@ export const markAssetsForRequestFn = createServerFn({ method: 'POST' })
     return markAssetsForRequest(input.assets);
   });
 
-export const assignPoolAssetToRequestFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: AssignAssetToRequestInput) => input)
-  .handler(async ({ data: input }) => {
-    const { assignPoolAssetToRequest } = await import('@/server/request-repo.server');
-    await assignPoolAssetToRequest(input);
+export const listUserRequestHistoryFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { staffId: string }) => data)
+  .handler(async ({ data }) => {
+    const { listUserRequestHistory } = await import('@/server/request-repo.server');
+    return listUserRequestHistory(data.staffId);
   });
 
-/** @deprecated Use assignPoolAssetToRequestFn — asset must already be status 9 */
-export const assignAssetToRequestFn = assignPoolAssetToRequestFn;
+export const submitUserRequestFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: SubmitUserRequestInput) => input)
+  .handler(async ({ data: input }) => {
+    const { submitUserRequest } = await import('@/server/request-repo.server');
+    return submitUserRequest(input);
+  });
+
+export const bookPoolAssetToRequestFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: AssignAssetToRequestInput) => input)
+  .handler(async ({ data: input }) => {
+    const { bookPoolAssetToRequest } = await import('@/server/request-repo.server');
+    return bookPoolAssetToRequest(input);
+  });
+
+export const changeBookedAssignmentFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: ChangeBookedAssignmentInput) => input)
+  .handler(async ({ data: input }) => {
+    const { changeBookedAssignment } = await import('@/server/request-repo.server');
+    await changeBookedAssignment(input);
+  });
+
+export const checkoutRequestAssignmentFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: CheckoutRequestAssignmentInput) => input)
+  .handler(async ({ data: input }) => {
+    const { checkoutRequestAssignment } = await import('@/server/request-repo.server');
+    await checkoutRequestAssignment(input);
+  });
+
+export const returnRequestAssignmentFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: ReturnRequestAssignmentInput) => input)
+  .handler(async ({ data: input }) => {
+    const { returnRequestAssignment } = await import('@/server/request-repo.server');
+    await returnRequestAssignment(input);
+  });
+
+export const returnUserRequestFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: ReturnUserRequestInput) => input)
+  .handler(async ({ data: input }) => {
+    const { returnUserRequest } = await import('@/server/request-repo.server');
+    return returnUserRequest(input);
+  });
+
+export const rejectUserRequestFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: RejectUserRequestInput) => input)
+  .handler(async ({ data: input }) => {
+    const { rejectUserRequest } = await import('@/server/request-repo.server');
+    await rejectUserRequest(input);
+  });
+
+/** @deprecated Use bookPoolAssetToRequestFn */
+export const assignPoolAssetToRequestFn = bookPoolAssetToRequestFn;
+
+/** @deprecated Use bookPoolAssetToRequestFn */
+export const assignAssetToRequestFn = bookPoolAssetToRequestFn;
 
 /** @deprecated Use listActiveForRequestPoolFn */
 export const listAssignableAssetsFn = listActiveForRequestPoolFn;

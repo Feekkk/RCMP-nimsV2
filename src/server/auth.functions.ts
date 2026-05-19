@@ -28,3 +28,25 @@ export const registerUserFn = createServerFn({ method: 'POST' })
       phone: data.phone,
     });
   });
+
+export const getUserProfileFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { staffId: string }) => data)
+  .handler(async ({ data }) => {
+    const { getUserProfile } = await import('@/server/auth-repo.server');
+    return getUserProfile(data.staffId);
+  });
+
+export const updateUserProfileFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: {
+      staffId: string;
+      fullName: string;
+      email: string;
+      phone: string | null;
+      password?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { updateUserProfile } = await import('@/server/auth-repo.server');
+    return updateUserProfile(data);
+  });
