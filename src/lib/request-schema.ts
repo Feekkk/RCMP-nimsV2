@@ -1,5 +1,9 @@
 /** status_id 9 — active (request) */
 export const REQUEST_STATUS_ACTIVE = 9;
+/** status_id 10 — booked (request) */
+export const REQUEST_STATUS_BOOKED = 10;
+/** status_id 11 — checkout (request) */
+export const REQUEST_STATUS_CHECKOUT = 11;
 
 export type RequestAssignableKind = 'laptop' | 'av';
 
@@ -31,6 +35,8 @@ export type RequestItemRow = {
   requestItemId: number;
   assetType: string;
   quantity: number;
+  /** Assignments already returned for this line */
+  returnedCount: number;
 };
 
 export type RequestAssignmentRow = {
@@ -41,6 +47,46 @@ export type RequestAssignmentRow = {
   model: string | null;
   brand: string | null;
   assignedAt: string | null;
+  checkoutAt: string | null;
+  assetStatusId: number;
+};
+
+export type CheckoutRequestAssignmentInput = {
+  assignmentId: number;
+  checkedOutBy: string;
+};
+
+/** Matches `request_assignment.return_condition` / `returned_by` / `remarks` */
+export type ReturnRequestAssignmentInput = {
+  assignmentId: number;
+  returnedBy: string;
+  returnCondition: string;
+  remarks?: string | null;
+};
+
+/** Return all checked-out assets for a user request */
+export type ReturnUserRequestInput = {
+  requestId: number;
+  returnedBy: string;
+  returnCondition: string;
+  remarks?: string | null;
+};
+
+export type ReturnUserRequestResult = {
+  returned: number;
+};
+
+export type ChangeBookedAssignmentInput = {
+  assignmentId: number;
+  kind: RequestAssignableKind;
+  assetId: number;
+  changedBy: string;
+};
+
+export type RejectUserRequestInput = {
+  requestId: number;
+  rejectedBy: string;
+  rejectionReason: string;
 };
 
 export type PendingRequest = {
@@ -78,4 +124,96 @@ export type MarkAssetsForRequestInput = {
 export type MarkAssetsForRequestResult = {
   updated: number;
   errors: string[];
+};
+
+/** Schema comment: academic project/class, Official Event, Club/Society */
+export const REQUEST_PROGRAM_TYPES = [
+  'Academic project / class',
+  'Official Event',
+  'Club / Society',
+  'Other',
+] as const;
+
+export type RequestProgramType = (typeof REQUEST_PROGRAM_TYPES)[number];
+
+export type UserRequestItemDraft = {
+  id: string;
+  assetType: string;
+  quantity: number;
+};
+
+export type SubmitUserRequestInput = {
+  requestedBy: string;
+  borrowDate: string;
+  returnDate: string;
+  programType: string;
+  usageLocation: string;
+  reason: string | null;
+  termsAcceptedAt: string;
+  items: { assetType: string; quantity: number }[];
+};
+
+export type SubmitUserRequestResult = {
+  requestId: number;
+};
+
+export type UserRequestHistoryStatus =
+  | 'rejected'
+  | 'completed'
+  | 'in_use'
+  | 'preparing'
+  | 'submitted';
+
+/** Per category line — counts only, no asset identifiers */
+export type UserRequestItemProgress = {
+  requestItemId: number;
+  assetType: string;
+  quantity: number;
+  bookedCount: number;
+  checkedOutCount: number;
+  returnedCount: number;
+};
+
+export type UserRequestHistory = {
+  requestId: number;
+  borrowDate: string;
+  returnDate: string;
+  programType: string;
+  usageLocation: string;
+  reason: string | null;
+  createdAt: string;
+  status: UserRequestHistoryStatus;
+  rejectionReason: string | null;
+  items: UserRequestItemProgress[];
+};
+
+export type RequestLogAssignment = {
+  assignmentId: number;
+  requestItemId: number | null;
+  assetType: string | null;
+  kind: RequestAssignableKind;
+  assetId: number;
+  model: string | null;
+  brand: string | null;
+  assignedAt: string | null;
+  checkoutAt: string | null;
+  returnedAt: string | null;
+  returnCondition: string | null;
+  assetStatusId: number;
+};
+
+export type RequestLogEntry = {
+  requestId: number;
+  requesterName: string;
+  requestedBy: string;
+  borrowDate: string;
+  returnDate: string;
+  programType: string;
+  usageLocation: string;
+  reason: string | null;
+  createdAt: string;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  items: RequestItemRow[];
+  assignments: RequestLogAssignment[];
 };
