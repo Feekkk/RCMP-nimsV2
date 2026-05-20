@@ -857,7 +857,7 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
     });
   }
 
-  if (kind === 'laptop' || kind === 'network') {
+  if (kind === 'laptop' || kind === 'av' || kind === 'network') {
     const [disposals] = await pool.query<
       (RowDataPacket & {
         disposal_date: Date | string;
