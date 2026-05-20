@@ -26,6 +26,7 @@ import { Route as TechnicianDashboardRouteImport } from './routes/technician/das
 import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bulk-import'
 import { Route as TechnicianAvRouteImport } from './routes/technician/av'
 import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
+import { Route as TechnicianAssetKindAssetIdRouteImport } from './routes/technician/asset.$kind.$assetId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -112,6 +113,12 @@ const TechnicianAddAssetRoute = TechnicianAddAssetRouteImport.update({
   path: '/technician/add-asset',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicianAssetKindAssetIdRoute =
+  TechnicianAssetKindAssetIdRouteImport.update({
+    id: '/technician/asset/$kind/$assetId',
+    path: '/technician/asset/$kind/$assetId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,6 +158,7 @@ export interface FileRoutesByTo {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,6 +179,7 @@ export interface FileRoutesById {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/technician/asset/$kind/$assetId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/technician/asset/$kind/$assetId'
   id:
     | '__root__'
     | '/'
@@ -229,6 +241,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/technician/asset/$kind/$assetId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -249,6 +262,7 @@ export interface RootRouteChildren {
   UserEditProfileRoute: typeof UserEditProfileRoute
   UserHistoryRoute: typeof UserHistoryRoute
   UserRequestRoute: typeof UserRequestRoute
+  TechnicianAssetKindAssetIdRoute: typeof TechnicianAssetKindAssetIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -372,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianAddAssetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technician/asset/$kind/$assetId': {
+      id: '/technician/asset/$kind/$assetId'
+      path: '/technician/asset/$kind/$assetId'
+      fullPath: '/technician/asset/$kind/$assetId'
+      preLoaderRoute: typeof TechnicianAssetKindAssetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -393,6 +414,7 @@ const rootRouteChildren: RootRouteChildren = {
   UserEditProfileRoute: UserEditProfileRoute,
   UserHistoryRoute: UserHistoryRoute,
   UserRequestRoute: UserRequestRoute,
+  TechnicianAssetKindAssetIdRoute: TechnicianAssetKindAssetIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
