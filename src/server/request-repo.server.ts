@@ -24,6 +24,9 @@ import {
 import type {
   ChangeBookedAssignmentInput,
   CheckoutRequestAssignmentInput,
+  CheckoutUserRequestInput,
+  CheckoutUserRequestResult,
+  MarkRequestSlotUnavailableInput,
   RejectUserRequestInput,
   ReturnRequestAssignmentInput,
   ReturnUserRequestInput,
@@ -382,6 +385,66 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
   }
 }
 
+export async function markRequestSlotUnavailable(
+  input: MarkRequestSlotUnavailableInput,
+): Promise<number> {
+  const pool = getDbPool();
+
+  const [reqRows] = await pool.query<RowDataPacket[]>(
+    `SELECT request_id FROM request WHERE request_id = ? AND rejected_at IS NULL`,
+    [input.requestId],
+  );
+  if (!reqRows[0]) throw new Error('Request not found or was rejected');
+
+  const [itemRows] = await pool.query<RowDataPacket[]>(
+    `SELECT request_item_id FROM request_item WHERE request_item_id = ? AND request_id = ?`,
+    [input.requestItemId, input.requestId],
+  );
+  if (!itemRows[0]) throw new Error('Request line item not found');
+
+  const [result] = await pool.execute(
+    `INSERT INTO request_assignment
+      (request_id, request_item_id, asset_id, assigned_by, assigned_at, unavailable_at, remarks)
+     VALUES (?, ?, NULL, ?, NOW(), NOW(), ?)`,
+    [input.requestId, input.requestItemId, input.markedBy, input.remarks ?? null],
+  );
+  return (result as { insertId: number }).insertId;
+}
+
+export async function checkoutUserRequest(
+  input: CheckoutUserRequestInput,
+): Promise<CheckoutUserRequestResult> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<(RowDataPacket & { assignment_id: number })[]>(
+    `SELECT ra.assignment_id
+     FROM request_assignment ra
+     INNER JOIN request r ON r.request_id = ra.request_id
+     LEFT JOIN laptop l ON l.asset_id = ra.asset_id
+     LEFT JOIN av av ON av.asset_id = ra.asset_id
+     WHERE ra.request_id = ?
+       AND r.rejected_at IS NULL
+       AND ra.returned_at IS NULL
+       AND ra.unavailable_at IS NULL
+       AND ra.asset_id IS NOT NULL
+       AND ra.checkout_at IS NULL
+       AND COALESCE(l.status_id, av.status_id) = ?`,
+    [input.requestId, REQUEST_STATUS_BOOKED],
+  );
+
+  let checkedOut = 0;
+  for (const row of rows) {
+    await checkoutRequestAssignment({
+      assignmentId: row.assignment_id,
+      checkedOutBy: input.checkedOutBy,
+    });
+    checkedOut++;
+  }
+  if (checkedOut === 0) {
+    throw new Error('No booked assets to check out for this request');
+  }
+  return { checkedOut };
+}
+
 export async function checkoutRequestAssignment(
   input: CheckoutRequestAssignmentInput,
 ): Promise<void> {
@@ -656,38 +719,54 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
       (RowDataPacket & {
         assignment_id: number;
         request_item_id: number | null;
-        asset_id: number;
+        asset_id: number | null;
+        unavailable_at: Date | string | null;
         assigned_at: Date | string | null;
         checkout_at: Date | string | null;
         model: string | null;
         brand: string | null;
-        kind: string;
-        asset_status_id: number;
+        asset_type: string | null;
+        pool_kind: string | null;
+        asset_status_id: number | null;
       })[]
     >(
-      `SELECT ra.assignment_id, ra.request_item_id, ra.asset_id, ra.assigned_at, ra.checkout_at,
+      `SELECT ra.assignment_id, ra.request_item_id, ra.asset_id, ra.unavailable_at,
+              ra.assigned_at, ra.checkout_at,
               COALESCE(l.model, av.model) AS model,
               COALESCE(l.brand, av.brand) AS brand,
-              IF(l.asset_id IS NOT NULL, 'laptop', 'av') AS kind,
+              ri.asset_type,
+              IF(l.asset_id IS NOT NULL, 'laptop', IF(av.asset_id IS NOT NULL, 'av', NULL)) AS pool_kind,
               COALESCE(l.status_id, av.status_id) AS asset_status_id
        FROM request_assignment ra
+       LEFT JOIN request_item ri ON ri.request_item_id = ra.request_item_id
        LEFT JOIN laptop l ON l.asset_id = ra.asset_id
        LEFT JOIN av av ON av.asset_id = ra.asset_id
        WHERE ra.request_id = ? AND ra.returned_at IS NULL`,
       [h.request_id],
     );
 
-    const assignmentRows: RequestAssignmentRow[] = assignments.map((a) => ({
-      assignmentId: a.assignment_id,
-      requestItemId: a.request_item_id,
-      assetId: a.asset_id,
-      kind: a.kind === 'laptop' ? 'laptop' : 'av',
-      model: a.model,
-      brand: a.brand,
-      assignedAt: formatTs(a.assigned_at),
-      checkoutAt: formatTs(a.checkout_at),
-      assetStatusId: a.asset_status_id,
-    }));
+    const assignmentRows: RequestAssignmentRow[] = assignments.map((a) => {
+      const unavailable = a.unavailable_at != null || a.asset_id == null;
+      const kind: RequestAssignableKind =
+        a.pool_kind === 'laptop'
+          ? 'laptop'
+          : a.pool_kind === 'av'
+            ? 'av'
+            : requestItemKindFromAssetType(a.asset_type ?? 'av');
+
+      return {
+        assignmentId: a.assignment_id,
+        requestItemId: a.request_item_id,
+        assetId: a.asset_id,
+        kind,
+        model: a.model,
+        brand: a.brand,
+        assignedAt: formatTs(a.assigned_at),
+        checkoutAt: formatTs(a.checkout_at),
+        assetStatusId: unavailable ? 0 : (a.asset_status_id ?? 0),
+        unavailable,
+      };
+    });
 
     if (!requestNeedsTechnicianWork(itemRows, assignmentRows.length, returnedByItem)) {
       continue;

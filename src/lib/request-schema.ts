@@ -42,13 +42,31 @@ export type RequestItemRow = {
 export type RequestAssignmentRow = {
   assignmentId: number;
   requestItemId: number | null;
-  assetId: number;
+  assetId: number | null;
   kind: RequestAssignableKind;
   model: string | null;
   brand: string | null;
   assignedAt: string | null;
   checkoutAt: string | null;
+  /** Pool asset status; 0 when slot is unavailable (no asset). */
   assetStatusId: number;
+  unavailable: boolean;
+};
+
+export type MarkRequestSlotUnavailableInput = {
+  requestId: number;
+  requestItemId: number;
+  markedBy: string;
+  remarks?: string | null;
+};
+
+export type CheckoutUserRequestInput = {
+  requestId: number;
+  checkedOutBy: string;
+};
+
+export type CheckoutUserRequestResult = {
+  checkedOut: number;
 };
 
 export type CheckoutRequestAssignmentInput = {

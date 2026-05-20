@@ -55,12 +55,15 @@ import { TechnicianShell } from '@/technician/technician-shell';
 import {
   bookPoolAssetToRequestFn,
   changeBookedAssignmentFn,
-  checkoutRequestAssignmentFn,
+  checkoutUserRequestFn,
   listAvailablePoolAssetsFn,
   listPendingRequestsFn,
+  markRequestSlotUnavailableFn,
   rejectUserRequestFn,
   returnUserRequestFn,
 } from '@/server/request.functions';
+
+const UNAVAILABLE_PICK = 'unavailable';
 import { RequestReturnFields } from '@/technician/request-return-fields';
 
 function poolAssetLabel(a: RequestPoolAsset): string {
@@ -70,8 +73,20 @@ function poolAssetLabel(a: RequestPoolAsset): string {
 }
 
 function bookedAssetLabel(a: RequestAssignmentRow): string {
+  if (a.unavailable) return 'Unavailable';
   const kind = a.kind === 'laptop' ? 'Laptop' : 'AV';
-  return [kind, `#${a.assetId}`, a.model, a.brand].filter(Boolean).join(' · ');
+  return [kind, a.assetId != null ? `#${a.assetId}` : null, a.model, a.brand]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function bookedAwaitingCheckout(req: PendingRequest): RequestAssignmentRow[] {
+  return req.assignments.filter(
+    (a) =>
+      !a.unavailable &&
+      a.checkoutAt == null &&
+      a.assetStatusId === REQUEST_STATUS_BOOKED,
+  );
 }
 
 type KindGroup = {
@@ -158,7 +173,7 @@ export function TechnicianRequestPage() {
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<number | null>(null);
   const [bookingKey, setBookingKey] = useState<string | null>(null);
-  const [checkoutId, setCheckoutId] = useState<number | null>(null);
+  const [checkoutRequestId, setCheckoutRequestId] = useState<number | null>(null);
   const [changingAssignmentId, setChangingAssignmentId] = useState<number | null>(null);
   const [rejectRequestId, setRejectRequestId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -220,11 +235,6 @@ export function TechnicianRequestPage() {
       return;
     }
 
-    const [kind, idStr] = pick.split(':');
-    const assetId = Number(idStr);
-    if ((kind !== 'laptop' && kind !== 'av') || Number.isNaN(assetId)) return;
-    if (kind !== group.kind) return;
-
     const session = readTechnicianSession();
     if (!session?.staffId) {
       toast.error('Technician session required');
@@ -232,6 +242,32 @@ export function TechnicianRequestPage() {
     }
 
     const key = `${req.requestId}-${group.kind}`;
+    if (pick === UNAVAILABLE_PICK) {
+      setBookingKey(key);
+      try {
+        await markRequestSlotUnavailableFn({
+          data: {
+            requestId: req.requestId,
+            requestItemId: item.requestItemId,
+            markedBy: session.staffId,
+            remarks: null,
+          },
+        });
+        toast.success(`${group.label} slot marked unavailable`);
+        await load();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not mark unavailable');
+      } finally {
+        setBookingKey(null);
+      }
+      return;
+    }
+
+    const [kind, idStr] = pick.split(':');
+    const assetId = Number(idStr);
+    if ((kind !== 'laptop' && kind !== 'av') || Number.isNaN(assetId)) return;
+    if (kind !== group.kind) return;
+
     setBookingKey(key);
     try {
       await bookPoolAssetToRequestFn({
@@ -257,7 +293,7 @@ export function TechnicianRequestPage() {
     assignment: RequestAssignmentRow,
     pick: string,
   ) => {
-    if (!pick) return;
+    if (!pick || assignment.unavailable) return;
     const current = `${assignment.kind}:${assignment.assetId}`;
     if (pick === current) return;
 
@@ -290,23 +326,30 @@ export function TechnicianRequestPage() {
     }
   };
 
-  const handleCheckout = async (assignmentId: number) => {
+  const handleCheckoutRequest = async (req: PendingRequest) => {
     const session = readTechnicianSession();
     if (!session?.staffId) {
       toast.error('Technician session required');
       return;
     }
-    setCheckoutId(assignmentId);
+    const toCheckout = bookedAwaitingCheckout(req);
+    if (toCheckout.length === 0) {
+      toast.error('No booked assets to check out');
+      return;
+    }
+    setCheckoutRequestId(req.requestId);
     try {
-      await checkoutRequestAssignmentFn({
-        data: { assignmentId, checkedOutBy: session.staffId },
+      const result = await checkoutUserRequestFn({
+        data: { requestId: req.requestId, checkedOutBy: session.staffId },
       });
-      toast.success(`Checked out (status ${REQUEST_STATUS_CHECKOUT})`);
+      toast.success(
+        `Checked out ${result.checkedOut} asset${result.checkedOut === 1 ? '' : 's'} (status ${REQUEST_STATUS_CHECKOUT})`,
+      );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Checkout failed');
     } finally {
-      setCheckoutId(null);
+      setCheckoutRequestId(null);
     }
   };
 
@@ -397,6 +440,7 @@ export function TechnicianRequestPage() {
     const totalCheckedOut = req.assignments.filter((a) => a.checkoutAt != null).length;
     const totalReturned = req.items.reduce((n, i) => n + i.returnedCount, 0);
     const awaitingReturn = checkedOutAwaitingReturn(req);
+    const toCheckout = bookedAwaitingCheckout(req);
 
     return (
       <Collapsible
@@ -448,7 +492,6 @@ export function TechnicianRequestPage() {
                   <TableHead className="w-[min(180px,28%)]">Category</TableHead>
                   <TableHead>Asset</TableHead>
                   <TableHead className="w-28">Status</TableHead>
-                  <TableHead className="w-36 text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -492,7 +535,11 @@ export function TechnicianRequestPage() {
                         {line.lineKind === 'assignment' && a ? (
                           <>
                             <TableCell>
-                              {!isCheckedOut && a.assetStatusId === REQUEST_STATUS_BOOKED ? (
+                              {a.unavailable ? (
+                                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                  Unavailable
+                                </span>
+                              ) : !isCheckedOut && a.assetStatusId === REQUEST_STATUS_BOOKED ? (
                                 <Select
                                   value={`${a.kind}:${a.assetId}`}
                                   disabled={
@@ -533,29 +580,19 @@ export function TechnicianRequestPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <AssetStatusBadge statusId={a.assetStatusId} />
-                              {isCheckedOut && a.checkoutAt && (
-                                <p className="mt-0.5 text-[10px] text-muted-foreground">
-                                  {new Date(a.checkoutAt).toLocaleString()}
-                                </p>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {!isCheckedOut && a.assetStatusId === REQUEST_STATUS_BOOKED ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  className="h-7 rounded-[6px] text-xs"
-                                  disabled={
-                                    changingAssignmentId === a.assignmentId ||
-                                    checkoutId === a.assignmentId
-                                  }
-                                  onClick={() => void handleCheckout(a.assignmentId)}
-                                >
-                                  {checkoutId === a.assignmentId ? 'Checking out…' : 'Checkout'}
-                                </Button>
+                              {a.unavailable ? (
+                                <Badge variant="outline" className="rounded-[6px] text-[10px]">
+                                  Unavailable
+                                </Badge>
                               ) : (
-                                '—'
+                                <>
+                                  <AssetStatusBadge statusId={a.assetStatusId} />
+                                  {isCheckedOut && a.checkoutAt && (
+                                    <p className="mt-0.5 text-[10px] text-muted-foreground">
+                                      {new Date(a.checkoutAt).toLocaleString()}
+                                    </p>
+                                  )}
+                                </>
                               )}
                             </TableCell>
                           </>
@@ -563,7 +600,7 @@ export function TechnicianRequestPage() {
                               <>
                                 <TableCell>
                                   <Select
-                                    disabled={bookingKey === bookKey || options.length === 0}
+                                    disabled={bookingKey === bookKey}
                                     onValueChange={(v) => void handleBookOnSelect(req, group, v)}
                                   >
                                     <SelectTrigger className="h-8 max-w-md rounded-[6px] text-xs">
@@ -571,19 +608,20 @@ export function TechnicianRequestPage() {
                                         placeholder={
                                           bookingKey === bookKey
                                             ? 'Booking…'
-                                            : options.length === 0
-                                              ? `No ${group.label} assets in pool`
-                                              : 'Select asset to book…'
+                                            : 'Select asset or unavailable…'
                                         }
                                       />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {options.map((a) => (
+                                      <SelectItem value={UNAVAILABLE_PICK}>
+                                        Unavailable (no asset in pool)
+                                      </SelectItem>
+                                      {options.map((poolAsset) => (
                                         <SelectItem
-                                          key={`${a.kind}-${a.assetId}`}
-                                          value={`${a.kind}:${a.assetId}`}
+                                          key={`${poolAsset.kind}-${poolAsset.assetId}`}
+                                          value={`${poolAsset.kind}:${poolAsset.assetId}`}
                                         >
-                                          {poolAssetLabel(a)}
+                                          {poolAssetLabel(poolAsset)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -592,7 +630,6 @@ export function TechnicianRequestPage() {
                                 <TableCell>
                                   <span className="text-xs text-muted-foreground">Unassigned</span>
                                 </TableCell>
-                                <TableCell />
                               </>
                         )}
                       </TableRow>
@@ -624,11 +661,24 @@ export function TechnicianRequestPage() {
                 Return request ({awaitingReturn.length})
               </Button>
             )}
+            {toCheckout.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 rounded-[8px]"
+                disabled={checkoutRequestId === req.requestId}
+                onClick={() => void handleCheckoutRequest(req)}
+              >
+                {checkoutRequestId === req.requestId
+                  ? 'Checking out…'
+                  : `Checkout request (${toCheckout.length})`}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="gap-1.5 rounded-[8px] border-rose-200 text-rose-700 hover:bg-rose-50"
+              className="gap-1.5 rounded-[8px] border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950"
               onClick={() => {
                 setRejectRequestId(req.requestId);
                 setRejectReason('');
@@ -649,7 +699,7 @@ export function TechnicianRequestPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">User requests</h1>
           <p className="mt-1 max-w-xl text-xs text-muted-foreground sm:text-sm">
-            One table per request — book assets, then use Checkout or Return on each row.
+            Book assets or mark slots unavailable, then checkout or return the whole request.
           </p>
         </div>
         <Button variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-[8px]" asChild>
@@ -675,8 +725,8 @@ export function TechnicianRequestPage() {
           <CardTitle className="text-base">Pending requests</CardTitle>
           <CardDescription>
             {pool.length} asset{pool.length === 1 ? '' : 's'} in pool (status {REQUEST_STATUS_ACTIVE})
-            · <span className="font-medium">Checkout</span> per row,{' '}
-            <span className="font-medium">Return request</span> when all items are checked out
+            · <span className="font-medium">Checkout request</span> checks out all booked assets ·{' '}
+            <span className="font-medium">Return request</span> when items are checked out
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

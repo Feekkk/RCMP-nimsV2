@@ -3,6 +3,8 @@ import type {
   AssignAssetToRequestInput,
   ChangeBookedAssignmentInput,
   CheckoutRequestAssignmentInput,
+  CheckoutUserRequestInput,
+  MarkRequestSlotUnavailableInput,
   ReturnRequestAssignmentInput,
   ReturnUserRequestInput,
   MarkAssetForRequestInput,
@@ -88,6 +90,20 @@ export const checkoutRequestAssignmentFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: input }) => {
     const { checkoutRequestAssignment } = await import('@/server/request-repo.server');
     await checkoutRequestAssignment(input);
+  });
+
+export const checkoutUserRequestFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: CheckoutUserRequestInput) => input)
+  .handler(async ({ data: input }) => {
+    const { checkoutUserRequest } = await import('@/server/request-repo.server');
+    return checkoutUserRequest(input);
+  });
+
+export const markRequestSlotUnavailableFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: MarkRequestSlotUnavailableInput) => input)
+  .handler(async ({ data: input }) => {
+    const { markRequestSlotUnavailable } = await import('@/server/request-repo.server');
+    return markRequestSlotUnavailable(input);
   });
 
 export const returnRequestAssignmentFn = createServerFn({ method: 'POST' })
