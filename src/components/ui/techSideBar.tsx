@@ -190,8 +190,8 @@ const TechSideBar = React.forwardRef<HTMLElement, TechSideBarProps>(function Tec
   const inner = (
     <>
       <div className="shrink-0 border-b border-border px-4 py-4">
-        <NimsLogo size="sm" variant="light" />
-        <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Technician</p>
+        <NimsLogo size="sm" variant="light" className="mx-auto" />
+        <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground text-center">Technical officer</p>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <TechSideBarNav />

@@ -29,7 +29,7 @@ export function TechnicianLaptopPage() {
 		<TechnicianShell>
 			<div className="mb-5 flex flex-col gap-1 sm:mb-6">
 				<h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Laptop &amp; desktop</h1>
-				<p className="text-xs text-muted-foreground sm:text-sm">From MySQL table `laptop`</p>
+				<p className="text-xs text-muted-foreground sm:text-sm">Fetch from system database</p>
 			</div>
 
 			<AssetStockSummary items={items} />
@@ -49,7 +49,7 @@ export function TechnicianLaptopPage() {
 
 			{error && (
 				<p className="mb-4 text-sm text-destructive">
-					{error} — check MySQL is running and `.env` matches database/schema.sql
+					{error} — check system database is running and `.env` matches database/schema.sql
 				</p>
 			)}
 

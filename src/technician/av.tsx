@@ -29,7 +29,7 @@ export function TechnicianAvPage() {
     <TechnicianShell>
       <div className="mb-5 flex flex-col gap-1 sm:mb-6">
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">AV equipment</h1>
-        <p className="text-xs text-muted-foreground sm:text-sm">From MySQL table `av`</p>
+        <p className="text-xs text-muted-foreground sm:text-sm">Fetch from system database</p>
       </div>
 
       <AssetStockSummary items={items} />
