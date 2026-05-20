@@ -29,13 +29,13 @@ const REQUEST_ASSETS = '/technician/request-assets' as const;
 const REQUESTS = '/technician/requests' as const;
 const REQUEST_LOG = '/technician/request-log' as const;
 const DISPOSAL = '/technician/disposal' as const;
+const HISTORY = '/technician/history' as const;
 
 const HASH = {
   dashboard: '',
   inventoryNetwork: 'inventory-network',
   requestAssign: 'request-assign-assets',
   requestUser: 'request-user',
-  history: 'history',
   manual: 'manual',
   profile: 'profile',
 } as const;
@@ -162,7 +162,11 @@ function TechSideBarNav() {
       >
         Disposal
       </NavLink>
-      <NavLink to={`${DASH}#${HASH.history}`} icon={History} active={h === HASH.history}>
+      <NavLink
+        to={HISTORY}
+        icon={History}
+        active={pathname === HISTORY || pathname.startsWith(`${HISTORY}/`)}
+      >
         History
       </NavLink>
       <NavLink to={`${DASH}#${HASH.manual}`} icon={BookOpen} active={h === HASH.manual}>
