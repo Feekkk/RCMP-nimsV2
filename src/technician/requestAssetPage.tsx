@@ -153,7 +153,7 @@ export function TechnicianRequestAssetPage() {
       <Card className="rounded-[14px] border-border shadow-sm">
         <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
           <div>
-            <CardTitle className="text-base">Active assets (status 1)</CardTitle>
+            <CardTitle className="text-base">Active assets</CardTitle>
             <CardDescription>
               {filtered.length} shown · {assets.length} total
             </CardDescription>

@@ -95,7 +95,7 @@ export function TechnicianRequestViewPage() {
         <CardHeader className="flex flex-col gap-3 pb-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-base">Request pool (status {REQUEST_STATUS_ACTIVE})</CardTitle>
+              <CardTitle className="text-base">Request pool</CardTitle>
               <CardDescription>
                 {filtered.length} shown · {assets.length} total in pool
               </CardDescription>

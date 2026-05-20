@@ -1,5 +1,6 @@
-import { useMemo, useState, type ElementType } from 'react';
-import { PackageCheck, PackageX, Search, Server } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { PackageCheck, Search, Server } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,41 +15,15 @@ import { TechnicianShell } from '@/technician/technician-shell';
 import { AssetStatusActions } from '@/technician/asset-status-actions';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
-import { countActiveAssets, filterBySearch, useAssets } from '@/hooks/assets';
-
-function StockCountCard({
-  icon: Icon,
-  label,
-  value,
-  tint,
-}: {
-  icon: ElementType;
-  label: string;
-  value: number;
-  tint: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${tint}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="text-xl font-bold tabular-nums text-foreground">{value}</p>
-      </div>
-    </div>
-  );
-}
+import { filterBySearch, useAssets } from '@/hooks/assets';
+import { AssetStockSummary } from '@/technician/asset-stock-summary';
 
 export function TechnicianNetworkPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const { items, isLoading, error, updateStatus } = useAssets('network');
 
-  const { otherCount, filtered } = useMemo(() => {
-    const filteredList = filterBySearch(items, search, (item) => item.ipAddress ?? '');
-    const { active, other } = countActiveAssets(items);
-    return { activeCount: active, otherCount: other, filtered: filteredList };
-  }, [items, search]);
+  const filtered = useMemo(() => filterBySearch(items, search, (item) => item.ipAddress ?? ''), [items, search]);
 
   return (
     <TechnicianShell>
@@ -57,20 +32,7 @@ export function TechnicianNetworkPage() {
         <p className="text-xs text-muted-foreground sm:text-sm">From MySQL table `network`</p>
       </div>
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:mb-6">
-        <StockCountCard
-          icon={PackageCheck}
-          label="Online (status_id 7)"
-          value={items.filter((i) => i.statusId === 7).length}
-          tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-        />
-        <StockCountCard
-          icon={PackageX}
-          label="Other statuses"
-          value={otherCount}
-          tint="bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200"
-        />
-      </div>
+      <AssetStockSummary items={items} />
 
       <div className="mb-4 flex items-center justify-between">
         <div className="relative w-full sm:max-w-sm">
@@ -117,9 +79,25 @@ export function TechnicianNetworkPage() {
                   </TableRow>
                 ) : (
                   filtered.map((item) => (
-                    <TableRow key={item.assetId} className="hover:bg-muted/50">
+                    <TableRow
+                      key={item.assetId}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() =>
+                        void navigate({
+                          to: '/technician/asset/$kind/$assetId',
+                          params: { kind: 'network', assetId: item.assetId },
+                        })
+                      }
+                    >
                       <TableCell>
-                        <code className="text-xs">{item.assetId}</code>
+                        <Link
+                          to="/technician/asset/$kind/$assetId"
+                          params={{ kind: 'network', assetId: item.assetId }}
+                          className="text-primary underline-offset-2 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <code className="text-xs">{item.assetId}</code>
+                        </Link>
                       </TableCell>
                       <TableCell className="font-medium text-foreground">
                         <span className="inline-flex items-center gap-1.5">
@@ -133,7 +111,7 @@ export function TechnicianNetworkPage() {
                       <TableCell>
                         <AssetStatusBadge statusId={item.statusId} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <AssetStatusActions
                           kind="network"
                           assetId={item.assetId}
