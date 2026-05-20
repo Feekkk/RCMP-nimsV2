@@ -3,7 +3,8 @@ import {
   ASSET_KIND_LABEL,
   ASSET_LIST_PATH,
   formatStatusLabel,
-  isActiveStatus,
+  isInstockStatus,
+  isOutstockStatus,
   type AssetKind,
   type AvAsset,
   type CreateAvInput,
@@ -32,7 +33,7 @@ export type {
   LaptopAsset,
   NetworkAsset,
 };
-export { ASSET_KIND_LABEL, ASSET_LIST_PATH, formatStatusLabel, isActiveStatus };
+export { ASSET_KIND_LABEL, ASSET_LIST_PATH, formatStatusLabel, isInstockStatus, isOutstockStatus };
 
 type AssetByKind = {
   laptop: LaptopAsset[];
@@ -130,9 +131,9 @@ export function filterBySearch<
   });
 }
 
-export function countActiveAssets<T extends { statusId: number }>(items: T[]) {
+export function countStockAssets<T extends { statusId: number }>(items: T[]) {
   return {
-    active: items.filter((i) => isActiveStatus(i.statusId)).length,
-    other: items.filter((i) => !isActiveStatus(i.statusId)).length,
+    instock: items.filter((i) => isInstockStatus(i.statusId)).length,
+    outstock: items.filter((i) => isOutstockStatus(i.statusId)).length,
   };
 }

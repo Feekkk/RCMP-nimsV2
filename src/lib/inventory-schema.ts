@@ -148,6 +148,27 @@ export type CreateNetworkInput = {
 
 export type AssetRecord = LaptopAsset | AvAsset | NetworkAsset;
 
+export type AssetTrailEvent = {
+  at: string;
+  sortKey: number;
+  category: string;
+  title: string;
+  detail: string | null;
+};
+
+export type AssetDetailMeta = {
+  statusName: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type AssetDetail = AssetRecord & AssetDetailMeta;
+
+export type AssetDetailResponse = {
+  asset: AssetDetail;
+  trails: AssetTrailEvent[];
+};
+
 export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
   laptop: [
     'asset_id',
@@ -189,8 +210,30 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
   ],
 };
 
+/** In stock — available in inventory / request pool (not deployed, lost, or disposed). */
+export const INSTOCK_STATUS_IDS = [1, 2, 4, 7, 8, 9, 10] as const;
+
+/** Out of stock — deployed, disposed, lost, or checked out to a user. */
+export const OUTSTOCK_STATUS_IDS = [3, 5, 6, 11] as const;
+
+const INSTOCK_SET = new Set<number>(INSTOCK_STATUS_IDS);
+const OUTSTOCK_SET = new Set<number>(OUTSTOCK_STATUS_IDS);
+
+export function isInstockStatus(statusId: number): boolean {
+  return INSTOCK_SET.has(statusId);
+}
+
+export function isOutstockStatus(statusId: number): boolean {
+  return OUTSTOCK_SET.has(statusId);
+}
+
+/** @deprecated Use isInstockStatus — kept for callers that meant status_id 1 only */
 export function isActiveStatus(statusId: number): boolean {
   return statusId === 1;
+}
+
+export function assetViewPath(kind: AssetKind, assetId: number): string {
+  return `/technician/asset/${kind}/${assetId}`;
 }
 
 export function isBulkImportRequiredColumn(kind: AssetKind, column: string): boolean {

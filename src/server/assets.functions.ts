@@ -101,3 +101,12 @@ export const updateAssetStatusFn = createServerFn({ method: 'POST' })
     const { updateAssetStatus } = await import('@/server/assets-repo.server');
     return updateAssetStatus(input.kind, input.assetId, input.statusId);
   });
+
+export type GetAssetDetailInput = { kind: AssetKind; assetId: number };
+
+export const getAssetDetailFn = createServerFn({ method: 'GET' })
+  .inputValidator((input: GetAssetDetailInput) => input)
+  .handler(async ({ data: input }) => {
+    const { getAssetDetail } = await import('@/server/assets-repo.server');
+    return getAssetDetail(input.kind, input.assetId);
+  });
