@@ -2,23 +2,39 @@ import { useCallback, useState } from 'react';
 import {
   BULK_IMPORT_COLUMNS,
   BULK_IMPORT_REQUIRED,
+  BULK_IMPORT_STATUS_DEPLOY,
   INVENTORY_STATUSES,
+  bulkImportDeployColumns,
+  bulkImportDeployRequiredColumns,
   type AssetKind,
+  type BulkLaptopHandoverImport,
+  type BulkPlaceDeploymentImport,
   type CreateAvInput,
   type CreateLaptopInput,
   type CreateNetworkInput,
 } from '@/lib/inventory-schema';
 import { getLaptopAssetIdPrefix } from '@/hooks/assetid-generator';
-import { parsePurchaseFromRow } from '@/lib/purchase-field-utils';
+import { parseOptionalDate, parsePurchaseFromRow } from '@/lib/purchase-field-utils';
 import {
   bulkCreateAvImportFn,
   bulkCreateLaptopsImportFn,
   bulkCreateNetworkImportFn,
 } from '@/server/assets.functions';
 
-export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & { assetId?: number };
-export type BulkAvImportRow = Omit<CreateAvInput, 'assetId'> & { assetId?: number };
-export type BulkNetworkImportRow = Omit<CreateNetworkInput, 'assetId'> & { assetId?: number };
+export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & {
+  assetId?: number;
+  handover?: BulkLaptopHandoverImport;
+};
+
+export type BulkAvImportRow = Omit<CreateAvInput, 'assetId'> & {
+  assetId?: number;
+  deployment?: BulkPlaceDeploymentImport;
+};
+
+export type BulkNetworkImportRow = Omit<CreateNetworkInput, 'assetId'> & {
+  assetId?: number;
+  deployment?: BulkPlaceDeploymentImport;
+};
 
 export type BulkImportRowError = {
   row: number;
@@ -36,20 +52,26 @@ export type BulkImportPreview = {
   networkRows?: BulkNetworkImportRow[];
 };
 
-export { BULK_IMPORT_COLUMNS, BULK_IMPORT_REQUIRED };
+export {
+  BULK_IMPORT_COLUMNS,
+  BULK_IMPORT_REQUIRED,
+  BULK_IMPORT_STATUS_DEPLOY,
+  bulkImportDeployColumns,
+  bulkImportDeployRequiredColumns,
+};
 
 const VALID_STATUS_IDS = new Set(INVENTORY_STATUSES.map((s) => s.statusId));
 
 const MOCK_CSV: Record<AssetKind, string> = {
-  laptop: `asset_id,serial_num,brand,model,category,part_number,processor,memory,os,storage,gpu,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks
-,DL-5450-001,Dell,Latitude 5450,Notebook,PN-5450,Intel i5-1345U,16GB,Windows 11,512GB,,150124,PO-2024-001,010224,DO-9001,100224,INV-7788,1299.00,1,HQ staging (auto 12-xx-xxx)
-,HP-PD400-002,HP,ProDesk 400 G9,Desktop AIO,,Intel i5-13500,16GB,Windows 11,256GB,,,,,,,,,1,Records floor 1 (auto 14-xx-xxx)`,
-  av: `asset_id,asset_id_old,category,brand,model,serial_num,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks
-,AV-LEG-001,display,Samsung,QM65C,SM-QM65-100,010623,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx)
-,AV-LEG-002,projector,Epson,EB-L200F,EPS-L200F-88,,,,,,,,,1,Training West`,
-  network: `asset_id,serial_num,brand,model,mac_address,ip_address,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks
-,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,100323,PO-NET-55,010423,DO-N-12,,,4500.00,7,Rack 2 (auto 24-xx-xxx)
-,AP-505-442,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,,,,,,,,7,Lobby East`,
+  laptop: `asset_id,serial_num,brand,model,category,part_number,processor,memory,os,storage,gpu,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,handover_staff_id,handover_date,handover_remarks,employee_no
+,DL-5450-001,Dell,Latitude 5450,Notebook,PN-5450,Intel i5-1345U,16GB,Windows 11,512GB,,150124,PO-2024-001,010224,DO-9001,100224,INV-7788,1299.00,1,HQ staging (auto 12-xx-xxx),,,,
+,HP-DEPLOY-01,HP,EliteBook 840,Notebook,,Intel i7,16GB,Windows 11,512GB,,,,,,,,,3,With user,TECH001,150126,Issued for project,EMP10001`,
+  av: `asset_id,asset_id_old,category,brand,model,serial_num,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
+,AV-LEG-001,display,Samsung,QM65C,SM-QM65-100,010623,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx),,,,,,
+,AV-DEPLOY-01,AV-DEP-88,projector,Epson,EB-L200F,EPS-L200F-99,,,,,,,,3,Training room,TECH001,Main,,,,`,
+  network: `asset_id,serial_num,brand,model,mac_address,ip_address,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
+,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,100323,PO-NET-55,010423,DO-N-12,,,4500.00,7,Rack 2 (auto 24-xx-xxx),,,,,,
+,SW-DEPLOY-01,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,,,,,,,,3,IDF East,TECH001,Annex,,,,`,
 };
 
 function normalizeHeader(h: string) {
@@ -146,6 +168,112 @@ function rowHasErrors(errors: BulkImportRowError[], rowNum: number) {
   return errors.some((e) => e.row === rowNum);
 }
 
+function cellTrim(row: string[], col: Map<string, number>, name: string) {
+  const idx = col.get(name);
+  if (idx === undefined) return '';
+  return row[idx]?.trim() ?? '';
+}
+
+function rejectDeployDataWhenNotDeployed(
+  kind: AssetKind,
+  statusId: number,
+  row: string[],
+  col: Map<string, number>,
+  rowNum: number,
+  errors: BulkImportRowError[],
+) {
+  if (statusId === BULK_IMPORT_STATUS_DEPLOY) return;
+  for (const name of bulkImportDeployColumns(kind)) {
+    if (cellTrim(row, col, name)) {
+      errors.push({
+        row: rowNum,
+        message: `${name} is only used when status_id is ${BULK_IMPORT_STATUS_DEPLOY} (deploy)`,
+      });
+    }
+  }
+}
+
+function parseRequiredDate(
+  row: string[],
+  col: Map<string, number>,
+  column: string,
+  rowNum: number,
+  errors: BulkImportRowError[],
+): string | null {
+  const raw = cellTrim(row, col, column);
+  if (!raw) {
+    errors.push({ row: rowNum, message: `Missing required column: ${column}` });
+    return null;
+  }
+  return parseOptionalDate(raw, column, rowNum, errors);
+}
+
+function parseLaptopHandover(
+  row: string[],
+  col: Map<string, number>,
+  statusId: number,
+  rowNum: number,
+  errors: BulkImportRowError[],
+): BulkLaptopHandoverImport | undefined {
+  rejectDeployDataWhenNotDeployed('laptop', statusId, row, col, rowNum, errors);
+
+  if (statusId !== BULK_IMPORT_STATUS_DEPLOY) return undefined;
+
+  const handoverStaffId = requireCell(row, col.get('handover_staff_id')!, 'handover_staff_id', rowNum, errors);
+  const handoverDate = parseRequiredDate(row, col, 'handover_date', rowNum, errors);
+  if (rowHasErrors(errors, rowNum) || !handoverStaffId || !handoverDate) return undefined;
+
+  return {
+    handoverStaffId,
+    handoverDate,
+    handoverRemarks: optionalCell(row, col.get('handover_remarks')!),
+    employeeNo: optionalCell(row, col.get('employee_no')!),
+  };
+}
+
+function parsePlaceDeployment(
+  kind: 'av' | 'network',
+  row: string[],
+  col: Map<string, number>,
+  statusId: number,
+  rowNum: number,
+  errors: BulkImportRowError[],
+): BulkPlaceDeploymentImport | undefined {
+  rejectDeployDataWhenNotDeployed(kind, statusId, row, col, rowNum, errors);
+
+  if (statusId !== BULK_IMPORT_STATUS_DEPLOY) return undefined;
+
+  const deploymentStaffId = requireCell(
+    row,
+    col.get('deployment_staff_id')!,
+    'deployment_staff_id',
+    rowNum,
+    errors,
+  );
+  const building = requireCell(row, col.get('building')!, 'building', rowNum, errors);
+
+  if (rowHasErrors(errors, rowNum) || !deploymentStaffId || !building) return undefined;
+
+  const level = optionalCell(row, col.get('level')!)?.trim() || '-';
+  const zone = optionalCell(row, col.get('zone')!)?.trim() || '-';
+  const deploymentDateRaw = cellTrim(row, col, 'deployment_date');
+  const deploymentDate =
+    (deploymentDateRaw
+      ? parseOptionalDate(deploymentDateRaw, 'deployment_date', rowNum, errors)
+      : null) ?? new Date().toISOString().slice(0, 10);
+
+  if (rowHasErrors(errors, rowNum)) return undefined;
+
+  return {
+    deploymentStaffId,
+    building,
+    level,
+    zone,
+    deploymentDate,
+    deploymentRemarks: optionalCell(row, col.get('deployment_remarks')!),
+  };
+}
+
 function parseLaptopRows(headers: string[], rows: string[][]) {
   const errors: BulkImportRowError[] = [];
   const col = buildColumnIndex(headers, BULK_IMPORT_COLUMNS.laptop, errors);
@@ -176,6 +304,9 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
 
     if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
+    const handover = parseLaptopHandover(row, col, statusId, rowNum, errors);
+    if (rowHasErrors(errors, rowNum)) return;
+
     laptopRows.push({
       ...(assetId !== undefined ? { assetId } : {}),
       serialNum,
@@ -191,6 +322,7 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
       ...purchase,
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
+      ...(handover ? { handover } : {}),
     });
   });
 
@@ -210,15 +342,17 @@ function parseAvRows(headers: string[], rows: string[][]) {
   rows.forEach((row, i) => {
     const rowNum = i + 2;
     const assetId = parseOptionalAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
-    const assetIdOld = requireCell(row, col.get('asset_id_old')!, 'asset_id_old', rowNum, errors);
     const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
     const purchase = parsePurchaseFromRow(row, col, rowNum, errors);
 
     if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
+    const deployment = parsePlaceDeployment('av', row, col, statusId, rowNum, errors);
+    if (rowHasErrors(errors, rowNum)) return;
+
     avRows.push({
       ...(assetId !== undefined ? { assetId } : {}),
-      assetIdOld,
+      assetIdOld: optionalCell(row, col.get('asset_id_old')!),
       category: optionalCell(row, col.get('category')!),
       brand: optionalCell(row, col.get('brand')!),
       model: optionalCell(row, col.get('model')!),
@@ -226,6 +360,7 @@ function parseAvRows(headers: string[], rows: string[][]) {
       ...purchase,
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
+      ...(deployment ? { deployment } : {}),
     });
   });
 
@@ -250,6 +385,9 @@ function parseNetworkRows(headers: string[], rows: string[][]) {
 
     if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
+    const deployment = parsePlaceDeployment('network', row, col, statusId, rowNum, errors);
+    if (rowHasErrors(errors, rowNum)) return;
+
     networkRows.push({
       ...(assetId !== undefined ? { assetId } : {}),
       serialNum: optionalCell(row, col.get('serial_num')!),
@@ -260,6 +398,7 @@ function parseNetworkRows(headers: string[], rows: string[][]) {
       ...purchase,
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
+      ...(deployment ? { deployment } : {}),
     });
   });
 

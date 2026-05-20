@@ -40,7 +40,7 @@ export type PurchaseFields = {
 export const BULK_IMPORT_REQUIRED: Record<AssetKind, readonly string[]> = {
   laptop: ['serial_num', 'category', 'status_id'],
   network: ['status_id'],
-  av: ['asset_id_old', 'status_id'],
+  av: ['status_id'],
 };
 
 export const INVENTORY_STATUSES = [
@@ -126,7 +126,7 @@ export type CreateLaptopInput = {
 
 export type CreateAvInput = {
   assetId: number;
-  assetIdOld: string;
+  assetIdOld?: string | null;
   category?: string | null;
   brand?: string | null;
   model?: string | null;
@@ -169,6 +169,47 @@ export type AssetDetailResponse = {
   trails: AssetTrailEvent[];
 };
 
+/** status_id = deploy — handover / deployment columns become required on import */
+export const BULK_IMPORT_STATUS_DEPLOY = 3;
+
+/** Laptop handover (`handover` table) — required when status_id is 3 */
+export const BULK_LAPTOP_HANDOVER_COLUMNS = [
+  'handover_staff_id',
+  'handover_date',
+  'handover_remarks',
+  'employee_no',
+] as const;
+
+/** AV / network deployment — required when status_id is 3 */
+export const BULK_PLACE_DEPLOYMENT_COLUMNS = [
+  'deployment_staff_id',
+  'building',
+  'level',
+  'zone',
+  'deployment_date',
+  'deployment_remarks',
+] as const;
+
+export const BULK_LAPTOP_HANDOVER_REQUIRED = ['handover_staff_id', 'handover_date'] as const;
+
+export const BULK_PLACE_DEPLOYMENT_REQUIRED = ['deployment_staff_id', 'building'] as const;
+
+export type BulkLaptopHandoverImport = {
+  handoverStaffId: string;
+  handoverDate: string;
+  handoverRemarks: string | null;
+  employeeNo: string | null;
+};
+
+export type BulkPlaceDeploymentImport = {
+  deploymentStaffId: string;
+  building: string;
+  level: string;
+  zone: string;
+  deploymentDate: string;
+  deploymentRemarks: string | null;
+};
+
 export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
   laptop: [
     'asset_id',
@@ -185,6 +226,7 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
     ...PURCHASE_FIELD_COLUMNS,
     'status_id',
     'remarks',
+    ...BULK_LAPTOP_HANDOVER_COLUMNS,
   ],
   av: [
     'asset_id',
@@ -196,6 +238,7 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
     ...PURCHASE_FIELD_COLUMNS,
     'status_id',
     'remarks',
+    ...BULK_PLACE_DEPLOYMENT_COLUMNS,
   ],
   network: [
     'asset_id',
@@ -207,8 +250,17 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
     ...PURCHASE_FIELD_COLUMNS,
     'status_id',
     'remarks',
+    ...BULK_PLACE_DEPLOYMENT_COLUMNS,
   ],
 };
+
+export function bulkImportDeployColumns(kind: AssetKind): readonly string[] {
+  return kind === 'laptop' ? BULK_LAPTOP_HANDOVER_COLUMNS : BULK_PLACE_DEPLOYMENT_COLUMNS;
+}
+
+export function bulkImportDeployRequiredColumns(kind: AssetKind): readonly string[] {
+  return kind === 'laptop' ? BULK_LAPTOP_HANDOVER_REQUIRED : BULK_PLACE_DEPLOYMENT_REQUIRED;
+}
 
 /** In stock — available in inventory / request pool (not deployed, lost, or disposed). */
 export const INSTOCK_STATUS_IDS = [1, 2, 4, 7, 8, 9, 10] as const;

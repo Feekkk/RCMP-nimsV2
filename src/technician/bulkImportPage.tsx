@@ -20,7 +20,14 @@ import { TechnicianShell } from '@/technician/technician-shell';
 import { DATE_FORMAT_DDMMYY, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
 import { formatStatusLabel } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, type AssetKind } from '@/hooks/assets';
-import { BULK_IMPORT_REQUIRED, downloadCsvFile, useBulkImport } from '@/hooks/bulkImport';
+import {
+  BULK_IMPORT_REQUIRED,
+  BULK_IMPORT_STATUS_DEPLOY,
+  bulkImportDeployColumns,
+  bulkImportDeployRequiredColumns,
+  downloadCsvFile,
+  useBulkImport,
+} from '@/hooks/bulkImport';
 
 type BulkImportSearch = { kind?: AssetKind };
 
@@ -114,6 +121,7 @@ function BulkImportWorkspace({
   const { preview, isParsing, parseText, loadMockSample, clearPreview, commit, getTemplate, getMockCsv, columns } =
     useBulkImport();
   const requiredSet = new Set(BULK_IMPORT_REQUIRED[kind]);
+  const deployRequiredSet = new Set(bulkImportDeployRequiredColumns(kind));
 
   const handleParse = () => {
     if (!csvText.trim()) {
@@ -183,11 +191,15 @@ function BulkImportWorkspace({
                 Headers with (<span className="text-destructive">*</span>) are required. Leave{' '}
                 <code className="text-[11px]">asset_id</code> blank to auto-generate from category.
               </span>
-              <span className="block text-muted-foreground">
-                Date columns ({PURCHASE_DATE_COLUMNS.join(', ')}) must use{' '}
-                <code className="text-[11px]">{DATE_FORMAT_DDMMYY}</code> (e.g.{' '}
-                <code className="text-[11px]">150126</code> = 15 Jan 2026).
-              </span>
+              {(kind === 'av' || kind === 'network') && (
+                <span className="block text-muted-foreground">
+                  When <code className="text-[11px]">status_id</code> is{' '}
+                  <code className="text-[11px]">{BULK_IMPORT_STATUS_DEPLOY}</code> (deploy), only{' '}
+                  <code className="text-[11px]">deployment_staff_id</code> and{' '}
+                  <code className="text-[11px]">building</code> are required. level, zone, and
+                  deployment_date default to &quot;-&quot; / today if omitted.
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -195,14 +207,23 @@ function BulkImportWorkspace({
               {columns[kind].map((col) => (
                 <Badge
                   key={col}
-                  variant={requiredSet.has(col) ? 'default' : 'secondary'}
+                  variant={
+                    requiredSet.has(col)
+                      ? 'default'
+                      : deployRequiredSet.has(col)
+                        ? 'outline'
+                        : 'secondary'
+                  }
                   className="rounded-[6px] font-mono text-[10px]"
                 >
                   {col}
-                  {requiredSet.has(col) ? ' *' : ''}
+                  {requiredSet.has(col) ? ' *' : deployRequiredSet.has(col) ? ' †' : ''}
                 </Badge>
               ))}
             </div>
+            <p className="text-[11px] text-muted-foreground">
+              * Always required · † Required when status_id is {BULK_IMPORT_STATUS_DEPLOY}
+            </p>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -357,6 +378,7 @@ function BulkImportWorkspace({
                         <TableHead className="font-semibold">Brand</TableHead>
                         <TableHead className="font-semibold">Serial</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">Deploy</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -372,6 +394,13 @@ function BulkImportWorkspace({
                             <Badge variant="outline" className="rounded-[6px] text-[10px]">
                               {formatStatusLabel(row.statusId)}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                            {'handover' in row && row.handover
+                              ? `Handover ${row.handover.handoverDate}${row.handover.employeeNo ? ` · ${row.handover.employeeNo}` : ''}`
+                              : 'deployment' in row && row.deployment
+                                ? `${row.deployment.building} / ${row.deployment.level} / ${row.deployment.zone}`
+                                : '—'}
                           </TableCell>
                         </TableRow>
                       ))}

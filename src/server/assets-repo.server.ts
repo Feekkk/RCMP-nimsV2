@@ -5,6 +5,8 @@ import type {
   AssetKind,
   AssetTrailEvent,
   AvAsset,
+  BulkLaptopHandoverImport,
+  BulkPlaceDeploymentImport,
   CreateAvInput,
   CreateLaptopInput,
   CreateNetworkInput,
@@ -18,11 +20,22 @@ import { purchaseSqlParams } from '@/lib/purchase-field-utils';
 import { allocateAssetIdsFromDb } from '@/server/asset-id.server';
 import { getDbPool } from '@/server/db';
 
-export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & { assetId?: number };
-export type BulkAvImportRow = Omit<CreateAvInput, 'assetId'> & { assetId?: number };
-export type BulkNetworkImportRow = Omit<CreateNetworkInput, 'assetId'> & { assetId?: number };
+export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & {
+  assetId?: number;
+  handover?: BulkLaptopHandoverImport;
+};
 
-async function fillLaptopAssetIds(rows: BulkLaptopImportRow[]): Promise<CreateLaptopInput[]> {
+export type BulkAvImportRow = Omit<CreateAvInput, 'assetId'> & {
+  assetId?: number;
+  deployment?: BulkPlaceDeploymentImport;
+};
+
+export type BulkNetworkImportRow = Omit<CreateNetworkInput, 'assetId'> & {
+  assetId?: number;
+  deployment?: BulkPlaceDeploymentImport;
+};
+
+async function fillLaptopAssetIds(rows: BulkLaptopImportRow[]): Promise<BulkLaptopImportRow[]> {
   const autoCategories = rows.filter((r) => r.assetId == null || r.assetId <= 0).map((r) => r.category);
   const generated =
     autoCategories.length > 0
@@ -31,7 +44,7 @@ async function fillLaptopAssetIds(rows: BulkLaptopImportRow[]): Promise<CreateLa
   let genIdx = 0;
   return rows.map((row) => {
     if (row.assetId != null && row.assetId > 0) {
-      return row as CreateLaptopInput;
+      return row;
     }
     const assetId = generated[genIdx++];
     if (assetId == null) {
@@ -41,14 +54,14 @@ async function fillLaptopAssetIds(rows: BulkLaptopImportRow[]): Promise<CreateLa
   });
 }
 
-async function fillAvAssetIds(rows: BulkAvImportRow[]): Promise<CreateAvInput[]> {
+async function fillAvAssetIds(rows: BulkAvImportRow[]): Promise<BulkAvImportRow[]> {
   const needCount = rows.filter((r) => r.assetId == null || r.assetId <= 0).length;
   const generated =
     needCount > 0 ? await allocateAssetIdsFromDb({ kind: 'av', count: needCount }) : [];
   let genIdx = 0;
   return rows.map((row) => {
     if (row.assetId != null && row.assetId > 0) {
-      return row as CreateAvInput;
+      return row;
     }
     const assetId = generated[genIdx++];
     if (assetId == null) {
@@ -58,14 +71,14 @@ async function fillAvAssetIds(rows: BulkAvImportRow[]): Promise<CreateAvInput[]>
   });
 }
 
-async function fillNetworkAssetIds(rows: BulkNetworkImportRow[]): Promise<CreateNetworkInput[]> {
+async function fillNetworkAssetIds(rows: BulkNetworkImportRow[]): Promise<BulkNetworkImportRow[]> {
   const needCount = rows.filter((r) => r.assetId == null || r.assetId <= 0).length;
   const generated =
     needCount > 0 ? await allocateAssetIdsFromDb({ kind: 'network', count: needCount }) : [];
   let genIdx = 0;
   return rows.map((row) => {
     if (row.assetId != null && row.assetId > 0) {
-      return row as CreateNetworkInput;
+      return row;
     }
     const assetId = generated[genIdx++];
     if (assetId == null) {
@@ -73,6 +86,77 @@ async function fillNetworkAssetIds(rows: BulkNetworkImportRow[]): Promise<Create
     }
     return { ...row, assetId };
   });
+}
+
+async function assertUserStaffId(conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>, staffId: string) {
+  const [rows] = await conn.query<(RowDataPacket & { staff_id: string })[]>(
+    'SELECT staff_id FROM users WHERE staff_id = ? LIMIT 1',
+    [staffId],
+  );
+  if (!rows[0]) {
+    throw new Error(`Unknown staff_id "${staffId}" (must exist in users)`);
+  }
+}
+
+async function assertEmployeeNo(
+  conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
+  employeeNo: string,
+) {
+  const [rows] = await conn.query<(RowDataPacket & { employee_no: string })[]>(
+    'SELECT employee_no FROM staff WHERE employee_no = ? LIMIT 1',
+    [employeeNo],
+  );
+  if (!rows[0]) {
+    throw new Error(`Unknown employee_no "${employeeNo}" (must exist in staff directory)`);
+  }
+}
+
+async function insertLaptopHandover(
+  conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
+  assetId: number,
+  handover: BulkLaptopHandoverImport,
+) {
+  await assertUserStaffId(conn, handover.handoverStaffId);
+  if (handover.employeeNo) {
+    await assertEmployeeNo(conn, handover.employeeNo);
+  }
+
+  const [handoverResult] = await conn.execute(
+    `INSERT INTO handover (asset_id, staff_id, handover_date, handover_remarks)
+     VALUES (?, ?, ?, ?)`,
+    [assetId, handover.handoverStaffId, handover.handoverDate, handover.handoverRemarks],
+  );
+  const handoverId = (handoverResult as { insertId: number }).insertId;
+  if (handover.employeeNo) {
+    await conn.execute(`INSERT INTO handover_staff (employee_no, handover_id) VALUES (?, ?)`, [
+      handover.employeeNo,
+      handoverId,
+    ]);
+  }
+}
+
+async function insertPlaceDeployment(
+  conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
+  kind: 'av' | 'network',
+  assetId: number,
+  deployment: BulkPlaceDeploymentImport,
+) {
+  await assertUserStaffId(conn, deployment.deploymentStaffId);
+  const table = kind === 'av' ? 'av_deployment' : 'network_deployment';
+  await conn.execute(
+    `INSERT INTO \`${table}\`
+      (asset_id, building, level, zone, deployment_date, deployment_remarks, staff_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      assetId,
+      deployment.building,
+      deployment.level,
+      deployment.zone,
+      deployment.deploymentDate,
+      deployment.deploymentRemarks,
+      deployment.deploymentStaffId,
+    ],
+  );
 }
 
 type PurchaseRow = {
@@ -236,7 +320,7 @@ function laptopParams(input: CreateLaptopInput) {
 function avParams(input: CreateAvInput) {
   return [
     input.assetId,
-    input.assetIdOld,
+    input.assetIdOld ?? null,
     input.category ?? null,
     input.brand ?? null,
     input.model ?? null,
@@ -299,13 +383,20 @@ export async function createNetwork(input: CreateNetworkInput) {
   return mapNetwork(rows[0]);
 }
 
-export async function bulkCreateLaptops(rows: CreateLaptopInput[]) {
+export async function bulkCreateLaptops(rows: BulkLaptopImportRow[]) {
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    for (const input of rows) {
-      await conn.execute(LAPTOP_INSERT, laptopParams(input));
+    for (const row of rows) {
+      const { handover, assetId, ...laptop } = row;
+      if (assetId == null || assetId <= 0) {
+        throw new Error('asset_id is required after ID generation');
+      }
+      await conn.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId }));
+      if (handover) {
+        await insertLaptopHandover(conn, assetId, handover);
+      }
     }
     await conn.commit();
     return rows.length;
@@ -317,13 +408,20 @@ export async function bulkCreateLaptops(rows: CreateLaptopInput[]) {
   }
 }
 
-export async function bulkCreateAv(rows: CreateAvInput[]) {
+export async function bulkCreateAv(rows: BulkAvImportRow[]) {
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    for (const input of rows) {
-      await conn.execute(AV_INSERT, avParams(input));
+    for (const row of rows) {
+      const { deployment, assetId, ...av } = row;
+      if (assetId == null || assetId <= 0) {
+        throw new Error('asset_id is required after ID generation');
+      }
+      await conn.execute(AV_INSERT, avParams({ ...av, assetId }));
+      if (deployment) {
+        await insertPlaceDeployment(conn, 'av', assetId, deployment);
+      }
     }
     await conn.commit();
     return rows.length;
@@ -335,13 +433,20 @@ export async function bulkCreateAv(rows: CreateAvInput[]) {
   }
 }
 
-export async function bulkCreateNetwork(rows: CreateNetworkInput[]) {
+export async function bulkCreateNetwork(rows: BulkNetworkImportRow[]) {
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    for (const input of rows) {
-      await conn.execute(NETWORK_INSERT, networkParams(input));
+    for (const row of rows) {
+      const { deployment, assetId, ...network } = row;
+      if (assetId == null || assetId <= 0) {
+        throw new Error('asset_id is required after ID generation');
+      }
+      await conn.execute(NETWORK_INSERT, networkParams({ ...network, assetId }));
+      if (deployment) {
+        await insertPlaceDeployment(conn, 'network', assetId, deployment);
+      }
     }
     await conn.commit();
     return rows.length;
