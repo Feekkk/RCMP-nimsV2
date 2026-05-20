@@ -30,6 +30,7 @@ const REQUESTS = '/technician/requests' as const;
 const REQUEST_LOG = '/technician/request-log' as const;
 const DISPOSAL = '/technician/disposal' as const;
 const HISTORY = '/technician/history' as const;
+const PROFILE = '/technician/profile' as const;
 
 const HASH = {
   dashboard: '',
@@ -37,7 +38,6 @@ const HASH = {
   requestAssign: 'request-assign-assets',
   requestUser: 'request-user',
   manual: 'manual',
-  profile: 'profile',
 } as const;
 
 type HashValue = (typeof HASH)[keyof typeof HASH];
@@ -172,7 +172,11 @@ function TechSideBarNav() {
       <NavLink to={`${DASH}#${HASH.manual}`} icon={BookOpen} active={h === HASH.manual}>
         Manual
       </NavLink>
-      <NavLink to={`${DASH}#${HASH.profile}`} icon={UserCircle} active={h === HASH.profile}>
+      <NavLink
+        to={PROFILE}
+        icon={UserCircle}
+        active={pathname === PROFILE || pathname.startsWith(`${PROFILE}/`)}
+      >
         Profile
       </NavLink>
     </nav>

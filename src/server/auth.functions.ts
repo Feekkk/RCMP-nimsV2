@@ -50,3 +50,25 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
     const { updateUserProfile } = await import('@/server/auth-repo.server');
     return updateUserProfile(data);
   });
+
+export const getStaffProfileFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { staffId: string }) => data)
+  .handler(async ({ data }) => {
+    const { getStaffProfile } = await import('@/server/auth-repo.server');
+    return getStaffProfile(data.staffId);
+  });
+
+export const updateStaffProfileFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: {
+      staffId: string;
+      fullName: string;
+      email: string;
+      phone: string | null;
+      password?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { updateStaffProfile } = await import('@/server/auth-repo.server');
+    return updateStaffProfile(data);
+  });

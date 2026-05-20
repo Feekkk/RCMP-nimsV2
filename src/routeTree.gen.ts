@@ -19,6 +19,7 @@ import { Route as TechnicianRequestsRouteImport } from './routes/technician/requ
 import { Route as TechnicianRequestViewRouteImport } from './routes/technician/request-view'
 import { Route as TechnicianRequestLogRouteImport } from './routes/technician/request-log'
 import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
+import { Route as TechnicianProfileRouteImport } from './routes/technician/profile'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
 import { Route as TechnicianHistoryRouteImport } from './routes/technician/history'
@@ -78,6 +79,11 @@ const TechnicianRequestLogRoute = TechnicianRequestLogRouteImport.update({
 const TechnicianRequestAssetsRoute = TechnicianRequestAssetsRouteImport.update({
   id: '/technician/request-assets',
   path: '/technician/request-assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianProfileRoute = TechnicianProfileRouteImport.update({
+  id: '/technician/profile',
+  path: '/technician/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TechnicianNetworkRoute = TechnicianNetworkRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/profile': typeof TechnicianProfileRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/profile': typeof TechnicianProfileRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/profile': typeof TechnicianProfileRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/profile'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/profile'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/profile'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
@@ -280,6 +292,7 @@ export interface RootRouteChildren {
   TechnicianHistoryRoute: typeof TechnicianHistoryRoute
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
+  TechnicianProfileRoute: typeof TechnicianProfileRoute
   TechnicianRequestAssetsRoute: typeof TechnicianRequestAssetsRoute
   TechnicianRequestLogRoute: typeof TechnicianRequestLogRoute
   TechnicianRequestViewRoute: typeof TechnicianRequestViewRoute
@@ -361,6 +374,13 @@ declare module '@tanstack/react-router' {
       path: '/technician/request-assets'
       fullPath: '/technician/request-assets'
       preLoaderRoute: typeof TechnicianRequestAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/profile': {
+      id: '/technician/profile'
+      path: '/technician/profile'
+      fullPath: '/technician/profile'
+      preLoaderRoute: typeof TechnicianProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/network': {
@@ -448,6 +468,7 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianHistoryRoute: TechnicianHistoryRoute,
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
+  TechnicianProfileRoute: TechnicianProfileRoute,
   TechnicianRequestAssetsRoute: TechnicianRequestAssetsRoute,
   TechnicianRequestLogRoute: TechnicianRequestLogRoute,
   TechnicianRequestViewRoute: TechnicianRequestViewRoute,

@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import type { RowDataPacket } from 'mysql2';
-import { ROLE_USER } from '@/lib/auth-session';
+import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
 import { getDbPool } from '@/server/db';
 
 const BCRYPT_ROUNDS = 10;
@@ -145,6 +145,61 @@ export type UpdateUserProfileInput = {
   phone: string | null;
   password?: string;
 };
+
+function assertStaffAccount(roleId: number): void {
+  if (roleId !== ROLE_TECHNICIAN && roleId !== ROLE_ADMIN) {
+    throw new Error('Only technician accounts can access this profile');
+  }
+}
+
+export async function getStaffProfile(staffId: string): Promise<AuthUserRow> {
+  const row = await findUserByStaffId(staffId);
+  if (!row) throw new Error('Account not found');
+  assertStaffAccount(row.role_id);
+  return mapUser(row);
+}
+
+export async function updateStaffProfile(input: UpdateUserProfileInput): Promise<AuthUserRow> {
+  const staffId = input.staffId.trim();
+  const fullName = input.fullName.trim();
+  const email = input.email.trim().toLowerCase();
+  const phone = input.phone?.trim() || null;
+
+  if (!fullName || !email) {
+    throw new Error('Name and email are required');
+  }
+
+  const row = await findUserByStaffId(staffId);
+  if (!row) throw new Error('Account not found');
+  assertStaffAccount(row.role_id);
+
+  if (input.password != null && input.password.length > 0 && input.password.length < 6) {
+    throw new Error('Password must be at least 6 characters');
+  }
+
+  const emailOwner = await findUserByEmail(email);
+  if (emailOwner && emailOwner.staff_id !== staffId) {
+    throw new Error('This email is already in use');
+  }
+
+  const pool = getDbPool();
+  if (input.password != null && input.password.length > 0) {
+    const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+    await pool.execute(
+      `UPDATE users SET full_name = ?, email = ?, phone = ?, password_hash = ? WHERE staff_id = ?`,
+      [fullName, email, phone, passwordHash, staffId],
+    );
+  } else {
+    await pool.execute(`UPDATE users SET full_name = ?, email = ?, phone = ? WHERE staff_id = ?`, [
+      fullName,
+      email,
+      phone,
+      staffId,
+    ]);
+  }
+
+  return getStaffProfile(staffId);
+}
 
 export async function getUserProfile(staffId: string): Promise<AuthUserRow> {
   const row = await findUserByStaffId(staffId);

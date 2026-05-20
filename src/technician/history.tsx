@@ -318,9 +318,6 @@ export function TechnicianHistoryPage() {
     <TechnicianShell>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-[12px] bg-lavender/15">
-            <History className="h-5 w-5 text-[oklch(0.45_0.12_290)]" />
-          </div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Activity history</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Unified audit trail — borrow requests, handovers, deployments, returns, disposal,
