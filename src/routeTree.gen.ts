@@ -14,15 +14,18 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as UserRequestRouteImport } from './routes/user/request'
 import { Route as UserHistoryRouteImport } from './routes/user/history'
 import { Route as UserEditProfileRouteImport } from './routes/user/edit-profile'
+import { Route as TechnicianWarrantyRouteImport } from './routes/technician/warranty'
 import { Route as TechnicianReturnRouteImport } from './routes/technician/return'
 import { Route as TechnicianRequestsRouteImport } from './routes/technician/requests'
 import { Route as TechnicianRequestViewRouteImport } from './routes/technician/request-view'
 import { Route as TechnicianRequestLogRouteImport } from './routes/technician/request-log'
 import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
+import { Route as TechnicianRepairRouteImport } from './routes/technician/repair'
 import { Route as TechnicianProfileRouteImport } from './routes/technician/profile'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
 import { Route as TechnicianHistoryRouteImport } from './routes/technician/history'
+import { Route as TechnicianFaultyRouteImport } from './routes/technician/faulty'
 import { Route as TechnicianDisposalRouteImport } from './routes/technician/disposal'
 import { Route as TechnicianDeployRouteImport } from './routes/technician/deploy'
 import { Route as TechnicianDashboardRouteImport } from './routes/technician/dashboard'
@@ -56,6 +59,11 @@ const UserEditProfileRoute = UserEditProfileRouteImport.update({
   path: '/user/edit-profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicianWarrantyRoute = TechnicianWarrantyRouteImport.update({
+  id: '/technician/warranty',
+  path: '/technician/warranty',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianReturnRoute = TechnicianReturnRouteImport.update({
   id: '/technician/return',
   path: '/technician/return',
@@ -81,6 +89,11 @@ const TechnicianRequestAssetsRoute = TechnicianRequestAssetsRouteImport.update({
   path: '/technician/request-assets',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicianRepairRoute = TechnicianRepairRouteImport.update({
+  id: '/technician/repair',
+  path: '/technician/repair',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianProfileRoute = TechnicianProfileRouteImport.update({
   id: '/technician/profile',
   path: '/technician/profile',
@@ -99,6 +112,11 @@ const TechnicianLaptopRoute = TechnicianLaptopRouteImport.update({
 const TechnicianHistoryRoute = TechnicianHistoryRouteImport.update({
   id: '/technician/history',
   path: '/technician/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianFaultyRoute = TechnicianFaultyRouteImport.update({
+  id: '/technician/faulty',
+  path: '/technician/faulty',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TechnicianDisposalRoute = TechnicianDisposalRouteImport.update({
@@ -147,15 +165,18 @@ export interface FileRoutesByFullPath {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
+  '/technician/faulty': typeof TechnicianFaultyRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
+  '/technician/repair': typeof TechnicianRepairRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
+  '/technician/warranty': typeof TechnicianWarrantyRoute
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
@@ -170,15 +191,18 @@ export interface FileRoutesByTo {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
+  '/technician/faulty': typeof TechnicianFaultyRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
+  '/technician/repair': typeof TechnicianRepairRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
+  '/technician/warranty': typeof TechnicianWarrantyRoute
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
@@ -194,15 +218,18 @@ export interface FileRoutesById {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
+  '/technician/faulty': typeof TechnicianFaultyRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
+  '/technician/repair': typeof TechnicianRepairRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
+  '/technician/warranty': typeof TechnicianWarrantyRoute
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
@@ -219,15 +246,18 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
+    | '/technician/faulty'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
+    | '/technician/repair'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
+    | '/technician/warranty'
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
@@ -242,15 +272,18 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
+    | '/technician/faulty'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
+    | '/technician/repair'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
+    | '/technician/warranty'
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
@@ -265,15 +298,18 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
+    | '/technician/faulty'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
+    | '/technician/repair'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
+    | '/technician/warranty'
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
@@ -289,15 +325,18 @@ export interface RootRouteChildren {
   TechnicianDashboardRoute: typeof TechnicianDashboardRoute
   TechnicianDeployRoute: typeof TechnicianDeployRoute
   TechnicianDisposalRoute: typeof TechnicianDisposalRoute
+  TechnicianFaultyRoute: typeof TechnicianFaultyRoute
   TechnicianHistoryRoute: typeof TechnicianHistoryRoute
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
   TechnicianProfileRoute: typeof TechnicianProfileRoute
+  TechnicianRepairRoute: typeof TechnicianRepairRoute
   TechnicianRequestAssetsRoute: typeof TechnicianRequestAssetsRoute
   TechnicianRequestLogRoute: typeof TechnicianRequestLogRoute
   TechnicianRequestViewRoute: typeof TechnicianRequestViewRoute
   TechnicianRequestsRoute: typeof TechnicianRequestsRoute
   TechnicianReturnRoute: typeof TechnicianReturnRoute
+  TechnicianWarrantyRoute: typeof TechnicianWarrantyRoute
   UserEditProfileRoute: typeof UserEditProfileRoute
   UserHistoryRoute: typeof UserHistoryRoute
   UserRequestRoute: typeof UserRequestRoute
@@ -341,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UserEditProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technician/warranty': {
+      id: '/technician/warranty'
+      path: '/technician/warranty'
+      fullPath: '/technician/warranty'
+      preLoaderRoute: typeof TechnicianWarrantyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/return': {
       id: '/technician/return'
       path: '/technician/return'
@@ -376,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianRequestAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technician/repair': {
+      id: '/technician/repair'
+      path: '/technician/repair'
+      fullPath: '/technician/repair'
+      preLoaderRoute: typeof TechnicianRepairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/profile': {
       id: '/technician/profile'
       path: '/technician/profile'
@@ -402,6 +455,13 @@ declare module '@tanstack/react-router' {
       path: '/technician/history'
       fullPath: '/technician/history'
       preLoaderRoute: typeof TechnicianHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/faulty': {
+      id: '/technician/faulty'
+      path: '/technician/faulty'
+      fullPath: '/technician/faulty'
+      preLoaderRoute: typeof TechnicianFaultyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/disposal': {
@@ -465,15 +525,18 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianDashboardRoute: TechnicianDashboardRoute,
   TechnicianDeployRoute: TechnicianDeployRoute,
   TechnicianDisposalRoute: TechnicianDisposalRoute,
+  TechnicianFaultyRoute: TechnicianFaultyRoute,
   TechnicianHistoryRoute: TechnicianHistoryRoute,
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
   TechnicianProfileRoute: TechnicianProfileRoute,
+  TechnicianRepairRoute: TechnicianRepairRoute,
   TechnicianRequestAssetsRoute: TechnicianRequestAssetsRoute,
   TechnicianRequestLogRoute: TechnicianRequestLogRoute,
   TechnicianRequestViewRoute: TechnicianRequestViewRoute,
   TechnicianRequestsRoute: TechnicianRequestsRoute,
   TechnicianReturnRoute: TechnicianReturnRoute,
+  TechnicianWarrantyRoute: TechnicianWarrantyRoute,
   UserEditProfileRoute: UserEditProfileRoute,
   UserHistoryRoute: UserHistoryRoute,
   UserRequestRoute: UserRequestRoute,
