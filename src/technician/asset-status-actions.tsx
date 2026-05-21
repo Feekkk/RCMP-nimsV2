@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { AssetKind } from '@/lib/inventory-schema';
 import { formatStatusLabel } from '@/lib/inventory-schema';
-import { getAssetStatusActions } from '@/lib/asset-status-actions';
+import { STATUS_ID, getAssetStatusActions } from '@/lib/asset-status-actions';
 
 type AssetStatusActionsProps = {
   kind: AssetKind;
@@ -23,6 +23,7 @@ export function AssetStatusActions({
   onStatusChange,
   disabled,
 }: AssetStatusActionsProps) {
+  const navigate = useNavigate();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const actions = getAssetStatusActions(kind, statusId);
 
@@ -35,6 +36,9 @@ export function AssetStatusActions({
     try {
       await onStatusChange(assetId, targetStatusId);
       toast.success(`${label} — now ${formatStatusLabel(targetStatusId)}`);
+      if (targetStatusId === STATUS_ID.FAULTY) {
+        void navigate({ to: '/technician/faulty', search: { kind, assetId } });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Status update failed');
     } finally {

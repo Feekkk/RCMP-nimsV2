@@ -17,6 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { INVENTORY_STATUSES } from '@/lib/inventory-schema';
 import { emptyPurchaseFormState, purchaseFormToInput } from '@/lib/purchase-field-utils';
+import { emptyWarrantyFormState, warrantyFormToInput } from '@/lib/warranty-field-utils';
 import {
   formatAssetIdDisplay,
   LAPTOP_CATEGORY_OPTIONS,
@@ -24,6 +25,7 @@ import {
 } from '@/hooks/assetid-generator';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { PurchaseFieldsSection } from '@/technician/asset-purchase-fields';
+import { WarrantyFieldsSection } from '@/technician/warranty-fields';
 import {
   ASSET_KIND_LABEL,
   ASSET_LIST_PATH,
@@ -139,6 +141,7 @@ function AssetForm({
   const [statusId, setStatusId] = useState('1');
   const [remarks, setRemarks] = useState('');
   const [purchase, setPurchase] = useState(emptyPurchaseFormState);
+  const [warranty, setWarranty] = useState(emptyWarrantyFormState);
 
   const [category, setCategory] = useState<string>(LAPTOP_CATEGORY_OPTIONS[0]);
   const [partNumber, setPartNumber] = useState('');
@@ -176,6 +179,15 @@ function AssetForm({
     }
 
     const purchaseInput = purchaseFormToInput(purchase);
+    const hasWarrantyPartial =
+      Boolean(warranty.startDate.trim()) ||
+      Boolean(warranty.endDate.trim()) ||
+      Boolean(warranty.remarks.trim());
+    const warrantyInput = warrantyFormToInput(warranty);
+    if (hasWarrantyPartial && !warrantyInput) {
+      toast.error('Warranty requires both start and end dates');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -205,6 +217,7 @@ function AssetForm({
           ...purchaseInput,
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
+          warranty: warrantyInput,
         });
       } else if (kind === 'av') {
         if (!assetIdOld.trim()) {
@@ -222,6 +235,7 @@ function AssetForm({
           ...purchaseInput,
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
+          warranty: warrantyInput,
         });
       } else {
         await createNetwork({
@@ -234,6 +248,7 @@ function AssetForm({
           ...purchaseInput,
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
+          warranty: warrantyInput,
         });
       }
       onCreated(kind);
@@ -406,6 +421,8 @@ function AssetForm({
             )}
 
             <PurchaseFieldsSection values={purchase} onChange={(patch) => setPurchase((p) => ({ ...p, ...patch }))} />
+
+            <WarrantyFieldsSection values={warranty} onChange={(patch) => setWarranty((w) => ({ ...w, ...patch }))} />
 
             <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" className="rounded-[8px]" asChild>
