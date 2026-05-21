@@ -1,5 +1,10 @@
 /** Types and constants aligned with database/schema.sql */
 
+import type { WarrantyInput } from '@/lib/warranty-field-utils';
+
+export type { WarrantyInput };
+export { WARRANTY_FIELD_COLUMNS } from '@/lib/warranty-field-utils';
+
 export type AssetKind = 'laptop' | 'av' | 'network';
 
 export const ASSET_KIND_LABEL: Record<AssetKind, string> = {
@@ -122,6 +127,7 @@ export type CreateLaptopInput = {
   gpu?: string | null;
   statusId: number;
   remarks?: string | null;
+  warranty?: WarrantyInput | null;
 } & PurchaseFields;
 
 export type CreateAvInput = {
@@ -133,6 +139,7 @@ export type CreateAvInput = {
   serialNum?: string | null;
   statusId: number;
   remarks?: string | null;
+  warranty?: WarrantyInput | null;
 } & PurchaseFields;
 
 export type CreateNetworkInput = {
@@ -144,6 +151,7 @@ export type CreateNetworkInput = {
   ipAddress?: string | null;
   statusId: number;
   remarks?: string | null;
+  warranty?: WarrantyInput | null;
 } & PurchaseFields;
 
 export type AssetRecord = LaptopAsset | AvAsset | NetworkAsset;
@@ -226,6 +234,9 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
     ...PURCHASE_FIELD_COLUMNS,
     'status_id',
     'remarks',
+    'warranty_start_date',
+    'warranty_end_date',
+    'warranty_remarks',
     ...BULK_LAPTOP_HANDOVER_COLUMNS,
   ],
   av: [
@@ -238,6 +249,9 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
     ...PURCHASE_FIELD_COLUMNS,
     'status_id',
     'remarks',
+    'warranty_start_date',
+    'warranty_end_date',
+    'warranty_remarks',
     ...BULK_PLACE_DEPLOYMENT_COLUMNS,
   ],
   network: [
@@ -250,6 +264,9 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
     ...PURCHASE_FIELD_COLUMNS,
     'status_id',
     'remarks',
+    'warranty_start_date',
+    'warranty_end_date',
+    'warranty_remarks',
     ...BULK_PLACE_DEPLOYMENT_COLUMNS,
   ],
 };

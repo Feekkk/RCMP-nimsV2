@@ -15,6 +15,7 @@ import {
 } from '@/lib/inventory-schema';
 import { getLaptopAssetIdPrefix } from '@/hooks/assetid-generator';
 import { parseOptionalDate, parsePurchaseFromRow } from '@/lib/purchase-field-utils';
+import { parseWarrantyFromRow } from '@/lib/warranty-field-utils';
 import {
   bulkCreateAvImportFn,
   bulkCreateLaptopsImportFn,
@@ -305,6 +306,7 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
     if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
     const handover = parseLaptopHandover(row, col, statusId, rowNum, errors);
+    const warranty = parseWarrantyFromRow(row, col, rowNum, errors);
     if (rowHasErrors(errors, rowNum)) return;
 
     laptopRows.push({
@@ -323,6 +325,7 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
       ...(handover ? { handover } : {}),
+      ...(warranty ? { warranty } : {}),
     });
   });
 
@@ -348,6 +351,7 @@ function parseAvRows(headers: string[], rows: string[][]) {
     if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
     const deployment = parsePlaceDeployment('av', row, col, statusId, rowNum, errors);
+    const warranty = parseWarrantyFromRow(row, col, rowNum, errors);
     if (rowHasErrors(errors, rowNum)) return;
 
     avRows.push({
@@ -361,6 +365,7 @@ function parseAvRows(headers: string[], rows: string[][]) {
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
       ...(deployment ? { deployment } : {}),
+      ...(warranty ? { warranty } : {}),
     });
   });
 
@@ -386,6 +391,7 @@ function parseNetworkRows(headers: string[], rows: string[][]) {
     if (rowHasErrors(errors, rowNum) || statusId === null) return;
 
     const deployment = parsePlaceDeployment('network', row, col, statusId, rowNum, errors);
+    const warranty = parseWarrantyFromRow(row, col, rowNum, errors);
     if (rowHasErrors(errors, rowNum)) return;
 
     networkRows.push({
@@ -399,6 +405,7 @@ function parseNetworkRows(headers: string[], rows: string[][]) {
       statusId,
       remarks: optionalCell(row, col.get('remarks')!),
       ...(deployment ? { deployment } : {}),
+      ...(warranty ? { warranty } : {}),
     });
   });
 

@@ -2,14 +2,15 @@ import type { LucideIcon } from 'lucide-react';
 import {
   AlertCircle,
   Archive,
-  Hammer,
   PackageCheck,
   PackageX,
   Power,
   Reply,
+  ShieldCheck,
   Signal,
   SignalZero,
   Truck,
+  Wrench,
 } from 'lucide-react';
 import type { AssetKind, StatusId } from '@/lib/inventory-schema';
 
@@ -39,9 +40,14 @@ export type AssetStatusAction = {
   label: string;
   icon: LucideIcon;
   buttonClassName: string;
-  /** Open deploy / return form */
+  /** Open deploy / return / warranty / repair form */
   mode: 'navigate';
-  href: '/technician/deploy' | '/technician/return';
+  href:
+    | '/technician/deploy'
+    | '/technician/return'
+    | '/technician/warranty'
+    | '/technician/repair'
+    | '/technician/faulty';
 };
 
 const actionBtn =
@@ -105,11 +111,19 @@ const LAPTOP_AV_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
   ],
   [STATUS_ID.FAULTY]: [
     {
-      key: 'repair',
-      label: 'Repair complete',
-      mode: 'status',
-      targetStatusId: STATUS_ID.ACTIVE,
-      icon: Hammer,
+      key: 'warranty-claim',
+      label: 'Warranty claim',
+      mode: 'navigate',
+      href: '/technician/warranty',
+      icon: ShieldCheck,
+      buttonClassName: `${actionBtn} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900`,
+    },
+    {
+      key: 'in-house-repair',
+      label: 'In-house repair',
+      mode: 'navigate',
+      href: '/technician/repair',
+      icon: Wrench,
       buttonClassName: `${actionBtn} border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200 dark:hover:bg-violet-900`,
     },
   ],
@@ -173,11 +187,19 @@ const NETWORK_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
   ],
   [STATUS_ID.FAULTY]: [
     {
-      key: 'repair',
-      label: 'Repair complete',
-      mode: 'status',
-      targetStatusId: STATUS_ID.ONLINE,
-      icon: Hammer,
+      key: 'warranty-claim',
+      label: 'Warranty claim',
+      mode: 'navigate',
+      href: '/technician/warranty',
+      icon: ShieldCheck,
+      buttonClassName: `${actionBtn} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900`,
+    },
+    {
+      key: 'in-house-repair',
+      label: 'In-house repair',
+      mode: 'navigate',
+      href: '/technician/repair',
+      icon: Wrench,
       buttonClassName: `${actionBtn} border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200 dark:hover:bg-violet-900`,
     },
   ],

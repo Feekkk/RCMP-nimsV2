@@ -19,6 +19,7 @@ import { formatIsoToDdMmYy } from '@/lib/date-format';
 import { purchaseSqlParams } from '@/lib/purchase-field-utils';
 import { allocateAssetIdsFromDb } from '@/server/asset-id.server';
 import { getDbPool } from '@/server/db';
+import { insertWarranty } from '@/server/warranty-repair-repo.server';
 
 export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & {
   assetId?: number;
@@ -359,9 +360,22 @@ export async function listAssets(kind: AssetKind) {
   return rows.map(mapNetwork);
 }
 
+async function maybeInsertWarranty(
+  kind: AssetKind,
+  assetId: number,
+  warranty: CreateLaptopInput['warranty'],
+  conn?: import('mysql2/promise').PoolConnection,
+) {
+  if (warranty?.startDate && warranty.endDate) {
+    await insertWarranty(kind, assetId, warranty, conn);
+  }
+}
+
 export async function createLaptop(input: CreateLaptopInput) {
   const pool = getDbPool();
-  await pool.execute(LAPTOP_INSERT, laptopParams(input));
+  const { warranty, ...laptop } = input;
+  await pool.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId: input.assetId }));
+  await maybeInsertWarranty('laptop', input.assetId, warranty);
   const [rows] = await pool.query<LaptopRow[]>('SELECT * FROM laptop WHERE asset_id = ?', [input.assetId]);
   if (!rows[0]) throw new Error('Failed to load created laptop');
   return mapLaptop(rows[0]);
@@ -369,7 +383,9 @@ export async function createLaptop(input: CreateLaptopInput) {
 
 export async function createAv(input: CreateAvInput) {
   const pool = getDbPool();
-  await pool.execute(AV_INSERT, avParams(input));
+  const { warranty, ...av } = input;
+  await pool.execute(AV_INSERT, avParams({ ...av, assetId: input.assetId }));
+  await maybeInsertWarranty('av', input.assetId, warranty);
   const [rows] = await pool.query<AvRow[]>('SELECT * FROM av WHERE asset_id = ?', [input.assetId]);
   if (!rows[0]) throw new Error('Failed to load created AV asset');
   return mapAv(rows[0]);
@@ -377,7 +393,9 @@ export async function createAv(input: CreateAvInput) {
 
 export async function createNetwork(input: CreateNetworkInput) {
   const pool = getDbPool();
-  await pool.execute(NETWORK_INSERT, networkParams(input));
+  const { warranty, ...network } = input;
+  await pool.execute(NETWORK_INSERT, networkParams({ ...network, assetId: input.assetId }));
+  await maybeInsertWarranty('network', input.assetId, warranty);
   const [rows] = await pool.query<NetworkRow[]>('SELECT * FROM network WHERE asset_id = ?', [input.assetId]);
   if (!rows[0]) throw new Error('Failed to load created network asset');
   return mapNetwork(rows[0]);
@@ -389,11 +407,12 @@ export async function bulkCreateLaptops(rows: BulkLaptopImportRow[]) {
   try {
     await conn.beginTransaction();
     for (const row of rows) {
-      const { handover, assetId, ...laptop } = row;
+      const { handover, assetId, warranty, ...laptop } = row;
       if (assetId == null || assetId <= 0) {
         throw new Error('asset_id is required after ID generation');
       }
       await conn.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId }));
+      await maybeInsertWarranty('laptop', assetId, warranty, conn);
       if (handover) {
         await insertLaptopHandover(conn, assetId, handover);
       }
@@ -414,11 +433,12 @@ export async function bulkCreateAv(rows: BulkAvImportRow[]) {
   try {
     await conn.beginTransaction();
     for (const row of rows) {
-      const { deployment, assetId, ...av } = row;
+      const { deployment, assetId, warranty, ...av } = row;
       if (assetId == null || assetId <= 0) {
         throw new Error('asset_id is required after ID generation');
       }
       await conn.execute(AV_INSERT, avParams({ ...av, assetId }));
+      await maybeInsertWarranty('av', assetId, warranty, conn);
       if (deployment) {
         await insertPlaceDeployment(conn, 'av', assetId, deployment);
       }
@@ -439,11 +459,12 @@ export async function bulkCreateNetwork(rows: BulkNetworkImportRow[]) {
   try {
     await conn.beginTransaction();
     for (const row of rows) {
-      const { deployment, assetId, ...network } = row;
+      const { deployment, assetId, warranty, ...network } = row;
       if (assetId == null || assetId <= 0) {
         throw new Error('asset_id is required after ID generation');
       }
       await conn.execute(NETWORK_INSERT, networkParams({ ...network, assetId }));
+      await maybeInsertWarranty('network', assetId, warranty, conn);
       if (deployment) {
         await insertPlaceDeployment(conn, 'network', assetId, deployment);
       }
