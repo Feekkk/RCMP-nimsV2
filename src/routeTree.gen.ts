@@ -32,6 +32,7 @@ import { Route as TechnicianDashboardRouteImport } from './routes/technician/das
 import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bulk-import'
 import { Route as TechnicianAvRouteImport } from './routes/technician/av'
 import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
+import { Route as AuthMicrosoftCallbackRouteImport } from './routes/auth/microsoft.callback'
 import { Route as TechnicianAssetKindAssetIdRouteImport } from './routes/technician/asset.$kind.$assetId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -149,6 +150,11 @@ const TechnicianAddAssetRoute = TechnicianAddAssetRouteImport.update({
   path: '/technician/add-asset',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthMicrosoftCallbackRoute = AuthMicrosoftCallbackRouteImport.update({
+  id: '/auth/microsoft/callback',
+  path: '/auth/microsoft/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianAssetKindAssetIdRoute =
   TechnicianAssetKindAssetIdRouteImport.update({
     id: '/technician/asset/$kind/$assetId',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRoutesByTo {
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRoutesById {
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRouteTypes {
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   id:
     | '__root__'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   fileRoutesById: FileRoutesById
 }
@@ -340,6 +352,7 @@ export interface RootRouteChildren {
   UserEditProfileRoute: typeof UserEditProfileRoute
   UserHistoryRoute: typeof UserHistoryRoute
   UserRequestRoute: typeof UserRequestRoute
+  AuthMicrosoftCallbackRoute: typeof AuthMicrosoftCallbackRoute
   TechnicianAssetKindAssetIdRoute: typeof TechnicianAssetKindAssetIdRoute
 }
 
@@ -506,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianAddAssetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/microsoft/callback': {
+      id: '/auth/microsoft/callback'
+      path: '/auth/microsoft/callback'
+      fullPath: '/auth/microsoft/callback'
+      preLoaderRoute: typeof AuthMicrosoftCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/asset/$kind/$assetId': {
       id: '/technician/asset/$kind/$assetId'
       path: '/technician/asset/$kind/$assetId'
@@ -540,6 +560,7 @@ const rootRouteChildren: RootRouteChildren = {
   UserEditProfileRoute: UserEditProfileRoute,
   UserHistoryRoute: UserHistoryRoute,
   UserRequestRoute: UserRequestRoute,
+  AuthMicrosoftCallbackRoute: AuthMicrosoftCallbackRoute,
   TechnicianAssetKindAssetIdRoute: TechnicianAssetKindAssetIdRoute,
 }
 export const routeTree = rootRouteImport

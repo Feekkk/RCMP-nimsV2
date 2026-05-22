@@ -18,11 +18,16 @@ type UserRow = RowDataPacket & {
   staff_id: string;
   full_name: string;
   email: string;
-  password_hash: string;
+  entra_oid: string | null;
+  password_hash: string | null;
+  auth_provider: 'local' | 'microsoft';
   role_id: number;
   phone: string | null;
   role_name: string;
 };
+
+const USER_SELECT = `SELECT u.staff_id, u.full_name, u.email, u.entra_oid, u.password_hash, u.auth_provider,
+  u.role_id, u.phone, r.name AS role_name`;
 
 function mapUser(row: UserRow): AuthUserRow {
   return {
@@ -35,10 +40,10 @@ function mapUser(row: UserRow): AuthUserRow {
   };
 }
 
-async function findUserByStaffId(staffId: string): Promise<(UserRow & { password_hash: string }) | null> {
+async function findUserByStaffId(staffId: string): Promise<UserRow | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRow[]>(
-    `SELECT u.staff_id, u.full_name, u.email, u.password_hash, u.role_id, u.phone, r.name AS role_name
+    `${USER_SELECT}
      FROM users u
      INNER JOIN role r ON r.id = u.role_id
      WHERE u.staff_id = ?
@@ -48,10 +53,10 @@ async function findUserByStaffId(staffId: string): Promise<(UserRow & { password
   return rows[0] ?? null;
 }
 
-async function findUserByEmail(email: string): Promise<(UserRow & { password_hash: string }) | null> {
+async function findUserByEmail(email: string): Promise<UserRow | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRow[]>(
-    `SELECT u.staff_id, u.full_name, u.email, u.password_hash, u.role_id, u.phone, r.name AS role_name
+    `${USER_SELECT}
      FROM users u
      INNER JOIN role r ON r.id = u.role_id
      WHERE u.email = ?
@@ -61,6 +66,97 @@ async function findUserByEmail(email: string): Promise<(UserRow & { password_has
   return rows[0] ?? null;
 }
 
+async function findUserByEntraOid(entraOid: string): Promise<UserRow | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<UserRow[]>(
+    `${USER_SELECT}
+     FROM users u
+     INNER JOIN role r ON r.id = u.role_id
+     WHERE u.entra_oid = ?
+     LIMIT 1`,
+    [entraOid.trim()],
+  );
+  return rows[0] ?? null;
+}
+
+async function touchMicrosoftLogin(staffId: string, entraOid: string, fullName: string): Promise<void> {
+  const pool = getDbPool();
+  await pool.execute(
+    `UPDATE users
+     SET entra_oid = ?, auth_provider = 'microsoft', full_name = ?, last_login_at = CURRENT_TIMESTAMP
+     WHERE staff_id = ?`,
+    [entraOid, fullName, staffId],
+  );
+}
+
+export type MicrosoftLoginInput = {
+  entraOid: string;
+  email: string;
+  fullName: string;
+};
+
+export type MicrosoftLoginResult = AuthUserRow & {
+  /** True when a new role=user account was created on this sign-in. */
+  accountCreated: boolean;
+};
+
+/** Stable staff_id for SSO-only borrowers (role 3), derived from Entra object id. */
+function staffIdFromEntraOid(entraOid: string): string {
+  const compact = entraOid.replace(/-/g, '').toLowerCase();
+  return `U${compact}`.slice(0, 32);
+}
+
+async function createMicrosoftBorrowerAccount(
+  entraOid: string,
+  email: string,
+  fullName: string,
+): Promise<UserRow> {
+  const staffId = staffIdFromEntraOid(entraOid);
+  const pool = getDbPool();
+  await pool.execute(
+    `INSERT INTO users (staff_id, full_name, email, entra_oid, password_hash, auth_provider, role_id, last_login_at)
+     VALUES (?, ?, ?, ?, NULL, 'microsoft', ?, CURRENT_TIMESTAMP)`,
+    [staffId, fullName, email, entraOid, ROLE_USER],
+  );
+  const created = await findUserByStaffId(staffId);
+  if (!created) throw new Error('Could not create your account');
+  return created;
+}
+
+/**
+ * Sign in via Entra ID.
+ * - role 3 (user): auto-created on first sign-in; returning users matched by entra_oid or email.
+ * - role 1/2 (staff/admin): must be provisioned in users first; role_id comes from the database.
+ */
+export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<MicrosoftLoginResult> {
+  const email = input.email.trim().toLowerCase();
+  const entraOid = input.entraOid.trim();
+  const fullName = input.fullName.trim() || email.split('@')[0];
+
+  let row = await findUserByEntraOid(entraOid);
+  if (!row) {
+    row = await findUserByEmail(email);
+  }
+
+  let accountCreated = false;
+
+  if (!row) {
+    row = await createMicrosoftBorrowerAccount(entraOid, email, fullName);
+    accountCreated = true;
+  } else {
+    if (row.email !== email) {
+      throw new Error(
+        'Microsoft email does not match your NIMS account. Contact an administrator to update your email.',
+      );
+    }
+    await touchMicrosoftLogin(row.staff_id, entraOid, fullName);
+  }
+
+  const updated = await findUserByStaffId(row.staff_id);
+  if (!updated) throw new Error('Account not found after sign-in');
+  return { ...mapUser(updated), accountCreated };
+}
+
 export async function loginStaff(staffId: string, password: string): Promise<AuthUserRow> {
   const row = await findUserByStaffId(staffId);
   if (!row) {
@@ -68,6 +164,9 @@ export async function loginStaff(staffId: string, password: string): Promise<Aut
   }
   if (row.role_id !== 1 && row.role_id !== 2) {
     throw new Error('This account cannot sign in as staff');
+  }
+  if (!row.password_hash) {
+    throw new Error('This account uses Microsoft sign-in. Use Continue with Microsoft.');
   }
   const ok = await bcrypt.compare(password, row.password_hash);
   if (!ok) {
@@ -83,6 +182,9 @@ export async function loginUser(email: string, password: string): Promise<AuthUs
   }
   if (row.role_id !== ROLE_USER) {
     throw new Error('This account cannot sign in here. Use staff sign-in.');
+  }
+  if (!row.password_hash) {
+    throw new Error('This account uses Microsoft sign-in. Use Continue with Microsoft.');
   }
   const ok = await bcrypt.compare(password, row.password_hash);
   if (!ok) {
@@ -126,8 +228,8 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthUserRo
   const pool = getDbPool();
 
   await pool.execute(
-    `INSERT INTO users (staff_id, full_name, email, password_hash, role_id, phone)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users (staff_id, full_name, email, password_hash, auth_provider, role_id, phone)
+     VALUES (?, ?, ?, ?, 'local', ?, ?)`,
     [staffId, fullName, email, passwordHash, ROLE_USER, phone],
   );
 
