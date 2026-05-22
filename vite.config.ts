@@ -172,6 +172,14 @@ export default defineConfig(({ command, mode }) => {
     envDefine[`import.meta.env.${key}`] = JSON.stringify(value);
   }
 
+  // Server-side OAuth / DB (not exposed to client bundle)
+  const serverEnv = loadEnv(mode, process.cwd(), ["AZURE_", "MYSQL_", "SMTP_"]);
+  for (const [key, value] of Object.entries(serverEnv)) {
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+
   return {
     server: {
       host: "::",
