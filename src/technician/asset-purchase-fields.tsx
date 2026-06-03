@@ -1,10 +1,10 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DATE_FORMAT_DDMMYY } from '@/lib/date-format';
+import { IMPORT_DATE_FORMAT_HINT } from '@/lib/date-format';
 import type { PurchaseFormState } from '@/lib/purchase-field-utils';
 
-const DATE_PLACEHOLDER = 'DDMMYY';
-const DATE_HINT = `${DATE_FORMAT_DDMMYY} (e.g. 150126)`;
+const DATE_PLACEHOLDER = 'DD-MM-YY';
+const DATE_HINT = IMPORT_DATE_FORMAT_HINT;
 
 export function PurchaseFieldsSection({
   values,

@@ -1,7 +1,7 @@
-import { DATE_FORMAT_DDMMYY, parseDdMmYyToIso } from '@/lib/date-format';
+import { IMPORT_DATE_FORMAT_HINT, parseDdMmYyToIso } from '@/lib/date-format';
 import type { PurchaseFields } from '@/lib/inventory-schema';
 
-export { DATE_FORMAT_DDMMYY, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
+export { DATE_FORMAT_DDMMYY, IMPORT_DATE_FORMAT_HINT, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
 
 export function parseOptionalDate(
   raw: string,
@@ -14,7 +14,10 @@ export function parseOptionalDate(
 
   const iso = parseDdMmYyToIso(val);
   if (!iso) {
-    errors.push({ row: rowNum, message: `Invalid ${column} (use ${DATE_FORMAT_DDMMYY}, e.g. 150126 for 15 Jan 2026)` });
+    errors.push({
+      row: rowNum,
+      message: `Invalid ${column} (use ${IMPORT_DATE_FORMAT_HINT})`,
+    });
     return null;
   }
   return iso;

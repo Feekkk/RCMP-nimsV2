@@ -57,10 +57,6 @@ export function parseWarrantyFromRow(
   const startDate = parseOptionalDate(startRaw, 'warranty_start_date', rowNum, errors);
   const endDate = parseOptionalDate(endRaw, 'warranty_end_date', rowNum, errors);
   if (!startDate || !endDate) return undefined;
-  if (endDate < startDate) {
-    errors.push({ row: rowNum, message: 'warranty_end_date must be on or after warranty_start_date' });
-    return undefined;
-  }
 
   return { startDate, endDate, remarks };
 }

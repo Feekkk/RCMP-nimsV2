@@ -81,9 +81,6 @@ export async function insertWarranty(
 ) {
   const pool = conn ?? getDbPool();
   const executor = conn ? conn.execute.bind(conn) : pool.execute.bind(pool);
-  if (input.endDate < input.startDate) {
-    throw new Error('Warranty end date must be on or after start date');
-  }
   await executor(
     `INSERT INTO warranty (asset_id, asset_type, warranty_start_date, warranty_end_date, warranty_remarks)
      VALUES (?, ?, ?, ?, ?)`,

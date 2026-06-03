@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { DATE_FORMAT_DDMMYY, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
+import { IMPORT_DATE_FORMAT_HINT, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
 import { formatStatusLabel } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, type AssetKind } from '@/hooks/assets';
 import {
@@ -292,8 +292,8 @@ function BulkImportWorkspace({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">CSV data</CardTitle>
           <CardDescription>
-            Paste rows below, then parse to validate. Dates: {DATE_FORMAT_DDMMYY} only (
-            {PURCHASE_DATE_COLUMNS.join(', ')}).
+            Paste rows below, then parse to validate. Dates: {IMPORT_DATE_FORMAT_HINT} (
+            {PURCHASE_DATE_COLUMNS.join(', ')}, handover_date, deployment_date).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
