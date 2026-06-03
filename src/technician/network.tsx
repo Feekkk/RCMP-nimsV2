@@ -15,21 +15,25 @@ import { TechnicianShell } from '@/technician/technician-shell';
 import { AssetStatusActions } from '@/technician/asset-status-actions';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
-import { filterBySearch, useAssets } from '@/hooks/assets';
+import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
 import { AssetStockSummary } from '@/technician/asset-stock-summary';
 
 export function TechnicianNetworkPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<number | null>(null);
   const { items, isLoading, error, updateStatus } = useAssets('network');
 
-  const filtered = useMemo(() => filterBySearch(items, search, (item) => item.ipAddress ?? ''), [items, search]);
+  const filtered = useMemo(() => {
+    const bySearch = filterBySearch(items, search, (item) => item.ipAddress ?? '');
+    return filterByStatus(bySearch, statusFilter);
+  }, [items, search, statusFilter]);
 
   return (
     <TechnicianShell>
       <div className="mb-5 flex flex-col gap-1 sm:mb-6">
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Network equipment</h1>
-        <p className="text-xs text-muted-foreground sm:text-sm">Fetch from system database</p>
+        <p className="text-xs text-muted-foreground sm:text-sm">List of network equipment in the system</p>
       </div>
 
       <AssetStockSummary items={items} />
@@ -44,7 +48,11 @@ export function TechnicianNetworkPage() {
             className="h-10 rounded-[10px] pl-9"
           />
         </div>
-        <RegisterAssetActions kind="network" />
+        <RegisterAssetActions
+          kind="network"
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+        />
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
@@ -74,7 +82,7 @@ export function TechnicianNetworkPage() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                      No assets match your search.
+                      No assets match your search or status filter.
                     </TableCell>
                   </TableRow>
                 ) : (
