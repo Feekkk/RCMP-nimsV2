@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileDown, Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,8 @@ import {
   returnLaptopStaffFn,
   returnPlaceFn,
 } from '@/server/deploy-return.functions';
+import { generateReturnPdfFn } from '@/server/return-pdf.functions';
+import { sendReturnEmailFn } from '@/server/return-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { ReturnDetailsFields } from '@/technician/deploy-return-fields';
 import { STATUS_ID } from '@/lib/asset-status-actions';
@@ -74,6 +76,10 @@ export function TechnicianReturnPage() {
   const [condition, setCondition] = useState('Good');
   const [returnRemarks, setReturnRemarks] = useState('');
   const [saving, setSaving] = useState(false);
+  const [lastReturnId, setLastReturnId] = useState<number | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const asset = useMemo(() => {
     if (!kind || !assetId) return null;
@@ -127,6 +133,47 @@ export function TechnicianReturnPage() {
 
   const session = readTechnicianSession();
 
+  const isStaffLaptopReturn =
+    openCtx?.kind === 'laptop' && openCtx.record.type === 'staff';
+
+  const handleSendReturnEmail = async (returnId?: number) => {
+    const id = returnId ?? lastReturnId;
+    if (id == null) return;
+    setEmailLoading(true);
+    try {
+      const result = await sendReturnEmailFn({ data: id });
+      setEmailSent(true);
+      toast.success(`Return email sent to ${result.to}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not send return email');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleDownloadReturnPdf = async () => {
+    if (lastReturnId == null) return;
+    setPdfLoading(true);
+    try {
+      const { base64, filename } = await generateReturnPdfFn({ data: lastReturnId });
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Return form downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not generate return PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.staffId) {
@@ -150,10 +197,11 @@ export function TechnicianReturnPage() {
 
     setSaving(true);
     try {
+      let returnId: number | undefined;
       if (openCtx.kind === 'laptop') {
         const r = openCtx.record;
         if (r.type === 'staff') {
-          await returnLaptopStaffFn({
+          const result = await returnLaptopStaffFn({
             data: {
               handoverStaffId: r.handoverStaffId,
               returnedBy: session.staffId,
@@ -164,8 +212,9 @@ export function TechnicianReturnPage() {
               returnRemarks: returnRemarks.trim() || null,
             },
           });
+          returnId = result.returnId;
         } else {
-          await returnLaptopPlaceFn({
+          const result = await returnLaptopPlaceFn({
             data: {
               handoverId: r.handoverId,
               returnedBy: session.staffId,
@@ -176,6 +225,7 @@ export function TechnicianReturnPage() {
               returnRemarks: returnRemarks.trim() || null,
             },
           });
+          returnId = result.returnId;
         }
       } else {
         await returnPlaceFn({
@@ -190,6 +240,15 @@ export function TechnicianReturnPage() {
             returnRemarks: returnRemarks.trim() || null,
           },
         });
+      }
+      if (returnId != null) {
+        setLastReturnId(returnId);
+        toast.success('Asset returned');
+        setSaving(false);
+        if (openCtx.kind === 'laptop' && openCtx.record.type === 'staff') {
+          await handleSendReturnEmail(returnId);
+        }
+        return;
       }
       toast.success('Asset returned');
       void navigate({ to: ASSET_LIST_PATH[kind] });
@@ -286,6 +345,51 @@ export function TechnicianReturnPage() {
           </form>
         </CardContent>
       </Card>
+
+      {lastReturnId != null && (
+        <Card className="mt-4 rounded-[14px] border-emerald-500/30 bg-emerald-50/50 shadow-sm dark:bg-emerald-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Return form</CardTitle>
+            <CardDescription>
+              {isStaffLaptopReturn
+                ? `An email with the return PDF is sent automatically to the staff recipient.${emailSent ? ' Sent successfully.' : ' Use the buttons below if it did not send.'}`
+                : 'Return form PDF is available below.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            {isStaffLaptopReturn && (
+              <Button
+                type="button"
+                variant="default"
+                className="rounded-[8px] gap-2 bg-foreground text-background hover:opacity-90"
+                disabled={emailLoading}
+                onClick={() => void handleSendReturnEmail()}
+              >
+                {emailLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
+                {emailSent ? 'Resend return email' : 'Send return email'}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[8px] gap-2"
+              disabled={pdfLoading}
+              onClick={() => void handleDownloadReturnPdf()}
+            >
+              {pdfLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="h-4 w-4" />
+              )}
+              Download PDF
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </TechnicianShell>
   );
 }

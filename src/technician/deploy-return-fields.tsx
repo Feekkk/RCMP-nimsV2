@@ -90,8 +90,9 @@ export function DatePickerField({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0" align="start" sideOffset={6}>
           <Calendar
+            className="[--cell-size:3rem]"
             mode="single"
             selected={selected}
             onSelect={(date) => {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileDown, Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,8 @@ import {
   deployLaptopStaffFn,
   deployPlaceFn,
 } from '@/server/deploy-return.functions';
+import { generateHandoverPdfFn } from '@/server/handover-pdf.functions';
+import { sendHandoverEmailFn } from '@/server/handover-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { StaffRecipientSearch } from '@/technician/staff-recipient-search';
@@ -57,6 +59,10 @@ export function TechnicianDeployPage() {
   const [deploymentDate, setDeploymentDate] = useState('');
   const [deploymentRemarks, setDeploymentRemarks] = useState('');
   const [saving, setSaving] = useState(false);
+  const [lastHandoverId, setLastHandoverId] = useState<number | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   if (!params) {
     return (
@@ -71,6 +77,42 @@ export function TechnicianDeployPage() {
 
   const { kind, assetId } = params;
   const session = readTechnicianSession();
+
+  const handleSendHandoverEmail = async (handoverId: number) => {
+    setEmailLoading(true);
+    try {
+      const result = await sendHandoverEmailFn({ data: handoverId });
+      setEmailSent(true);
+      toast.success(`Handover email sent to ${result.to}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not send handover email');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleDownloadHandoverPdf = async () => {
+    if (lastHandoverId == null) return;
+    setPdfLoading(true);
+    try {
+      const { base64, filename } = await generateHandoverPdfFn({ data: lastHandoverId });
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Handover form downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not generate PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +136,12 @@ export function TechnicianDeployPage() {
             setSaving(false);
             return;
           }
-          await deployLaptopStaffFn({
+          if (!recipient.email?.trim().includes('@')) {
+            toast.error('Selected staff has no email in the directory — add email before handover');
+            setSaving(false);
+            return;
+          }
+          const result = await deployLaptopStaffFn({
             data: {
               assetId,
               staffId: session.staffId,
@@ -103,6 +150,11 @@ export function TechnicianDeployPage() {
               handoverRemarks: handoverRemarks.trim() || null,
             },
           });
+          setLastHandoverId(result.handoverId);
+          toast.success('Asset deployed');
+          setSaving(false);
+          await handleSendHandoverEmail(result.handoverId);
+          return;
         } else {
           await deployLaptopPlaceFn({
             data: {
@@ -138,8 +190,10 @@ export function TechnicianDeployPage() {
           },
         });
       }
-      toast.success('Asset deployed');
-      void navigate({ to: ASSET_LIST_PATH[kind] });
+      if (!(kind === 'laptop' && laptopMode === 'staff')) {
+        toast.success('Asset deployed');
+        void navigate({ to: ASSET_LIST_PATH[kind] });
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Deploy failed');
     } finally {
@@ -271,6 +325,49 @@ export function TechnicianDeployPage() {
           </form>
         </CardContent>
       </Card>
+
+      {lastHandoverId != null && (
+        <Card className="mt-4 rounded-[14px] border-emerald-500/30 bg-emerald-50/50 shadow-sm dark:bg-emerald-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Handover form (3 pages)</CardTitle>
+            <CardDescription>
+              Software compliance, equipment handover, and liability acknowledgment. An email with the
+              handover PDF is sent automatically to the staff recipient.
+              {emailSent ? ' Sent successfully.' : ' Use the buttons below if it did not send.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <Button
+              type="button"
+              variant="default"
+              className="rounded-[8px] gap-2 bg-foreground text-background hover:opacity-90"
+              disabled={emailLoading}
+              onClick={() => void handleSendHandoverEmail(lastHandoverId)}
+            >
+              {emailLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              {emailSent ? 'Resend handover email' : 'Send handover email'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[8px] gap-2"
+              disabled={pdfLoading}
+              onClick={() => void handleDownloadHandoverPdf()}
+            >
+              {pdfLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="h-4 w-4" />
+              )}
+              Download PDF
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </TechnicianShell>
   );
 }

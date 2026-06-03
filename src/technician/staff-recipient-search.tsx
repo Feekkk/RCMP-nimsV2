@@ -38,6 +38,7 @@ export function StaffRecipientSearch({
           <p className="font-medium">{value.fullName}</p>
           <p className="text-xs text-muted-foreground">
             {value.employeeNo}
+            {value.email ? ` · ${value.email}` : ' · no email'}
             {value.department ? ` · ${value.department}` : ''}
           </p>
         </div>
