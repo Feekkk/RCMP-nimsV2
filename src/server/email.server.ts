@@ -34,6 +34,18 @@ function normalizeRecipients(to: string | string[], required = true): string[] {
   return out;
 }
 
+function toNodemailerAttachments(input: SendNotificationEmailInput['attachments']) {
+  if (!input?.length) return undefined;
+  return input.map((a) => ({
+    filename: a.filename,
+    content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
+    contentType: a.contentType,
+    ...(a.cid
+      ? { cid: a.cid, contentDisposition: 'inline' as const }
+      : { contentDisposition: 'attachment' as const }),
+  }));
+}
+
 export async function sendNotificationEmail(
   input: SendNotificationEmailInput,
 ): Promise<SendNotificationEmailResult> {
@@ -43,12 +55,14 @@ export async function sendNotificationEmail(
 
   const config = getMicrosoftEmailConfig()!;
   const to = normalizeRecipients(input.to);
-  const cc = input.cc ? normalizeRecipients(input.cc, false) : [];
   const subject = input.subject.trim();
   const text = input.text.trim();
 
   if (!subject) throw new Error('Email subject is required');
   if (!text && !input.html?.trim()) throw new Error('Email body is required');
+
+  const cc = input.cc ? normalizeRecipients(input.cc, false) : [];
+  const attachments = toNodemailerAttachments(input.attachments);
 
   const transport = getTransporter();
   const info = await transport.sendMail({
@@ -58,16 +72,11 @@ export async function sendNotificationEmail(
     subject,
     text: text || undefined,
     html: input.html?.trim() || undefined,
-    attachments: input.attachments?.map((a) => ({
-      filename: a.filename,
-      content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
-      contentType: a.contentType,
-      cid: a.cid,
-    })),
+    ...(attachments ? { attachments } : {}),
   });
 
   return {
-    messageId: String(info.messageId ?? ''),
+    messageId: info.messageId,
     accepted: (info.accepted as string[]).map(String),
   };
 }
