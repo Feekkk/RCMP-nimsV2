@@ -8,7 +8,9 @@ let transporter: Transporter | null = null;
 function getTransporter(): Transporter {
   const config = getMicrosoftEmailConfig();
   if (!config) {
-    throw new Error('Email is not configured. Set SMTP_USER and SMTP_PASSWORD in the server environment.');
+    throw new Error(
+      'Email is not configured. Set SMTP_USER/SMTP_PASSWORD or SMTP_MAILPIT=true',
+    );
   }
 
   if (!transporter) {
@@ -16,11 +18,9 @@ function getTransporter(): Transporter {
       host: config.host,
       port: config.port,
       secure: config.secure,
-      auth: {
-        user: config.user,
-        pass: config.password,
-      },
-      requireTLS: !config.secure && config.port === 587,
+      ...(config.auth ? { auth: config.auth } : {}),
+      requireTLS: Boolean(config.auth) && !config.secure && config.port === 587,
+      tls: config.auth ? undefined : { rejectUnauthorized: false },
     });
   }
 
