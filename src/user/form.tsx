@@ -40,6 +40,7 @@ import {
   USER_REQUEST_LAPTOP_TYPES,
   requestItemKindFromAssetType,
 } from '@/lib/request-asset-types';
+import { sendRequestEmailFn } from '@/server/request-email.functions';
 import { submitUserRequestFn } from '@/server/request.functions';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
@@ -152,7 +153,17 @@ export function UserRequestFormPage() {
         },
       });
       setSubmittedId(result.requestId);
-      toast.success(`Request #${result.requestId} submitted`);
+      try {
+        await sendRequestEmailFn({ data: result.requestId });
+        toast.success(`Request #${result.requestId} submitted — confirmation sent to you and IT`);
+      } catch (emailErr) {
+        toast.success(`Request #${result.requestId} submitted`);
+        toast.warning(
+          emailErr instanceof Error
+            ? emailErr.message
+            : 'Request saved but notification email could not be sent',
+        );
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not submit request');
     } finally {
@@ -178,7 +189,8 @@ export function UserRequestFormPage() {
           </div>
           <h1 className="text-2xl font-bold">Request submitted</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your request <strong>#{submittedId}</strong> has been sent for technician review.
+            Your request <strong>#{submittedId}</strong> has been sent for technician review. A confirmation
+            email was sent to you and ITD when notifications are enabled.
           </p>
           <Button
             className="mt-8 rounded-[8px]"

@@ -52,6 +52,8 @@ import type {
 import { kindGroupLabel, requestItemKindFromAssetType } from '@/lib/request-asset-types';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { sendCheckoutEmailFn } from '@/server/checkout-email.functions';
+import { sendRequestReturnEmailFn } from '@/server/request-return-email.functions';
 import {
   bookPoolAssetToRequestFn,
   changeBookedAssignmentFn,
@@ -342,9 +344,27 @@ export function TechnicianRequestPage() {
       const result = await checkoutUserRequestFn({
         data: { requestId: req.requestId, checkedOutBy: session.staffId },
       });
-      toast.success(
-        `Checked out ${result.checkedOut} asset${result.checkedOut === 1 ? '' : 's'} (status ${REQUEST_STATUS_CHECKOUT})`,
-      );
+      try {
+        await sendCheckoutEmailFn({
+          data: {
+            requestId: req.requestId,
+            checkedOutBy: session.staffId,
+            assignmentIds: result.assignmentIds,
+          },
+        });
+        toast.success(
+          `Checked out ${result.checkedOut} asset${result.checkedOut === 1 ? '' : 's'} — notification sent to requester`,
+        );
+      } catch (emailErr) {
+        toast.success(
+          `Checked out ${result.checkedOut} asset${result.checkedOut === 1 ? '' : 's'} (status ${REQUEST_STATUS_CHECKOUT})`,
+        );
+        toast.warning(
+          emailErr instanceof Error
+            ? emailErr.message
+            : 'Checkout saved but notification email could not be sent',
+        );
+      }
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Checkout failed');
@@ -421,9 +441,29 @@ export function TechnicianRequestPage() {
           remarks: returnRemarks.trim() || null,
         },
       });
-      toast.success(
-        `Returned ${result.returned} asset${result.returned === 1 ? '' : 's'} to the request pool`,
-      );
+      try {
+        await sendRequestReturnEmailFn({
+          data: {
+            requestId: returnRequest.requestId,
+            returnedBy: session.staffId,
+            assignmentIds: result.assignmentIds,
+            returnCondition: condition,
+            remarks: returnRemarks.trim() || null,
+          },
+        });
+        toast.success(
+          `Returned ${result.returned} asset${result.returned === 1 ? '' : 's'} — notification sent to requester`,
+        );
+      } catch (emailErr) {
+        toast.success(
+          `Returned ${result.returned} asset${result.returned === 1 ? '' : 's'} to the request pool`,
+        );
+        toast.warning(
+          emailErr instanceof Error
+            ? emailErr.message
+            : 'Return saved but notification email could not be sent',
+        );
+      }
       setReturnRequest(null);
       setReturnRemarks('');
       await load();

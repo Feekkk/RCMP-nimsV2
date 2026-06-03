@@ -431,18 +431,18 @@ export async function checkoutUserRequest(
     [input.requestId, REQUEST_STATUS_BOOKED],
   );
 
-  let checkedOut = 0;
+  const assignmentIds: number[] = [];
   for (const row of rows) {
     await checkoutRequestAssignment({
       assignmentId: row.assignment_id,
       checkedOutBy: input.checkedOutBy,
     });
-    checkedOut++;
+    assignmentIds.push(row.assignment_id);
   }
-  if (checkedOut === 0) {
+  if (assignmentIds.length === 0) {
     throw new Error('No booked assets to check out for this request');
   }
-  return { checkedOut };
+  return { checkedOut: assignmentIds.length, assignmentIds };
 }
 
 export async function checkoutRequestAssignment(
@@ -584,18 +584,20 @@ export async function returnUserRequest(
     throw new Error('No checked-out assets to return for this request');
   }
 
+  const assignmentIds = pending.map((row) => Number(row.assignment_id));
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    for (const row of pending) {
-      await returnOneAssignment(conn, Number(row.assignment_id), {
+    for (const assignmentId of assignmentIds) {
+      await returnOneAssignment(conn, assignmentId, {
         returnedBy: input.returnedBy,
         returnCondition: condition,
         remarks: input.remarks,
       });
     }
     await conn.commit();
-    return { returned: pending.length };
+    return { returned: assignmentIds.length, assignmentIds };
   } catch (e) {
     await conn.rollback();
     throw e;

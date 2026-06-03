@@ -67,6 +67,7 @@ export type CheckoutUserRequestInput = {
 
 export type CheckoutUserRequestResult = {
   checkedOut: number;
+  assignmentIds: number[];
 };
 
 export type CheckoutRequestAssignmentInput = {
@@ -92,6 +93,7 @@ export type ReturnUserRequestInput = {
 
 export type ReturnUserRequestResult = {
   returned: number;
+  assignmentIds: number[];
 };
 
 export type ChangeBookedAssignmentInput = {
