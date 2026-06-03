@@ -27,10 +27,10 @@ function getTransporter(): Transporter {
   return transporter;
 }
 
-function normalizeRecipients(to: string | string[]): string[] {
+function normalizeRecipients(to: string | string[], required = true): string[] {
   const list = Array.isArray(to) ? to : [to];
   const out = list.map((e) => e.trim().toLowerCase()).filter((e) => e.includes('@'));
-  if (out.length === 0) throw new Error('No valid recipient email address');
+  if (required && out.length === 0) throw new Error('No valid recipient email address');
   return out;
 }
 
@@ -43,6 +43,7 @@ export async function sendNotificationEmail(
 
   const config = getMicrosoftEmailConfig()!;
   const to = normalizeRecipients(input.to);
+  const cc = input.cc ? normalizeRecipients(input.cc, false) : [];
   const subject = input.subject.trim();
   const text = input.text.trim();
 
@@ -53,13 +54,20 @@ export async function sendNotificationEmail(
   const info = await transport.sendMail({
     from: `"${config.fromName}" <${config.fromAddress}>`,
     to: to.join(', '),
+    ...(cc.length > 0 ? { cc: cc.join(', ') } : {}),
     subject,
     text: text || undefined,
     html: input.html?.trim() || undefined,
+    attachments: input.attachments?.map((a) => ({
+      filename: a.filename,
+      content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
+      contentType: a.contentType,
+      cid: a.cid,
+    })),
   });
 
   return {
-    messageId: info.messageId,
+    messageId: String(info.messageId ?? ''),
     accepted: (info.accepted as string[]).map(String),
   };
 }
