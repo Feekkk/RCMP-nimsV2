@@ -131,6 +131,11 @@ export function filterBySearch<
   });
 }
 
+export function filterByStatus<T extends { statusId: number }>(items: T[], statusId: number | null): T[] {
+  if (statusId == null) return items;
+  return items.filter((item) => item.statusId === statusId);
+}
+
 export function countStockAssets<T extends { statusId: number }>(items: T[]) {
   return {
     instock: items.filter((i) => isInstockStatus(i.statusId)).length,
