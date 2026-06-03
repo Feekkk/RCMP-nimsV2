@@ -274,7 +274,7 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
     const row = hsRows[0];
     if (!row) throw new Error('Handover record not found');
 
-    await conn.execute(
+    const [insertResult] = await conn.execute(
       `INSERT INTO handover_return
         (handover_staff_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks, return_status_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -294,7 +294,10 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
       row.asset_id,
     ]);
     await conn.commit();
-    return { assetId: row.asset_id };
+    return {
+      assetId: row.asset_id,
+      returnId: (insertResult as { insertId: number }).insertId,
+    };
   } catch (e) {
     await conn.rollback();
     throw e;
@@ -315,7 +318,7 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
     const row = hRows[0];
     if (!row) throw new Error('Handover record not found');
 
-    await conn.execute(
+    const [insertResult] = await conn.execute(
       `INSERT INTO handover_return
         (handover_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks, return_status_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -335,7 +338,10 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
       row.asset_id,
     ]);
     await conn.commit();
-    return { assetId: row.asset_id };
+    return {
+      assetId: row.asset_id,
+      returnId: (insertResult as { insertId: number }).insertId,
+    };
   } catch (e) {
     await conn.rollback();
     throw e;
