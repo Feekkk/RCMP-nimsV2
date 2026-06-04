@@ -196,11 +196,8 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-6xl h-8 items-center justify-between">
           <NimsLogo size="md" variant="light" />
           <div className="hidden items-center gap-8 sm:flex">
-            <button onClick={scrollToHowItWorks} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              How it works
-            </button>
             <Link to="/login" className="rounded-[10px] bg-foreground px-5 py-1.5 text-sm font-semibold text-background hover:opacity-90 transition-all">
-              Sign in
+              Access the System
             </Link>
           </div>
           <button onClick={() => setMobileNavOpen(!mobileNavOpen)} className="flex h-10 w-10 items-center justify-center rounded-[8px] text-muted-foreground hover:text-foreground sm:hidden">
@@ -209,11 +206,8 @@ export function LandingPage() {
         </div>
         {mobileNavOpen && (
           <div className="mx-auto max-w-6xl space-y-3 px-1 pt-4 sm:hidden">
-            <button onClick={scrollToHowItWorks} className="block w-full py-2 text-left text-sm text-muted-foreground">
-              How it works
-            </button>
             <Link to="/login" className="block w-full rounded-[10px] bg-foreground px-4 py-2 text-center text-sm font-semibold text-background">
-              Sign in
+              Access the System
             </Link>
           </div>
         )}
@@ -263,7 +257,7 @@ export function LandingPage() {
                     to="/login"
                     className="group inline-flex items-center justify-center gap-2 rounded-[10px] bg-lavender px-8 py-3 text-base font-semibold text-foreground transition-all hover:shadow-lg hover:shadow-lavender/25"
                   >
-                    Sign in <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    Sign in
                   </Link>
                   <button
                     onClick={scrollToHowItWorks}
