@@ -1,42 +1,160 @@
 import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowRight, Boxes, BarChart3, Shield, Bell, PackageSearch, ScanBarcode, Activity, Menu, X } from 'lucide-react';
+import {
+  Activity,
+  ArrowRight,
+  BarChart3,
+  Bell,
+  Boxes,
+  Database,
+  Laptop,
+  Loader2,
+  Menu,
+  Network,
+  PackageSearch,
+  ScanBarcode,
+  Shield,
+  Tv,
+  X,
+} from 'lucide-react';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { StatusBadge } from '@/components/inventory/StatusBadge';
+import uniklOfficialLogo from '@/assets/unikl-official.png';
+import { AssetStatusBadge } from '@/technician/asset-status-badge';
+import type { LandingSampleAsset, LandingStatusLevel, LandingSystemStatus } from '@/lib/landing-status-types';
+import { getLandingSystemStatusFn } from '@/server/landing-status.functions';
+import { cn } from '@/lib/utils';
 
-function MockRow({ name, sku, qty, status }: { name: string; sku: string; qty: number; status: 'in_stock' | 'low_stock' | 'out_of_stock' }) {
+const STATUS_DOT: Record<LandingStatusLevel, string> = {
+  ok: 'bg-emerald-500 shadow-[0_0_0_3px] shadow-emerald-500/25',
+  warn: 'bg-amber-500 shadow-[0_0_0_3px] shadow-amber-500/25',
+  error: 'bg-rose-500 shadow-[0_0_0_3px] shadow-rose-500/25',
+  neutral: 'bg-muted-foreground/40',
+};
+
+function kindIcon(kind: LandingSampleAsset['kind']) {
+  if (kind === 'laptop') return Laptop;
+  if (kind === 'av') return Tv;
+  return Network;
+}
+
+function StatusRow({ label, value, level }: { label: string; value: string; level: LandingStatusLevel }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/60 bg-white p-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-secondary">
-          <Boxes className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold text-foreground">{name}</p>
-          <p className="font-mono text-[10px] text-muted-foreground">{sku}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <StatusBadge status={status} className="text-[9px]" />
-        <span className="text-sm font-bold tabular-nums text-foreground">{qty}</span>
+    <div className="flex items-start gap-3 rounded-[10px] border border-border/50 bg-white/80 px-3 py-2.5">
+      <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', STATUS_DOT[level])} aria-hidden />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="mt-0.5 text-[12px] font-medium leading-snug text-foreground">{value}</p>
       </div>
     </div>
   );
 }
 
-function AppMockup() {
+function SampleAssetRow({ asset }: { asset: LandingSampleAsset }) {
+  const Icon = kindIcon(asset.kind);
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-[10px] border border-border/40 bg-white/60 px-3 py-2">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-lavender/15">
+          <Icon className="h-4 w-4 text-[oklch(0.45_0.12_290)]" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[12px] font-semibold text-foreground">{asset.label}</p>
+          <p className="truncate font-mono text-[10px] text-muted-foreground">{asset.detail}</p>
+        </div>
+      </div>
+      <AssetStatusBadge statusId={asset.statusId} />
+    </div>
+  );
+}
+
+function SystemOverviewPanel() {
+  const [data, setData] = useState<LandingSystemStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async (initial: boolean) => {
+      try {
+        const status = await getLandingSystemStatusFn();
+        if (!cancelled) {
+          setData(status);
+          setError(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Could not load system status');
+          if (initial) setData(null);
+        }
+      } finally {
+        if (!cancelled && initial) setLoading(false);
+      }
+    };
+
+    void load(true);
+    const interval = window.setInterval(() => void load(false), 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className="relative w-full">
-      <div className="overflow-hidden rounded-[16px] border border-border/50 bg-background shadow-[0_20px_60px_-12px_rgba(0,0,0,0.12)]">
-        <div className="space-y-2 bg-background p-4">
-          <div className="mb-2">
-            <p className="text-[13px] font-semibold text-foreground">Inventory</p>
-            <p className="text-[10px] text-muted-foreground">12 items tracked</p>
+      <div className="overflow-hidden rounded-[16px] border border-border/50 bg-background/95 shadow-[0_20px_60px_-12px_rgba(0,0,0,0.12)] backdrop-blur-sm">
+        <div className="border-b border-border/50 bg-gradient-to-r from-lavender/10 to-transparent px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div>
+                <p className="text-[13px] font-semibold text-foreground">IT Department · Live status</p>
+                <p className="text-[10px] text-muted-foreground"> System &amp; database status overview</p>
+              </div>
+            </div>
+            {data && (
+              <p className="text-[9px] tabular-nums text-muted-foreground">Updated {data.fetchedAt}</p>
+            )}
           </div>
-          <MockRow name="USB-C Cable 2m" sku="ELEC-001" qty={42} status="in_stock" />
-          <MockRow name="Office Chair" sku="FURN-014" qty={3} status="low_stock" />
-          <MockRow name="A4 Paper Ream" sku="OFFC-022" qty={0} status="out_of_stock" />
-          <MockRow name="Cordless Drill" sku="TOOL-007" qty={18} status="in_stock" />
+        </div>
+
+        <div className="space-y-3 p-4">
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking system…
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="rounded-[10px] border border-destructive/30 bg-destructive/5 px-3 py-3 text-xs text-destructive">
+              <p className="font-semibold">Status unavailable</p>
+              <p className="mt-1 text-destructive/90">{error}</p>
+            </div>
+          )}
+
+          {!loading && data && (
+            <>
+              <div className="space-y-2">
+                {data.rows.map((row) => (
+                  <StatusRow key={row.key} label={row.label} value={row.value} level={row.level} />
+                ))}
+              </div>
+
+              {data.sampleAssets.length > 0 && (
+                <div className="pt-1">
+                  <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <Database className="h-3 w-3" />
+                    Recent assets
+                  </p>
+                  <div className="space-y-1.5">
+                    {data.sampleAssets.map((asset) => (
+                      <SampleAssetRow key={`${asset.kind}-${asset.assetId}`} asset={asset} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -118,13 +236,27 @@ export function LandingPage() {
             <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-20">
               <div className="flex-1 max-w-xl">
                 <div className="mb-8">
-                  <NimsLogo size="lg" variant="light" />
+                  <img
+                    src={uniklOfficialLogo}
+                    alt="Universiti Kuala Lumpur · Royal College of Medicine Perak"
+                    className="h- max-h-16 w-auto max-w-[min(100%,420px)] object-contain object-left sm:max-h-16"
+                  />
                 </div>
-                <h1 className="text-3xl font-bold leading-[1.08] tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl lg:text-[56px]">
-                  Nexcheck Inventory Management System
+                <div className="mb-5 flex items-center gap-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:text-xs">
+                    University Kuala Lumpur Royal College of Medicine
+                  </p>
+                </div>
+                <h1>
+                  <span className="block bg-gradient-to-br from-foreground via-foreground to-[oklch(0.48_0.12_290)] bg-clip-text text-[2.5rem] font-extrabold leading-[1.02] tracking-[-0.04em] text-transparent sm:text-5xl md:text-6xl lg:text-[4.25rem]">
+                    Nexcheck
+                  </span>
+                  <span className="mt-2 block text-[1.65rem] font-bold leading-[1.12] tracking-[-0.03em] text-foreground sm:mt-3 sm:text-4xl md:text-[2.75rem] lg:text-5xl">
+                    Inventory Management <br/> System
+                  </span>
                 </h1>
                 <p className="mt-6 max-w-md text-base leading-[1.6] text-muted-foreground sm:mt-8 sm:text-lg">
-                  NIMS gives your team a single source of truth for stock levels, locations, and suppliers — with low-stock alerts so nothing slips through.
+                  NIMS This system is designed to help IT department manage inventory effectively and efficiently.
                 </p>
                 <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:gap-4">
                   <Link
@@ -152,7 +284,7 @@ export function LandingPage() {
                   <div className="pointer-events-none absolute -bottom-5 -right-5 z-10 h-11 w-11 rounded-full bg-foreground shadow-lg flex items-center justify-center">
                     <ScanBarcode className="h-4 w-4 text-background" />
                   </div>
-                  <AppMockup />
+                  <SystemOverviewPanel />
                 </div>
               </div>
             </div>
@@ -189,56 +321,10 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Features */}
-        <section className="py-20 sm:py-28">
-          <div className="mx-auto max-w-6xl px-6 sm:px-10">
-            <div className="flex flex-col gap-12 lg:flex-row lg:gap-20">
-              <div className="lg:w-80 lg:flex-shrink-0">
-                <div className="lg:sticky lg:top-8">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-lavender">Features</p>
-                  <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.01em] text-foreground sm:text-4xl">Built for the people who keep things moving</h2>
-                  <p className="mt-4 text-base leading-[1.6] text-muted-foreground">
-                    Every tool you need to run an organized stockroom — without the spreadsheet headaches.
-                  </p>
-                </div>
-              </div>
-              <div className="flex-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {features.map((feature, i) => (
-                  <div key={i} className="group rounded-[16px] border border-border p-7 transition-all hover:border-lavender/30 hover:shadow-lg hover:shadow-lavender/5 sm:p-8">
-                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-lavender/10 transition-colors group-hover:bg-lavender/15">
-                      <feature.icon className="h-5 w-5 text-lavender" />
-                    </div>
-                    <h3 className="text-base font-semibold tracking-[-0.02em] text-foreground">{feature.title}</h3>
-                    <p className="mt-2 text-sm leading-[1.6] text-muted-foreground">{feature.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="relative">
-          <div className="mx-6 mb-4 rounded-[24px] bg-foreground px-6 py-16 sm:mx-10 sm:px-12 sm:py-24 md:py-28">
-            <div className="relative mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold leading-[1.08] tracking-[-0.01em] text-white sm:text-4xl">Ready to take control of your stock?</h2>
-              <p className="mx-auto mt-4 max-w-lg text-base leading-[1.6] text-white/60">
-                Sign in to start managing inventory the way it should be — clear, fast, and shared with your team.
-              </p>
-              <Link
-                to="/login"
-                className="group mt-10 inline-flex items-center justify-center gap-2 rounded-[10px] bg-lavender px-8 py-3 text-base font-semibold text-foreground transition-all hover:shadow-lg hover:shadow-lavender/25"
-              >
-                Sign in to NIMS <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            </div>
-          </div>
-        </section>
-
         <footer className="px-6 py-4 sm:px-10">
           <div className="mx-auto flex max-w-6xl items-center justify-between">
             <NimsLogo size="sm" variant="light" />
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} NIMS. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} University Kuala Lumpur Royal College of Medicine. All rights reserved.</p>
           </div>
         </footer>
       </div>
