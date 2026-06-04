@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Laptop as LaptopIcon, Monitor, PackageCheck, Search } from 'lucide-react';
+import { Laptop as LaptopIcon, Monitor, Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,7 +16,9 @@ import { AssetStatusActions } from '@/technician/asset-status-actions';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
 import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
+import { usePagination } from '@/hooks/use-pagination';
 import { AssetStockSummary } from '@/technician/asset-stock-summary';
+import { AssetTablePagination } from '@/technician/asset-table-pagination';
 
 export function TechnicianLaptopPage() {
 	const navigate = useNavigate();
@@ -28,6 +30,10 @@ export function TechnicianLaptopPage() {
 		const bySearch = filterBySearch(items, search, (c) => c.category ?? '');
 		return filterByStatus(bySearch, statusFilter);
 	}, [items, search, statusFilter]);
+
+	const pagination = usePagination(filtered, {
+		resetKey: `${search}|${statusFilter ?? ''}`,
+	});
 
 	return (
 		<TechnicianShell>
@@ -90,7 +96,7 @@ export function TechnicianLaptopPage() {
 										</TableCell>
 									</TableRow>
 								) : (
-									filtered.map((c) => (
+									pagination.paginatedItems.map((c) => (
 										<TableRow
 											key={c.assetId}
 											className="cursor-pointer hover:bg-muted/50"
@@ -145,10 +151,17 @@ export function TechnicianLaptopPage() {
 							</TableBody>
 						</Table>
 					</div>
-					<p className="flex items-center gap-1.5 border-t border-border px-4 py-3 text-xs text-muted-foreground">
-						<PackageCheck className="h-3.5 w-3.5" />
-						Showing {filtered.length} of {items.length} records
-					</p>
+					<AssetTablePagination
+						page={pagination.page}
+						totalPages={pagination.totalPages}
+						pageSize={pagination.pageSize}
+						rangeStart={pagination.rangeStart}
+						rangeEnd={pagination.rangeEnd}
+						totalItems={pagination.totalItems}
+						totalLoaded={items.length}
+						onPageChange={pagination.setPage}
+						onPageSizeChange={pagination.setPageSize}
+					/>
 				</CardContent>
 			</Card>
 		</TechnicianShell>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { PackageCheck, Search, Tv } from 'lucide-react';
+import { Search, Tv } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,7 +16,9 @@ import { AssetStatusActions } from '@/technician/asset-status-actions';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
 import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
+import { usePagination } from '@/hooks/use-pagination';
 import { AssetStockSummary } from '@/technician/asset-stock-summary';
+import { AssetTablePagination } from '@/technician/asset-table-pagination';
 
 export function TechnicianAvPage() {
   const navigate = useNavigate();
@@ -28,6 +30,10 @@ export function TechnicianAvPage() {
     const bySearch = filterBySearch(items, search, (item) => item.category ?? '');
     return filterByStatus(bySearch, statusFilter);
   }, [items, search, statusFilter]);
+
+  const pagination = usePagination(filtered, {
+    resetKey: `${search}|${statusFilter ?? ''}`,
+  });
 
   return (
     <TechnicianShell>
@@ -86,7 +92,7 @@ export function TechnicianAvPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((item) => (
+                  pagination.paginatedItems.map((item) => (
                     <TableRow
                       key={item.assetId}
                       className="cursor-pointer hover:bg-muted/50"
@@ -134,10 +140,17 @@ export function TechnicianAvPage() {
               </TableBody>
             </Table>
           </div>
-          <p className="flex items-center gap-1.5 border-t border-border px-4 py-3 text-xs text-muted-foreground">
-            <PackageCheck className="h-3.5 w-3.5" />
-            Showing {filtered.length} of {items.length} records
-          </p>
+          <AssetTablePagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            pageSize={pagination.pageSize}
+            rangeStart={pagination.rangeStart}
+            rangeEnd={pagination.rangeEnd}
+            totalItems={pagination.totalItems}
+            totalLoaded={items.length}
+            onPageChange={pagination.setPage}
+            onPageSizeChange={pagination.setPageSize}
+          />
         </CardContent>
       </Card>
     </TechnicianShell>
