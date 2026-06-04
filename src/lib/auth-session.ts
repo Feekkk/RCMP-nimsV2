@@ -19,6 +19,19 @@ export function isStaffRole(roleId: number): boolean {
   return roleId === ROLE_TECHNICIAN || roleId === ROLE_ADMIN;
 }
 
+export function isAdminRole(roleId: number): boolean {
+  return roleId === ROLE_ADMIN;
+}
+
+export function readAdminSession(): SessionUser | null {
+  const user = readTechnicianSession();
+  return user && isAdminRole(user.roleId) ? user : null;
+}
+
+export function hasAdminSession(): boolean {
+  return readAdminSession() !== null;
+}
+
 export function persistSession(user: SessionUser): void {
   if (typeof window === 'undefined') return;
   const payload = JSON.stringify(user);

@@ -3,22 +3,22 @@ import { useNavigate } from '@tanstack/react-router';
 import { LogOut, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { TechSideBar } from '@/components/ui/techSideBar';
+import { AdminSideBar } from '@/components/ui/adminSidebar';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, hasTechnicianSession, isAdminRole, readTechnicianSession } from '@/lib/auth-session';
+import { clearAllSessions, hasAdminSession, isStaffRole, readTechnicianSession } from '@/lib/auth-session';
 
-export function TechnicianShell({ children }: { children: ReactNode }) {
+export function AdminShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const user = readTechnicianSession();
-    if (user && isAdminRole(user.roleId)) {
-      void navigate({ to: '/admin/dashboard' });
-      return;
-    }
-    if (!hasTechnicianSession()) {
-      void navigate({ to: '/login' });
+    if (!hasAdminSession()) {
+      if (user && isStaffRole(user.roleId)) {
+        void navigate({ to: '/technician/dashboard' });
+      } else {
+        void navigate({ to: '/login' });
+      }
     }
   }, [navigate]);
 
@@ -33,7 +33,7 @@ export function TechnicianShell({ children }: { children: ReactNode }) {
         <div className="absolute -top-[160px] right-[8%] h-[480px] w-[480px] rounded-full bg-lavender/[0.08] blur-[90px]" />
       </div>
 
-      <TechSideBar className="sticky top-0 z-40 hidden h-svh shrink-0 md:flex" />
+      <AdminSideBar className="sticky top-0 z-40 hidden h-svh shrink-0 md:flex" />
 
       <div className="relative flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md">
@@ -52,11 +52,13 @@ export function TechnicianShell({ children }: { children: ReactNode }) {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex h-full w-[min(20rem,85vw)] flex-col p-0">
-                  <TechSideBar embedded className="min-h-0 flex-1 overflow-hidden" />
+                  <AdminSideBar embedded className="min-h-0 flex-1 overflow-hidden" />
                 </SheetContent>
               </Sheet>
               <div className="min-w-0">
-                <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">Technician</p>
+                <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Administrator
+                </p>
                 <p className="truncate text-sm font-bold text-foreground">Asset Management System</p>
               </div>
             </div>

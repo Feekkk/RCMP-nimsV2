@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { isStaffRole, persistSession } from '@/lib/auth-session';
+import { isAdminRole, isStaffRole, persistSession } from '@/lib/auth-session';
 import { completeMicrosoftLoginFn } from '@/server/auth.functions';
 
 const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
@@ -50,7 +50,11 @@ function MicrosoftCallbackPage() {
         } else {
           toast.success(`Signed in as ${user.fullName}`);
         }
-        const to = isStaffRole(user.roleId) ? '/technician/dashboard' : '/user/request';
+        const to = isStaffRole(user.roleId)
+          ? isAdminRole(user.roleId)
+            ? '/admin/dashboard'
+            : '/technician/dashboard'
+          : '/user/request';
         void navigate({ to });
       })
       .catch((err) => {

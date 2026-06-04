@@ -32,6 +32,9 @@ import { Route as TechnicianDashboardRouteImport } from './routes/technician/das
 import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bulk-import'
 import { Route as TechnicianAvRouteImport } from './routes/technician/av'
 import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminExportRouteImport } from './routes/admin/export'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AuthMicrosoftCallbackRouteImport } from './routes/auth/microsoft.callback'
 import { Route as TechnicianAssetKindAssetIdRouteImport } from './routes/technician/asset.$kind.$assetId'
 
@@ -150,6 +153,21 @@ const TechnicianAddAssetRoute = TechnicianAddAssetRouteImport.update({
   path: '/technician/add-asset',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminExportRoute = AdminExportRouteImport.update({
+  id: '/admin/export',
+  path: '/admin/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthMicrosoftCallbackRoute = AuthMicrosoftCallbackRouteImport.update({
   id: '/auth/microsoft/callback',
   path: '/auth/microsoft/callback',
@@ -165,6 +183,9 @@ const TechnicianAssetKindAssetIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/export': typeof AdminExportRoute
+  '/admin/users': typeof AdminUsersRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
@@ -192,6 +213,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/export': typeof AdminExportRoute
+  '/admin/users': typeof AdminUsersRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
@@ -220,6 +244,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/export': typeof AdminExportRoute
+  '/admin/users': typeof AdminUsersRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
@@ -249,6 +276,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/admin/dashboard'
+    | '/admin/export'
+    | '/admin/users'
     | '/technician/add-asset'
     | '/technician/av'
     | '/technician/bulk-import'
@@ -276,6 +306,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/admin/dashboard'
+    | '/admin/export'
+    | '/admin/users'
     | '/technician/add-asset'
     | '/technician/av'
     | '/technician/bulk-import'
@@ -303,6 +336,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/admin/dashboard'
+    | '/admin/export'
+    | '/admin/users'
     | '/technician/add-asset'
     | '/technician/av'
     | '/technician/bulk-import'
@@ -331,6 +367,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminExportRoute: typeof AdminExportRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   TechnicianAddAssetRoute: typeof TechnicianAddAssetRoute
   TechnicianAvRoute: typeof TechnicianAvRoute
   TechnicianBulkImportRoute: typeof TechnicianBulkImportRoute
@@ -519,6 +558,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianAddAssetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/export': {
+      id: '/admin/export'
+      path: '/admin/export'
+      fullPath: '/admin/export'
+      preLoaderRoute: typeof AdminExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/microsoft/callback': {
       id: '/auth/microsoft/callback'
       path: '/auth/microsoft/callback'
@@ -539,6 +599,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminExportRoute: AdminExportRoute,
+  AdminUsersRoute: AdminUsersRoute,
   TechnicianAddAssetRoute: TechnicianAddAssetRoute,
   TechnicianAvRoute: TechnicianAvRoute,
   TechnicianBulkImportRoute: TechnicianBulkImportRoute,

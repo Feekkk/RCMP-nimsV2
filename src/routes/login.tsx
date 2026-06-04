@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { persistSession } from '@/lib/auth-session';
+import { isAdminRole, persistSession } from '@/lib/auth-session';
 import { isMicrosoftSsoEnabledForClient } from '@/lib/microsoft-auth-config';
 import { getMicrosoftLoginUrlFn, loginStaffFn } from '@/server/auth.functions';
 
@@ -64,7 +64,7 @@ function LoginPage() {
       setLoginSuccessMessage(message);
       toast.success(message);
       window.setTimeout(() => {
-        void navigate({ to: '/technician/dashboard' });
+        void navigate({ to: isAdminRole(user.roleId) ? '/admin/dashboard' : '/technician/dashboard' });
       }, LOGIN_SUCCESS_DELAY_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Authentication failed';
