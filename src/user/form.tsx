@@ -38,7 +38,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, readUserSession } from '@/lib/auth-session';
+import { clearAllSessions, readUserSession, type SessionUser } from '@/lib/auth-session';
+import { isUserProfileComplete } from '@/lib/user-profile';
 import {
   REQUEST_PROGRAM_TYPES,
   type UserRequestItemDraft,
@@ -55,6 +56,8 @@ import { sendRequestEmailFn } from '@/server/request-email.functions';
 import { submitUserRequestFn } from '@/server/request.functions';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
+import { UserProfileCompleteDialog } from '@/user/profile-complete-dialog';
+import { getUserProfileFn } from '@/server/auth.functions';
 import { cn } from '@/lib/utils';
 
 const STEPS = [
@@ -70,7 +73,8 @@ function newItemId() {
 
 export function UserRequestFormPage() {
   const navigate = useNavigate();
-  const [session, setSession] = useState(readUserSession);
+  const [session, setSession] = useState<SessionUser | null>(readUserSession);
+  const [profileReady, setProfileReady] = useState(false);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<number | null>(null);
@@ -90,7 +94,25 @@ export function UserRequestFormPage() {
       return;
     }
     setSession(user);
+    void getUserProfileFn({ data: { staffId: user.staffId } })
+      .then((profile) => {
+        const nextSession: SessionUser = {
+          staffId: profile.staffId,
+          fullName: profile.fullName,
+          email: profile.email,
+          roleId: profile.roleId,
+          roleName: profile.roleName,
+          phone: profile.phone,
+        };
+        setSession(nextSession);
+        setProfileReady(true);
+      })
+      .catch(() => {
+        setProfileReady(true);
+      });
   }, [navigate]);
+
+  const profileComplete = session != null && isUserProfileComplete(session);
 
   const progress = ((step + 1) / STEPS.length) * 100;
 
@@ -147,6 +169,10 @@ export function UserRequestFormPage() {
       void navigate({ to: '/login' });
       return;
     }
+    if (!isUserProfileComplete(session)) {
+      toast.error('Complete your profile before submitting a request');
+      return;
+    }
     setSubmitting(true);
     try {
       const result = await submitUserRequestFn({
@@ -180,7 +206,7 @@ export function UserRequestFormPage() {
     }
   };
 
-  if (!session) {
+  if (!session || !profileReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -231,7 +257,19 @@ export function UserRequestFormPage() {
 
       <UserPageChrome session={session} onSignOut={handleSignOut} active="request" />
 
-      <main className="relative mx-auto max-w-2xl px-4 py-6 sm:py-8">
+      <UserProfileCompleteDialog
+        session={session}
+        open={!profileComplete}
+        onCompleted={setSession}
+      />
+
+      <main
+        className={cn(
+          'relative mx-auto max-w-2xl px-4 py-6 sm:py-8',
+          !profileComplete && 'pointer-events-none select-none opacity-40',
+        )}
+        aria-hidden={!profileComplete}
+      >
         <div className="mb-6">
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Equipment request</h1>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { IdCard, Lock, Mail, Phone, User } from 'lucide-react';
+import { IdCard, Mail, Phone, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,8 +25,6 @@ export function UserEditProfilePage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     const user = readUserSession();
@@ -59,11 +57,6 @@ export function UserEditProfilePage() {
     e.preventDefault();
     if (!session) return;
 
-    if (password && password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
     setSaving(true);
     try {
       const updated = await updateUserProfileFn({
@@ -72,7 +65,6 @@ export function UserEditProfilePage() {
           fullName: fullName.trim(),
           email: email.trim(),
           phone: phone.trim() || null,
-          password: password || undefined,
         },
       });
       const nextSession: SessionUser = {
@@ -85,8 +77,6 @@ export function UserEditProfilePage() {
       };
       persistSession(nextSession);
       setSession(nextSession);
-      setPassword('');
-      setConfirmPassword('');
       toast.success('Profile updated');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not update profile');
@@ -157,50 +147,19 @@ export function UserEditProfilePage() {
                     />
                   </div>
                 </FormField>
-                <FormField label="Phone">
+                <FormField label="Phone number" required>
                   <div className="relative">
                     <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
+                      required
                       autoComplete="tel"
                       className="rounded-[8px] pl-9"
                     />
                   </div>
                 </FormField>
-
-                <div className="border-t border-border pt-4">
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    Leave blank to keep your current password.
-                  </p>
-                  <FormField label="New password">
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        minLength={6}
-                        autoComplete="new-password"
-                        className="rounded-[8px] pl-9"
-                      />
-                    </div>
-                  </FormField>
-                  <FormField label="Confirm new password">
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        minLength={6}
-                        autoComplete="new-password"
-                        className="rounded-[8px] pl-9"
-                      />
-                    </div>
-                  </FormField>
-                </div>
 
                 <Button type="submit" className="w-full rounded-[8px]" disabled={saving}>
                   {saving ? 'Saving…' : 'Save changes'}
