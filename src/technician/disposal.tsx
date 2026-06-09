@@ -22,8 +22,10 @@ import { readTechnicianSession } from '@/lib/auth-session';
 import { DISPOSAL_ELIGIBLE_STATUS_IDS } from '@/lib/disposal-schema';
 import { normalizeToIsoDate } from '@/lib/date-format';
 import { filterBySearch, useAssets } from '@/hooks/assets';
+import { usePagination } from '@/hooks/use-pagination';
 import { createDisposalFn } from '@/server/disposal.functions';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
+import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 
@@ -119,6 +121,10 @@ export function TechnicianDisposalPage() {
     }
     return filterBySearch(list, search, (a) => a.category ?? '');
   }, [eligible, kindFilter, search]);
+
+  const pagination = usePagination(filtered, {
+    resetKey: `${search}|${kindFilter}`,
+  });
 
   const filteredKeys = useMemo(
     () => filtered.map((a) => assetKey(a.kind, a.assetId)),
@@ -327,7 +333,7 @@ export function TechnicianDisposalPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((a) => {
+                    pagination.paginatedItems.map((a) => {
                       const key = assetKey(a.kind, a.assetId);
                       return (
                         <TableRow
@@ -368,6 +374,17 @@ export function TechnicianDisposalPage() {
                 </TableBody>
               </Table>
             </div>
+            <AssetTablePagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              pageSize={pagination.pageSize}
+              rangeStart={pagination.rangeStart}
+              rangeEnd={pagination.rangeEnd}
+              totalItems={pagination.totalItems}
+              totalLoaded={eligible.length}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-4">
               <Button
                 type="submit"
