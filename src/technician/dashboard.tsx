@@ -33,7 +33,6 @@ import { getTechnicianDashboardFn } from '@/server/dashboard.functions';
 import {
   InventoryMixChart,
   MiniSparkline,
-  ProgramStackChart,
   RequestTrendChart,
 } from '@/technician/dashboard-charts';
 import { TechnicianShell } from '@/technician/technician-shell';
@@ -146,50 +145,128 @@ function StatCard({
   return inner;
 }
 
-function weekDays(weekStartIso: string): { iso: string; label: string; short: string; isToday: boolean }[] {
-  const start = isoToLocalDate(weekStartIso);
-  if (!start) return [];
-  const todayIso = localDateToIso(new Date());
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    const iso = localDateToIso(d);
-    return {
-      iso,
-      label: d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }),
-      short: d.toLocaleDateString(undefined, { weekday: 'narrow' }),
-      isToday: iso === todayIso,
-    };
-  });
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+type CalendarCell = { iso: string; day: number; inMonth: boolean };
+
+function currentCalendarMonth(): { year: number; month: number } {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
 }
 
-function dayOffset(iso: string, weekStartIso: string): number {
-  const d = isoToLocalDate(iso);
-  const start = isoToLocalDate(weekStartIso);
-  if (!d || !start) return -1;
-  const ms = d.getTime() - start.getTime();
-  return Math.round(ms / 86400000);
+function monthLabel(year: number, month: number): string {
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
-function barPlacement(entry: DashboardTimetableEntry, weekStartIso: string) {
-  const startIdx = Math.max(0, dayOffset(entry.borrowDate, weekStartIso));
-  const endIdx = Math.min(6, dayOffset(entry.returnDate, weekStartIso));
-  if (startIdx > 6 || endIdx < 0) return null;
-  const colStart = startIdx + 2;
-  const span = endIdx - Math.max(0, startIdx) + 1;
-  return { colStart, span };
+function buildMonthCells(year: number, month: number): CalendarCell[] {
+  const cells: CalendarCell[] = [];
+  const first = new Date(year, month - 1, 1);
+  const pad = (first.getDay() + 6) % 7;
+  const prevMonthEnd = new Date(year, month - 1, 0);
+
+  for (let i = pad - 1; i >= 0; i--) {
+    const d = new Date(prevMonthEnd);
+    d.setDate(prevMonthEnd.getDate() - i);
+    cells.push({ iso: localDateToIso(d), day: d.getDate(), inMonth: false });
+  }
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({
+      iso: localDateToIso(new Date(year, month - 1, day)),
+      day,
+      inMonth: true,
+    });
+  }
+
+  let nextDay = 1;
+  while (cells.length % 7 !== 0) {
+    const d = new Date(year, month, nextDay++);
+    cells.push({ iso: localDateToIso(d), day: d.getDate(), inMonth: false });
+  }
+
+  return cells;
 }
 
-function WeekNav({
-  weekOffset,
+function entryCoversDay(entry: DashboardTimetableEntry, iso: string): boolean {
+  return iso >= entry.borrowDate && iso <= entry.returnDate;
+}
+
+function entriesOnDay(entries: DashboardTimetableEntry[], iso: string): DashboardTimetableEntry[] {
+  return entries.filter((e) => entryCoversDay(e, iso));
+}
+
+function RequestDetailPanel({ entry }: { entry: DashboardTimetableEntry | null }) {
+  if (!entry) {
+    return (
+      <div className="border-t border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground sm:px-6">
+        Select a request on the calendar to view details.
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-border bg-muted/20 px-4 py-4 sm:px-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-semibold text-foreground">{entry.requesterName}</p>
+          <p className="font-mono text-xs text-muted-foreground">Request #{entry.requestId}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className={cn('rounded-md text-xs', STATUS_BADGE[entry.status])}>
+            {DASHBOARD_REQUEST_STATUS_LABEL[entry.status]}
+          </Badge>
+          {entry.needsAction && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Action needed
+            </span>
+          )}
+        </div>
+      </div>
+
+      <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Program</dt>
+          <dd className="mt-0.5 font-medium text-foreground">{entry.programType}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Location</dt>
+          <dd className="mt-0.5 font-medium text-foreground">{entry.usageLocation}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Borrow window</dt>
+          <dd className="mt-0.5 font-medium text-foreground">
+            {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Items requested</dt>
+          <dd className="mt-0.5 font-medium text-foreground">{entry.itemSummary}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total quantity</dt>
+          <dd className="mt-0.5 font-medium tabular-nums text-foreground">{entry.totalQty}</dd>
+        </div>
+      </dl>
+
+      <Button variant="outline" size="sm" className="mt-4 h-8 rounded-lg" asChild>
+        <Link to="/technician/requests">Open request</Link>
+      </Button>
+    </div>
+  );
+}
+
+function MonthNav({
+  isCurrentMonth,
   onPrev,
   onNext,
-  onThisWeek,
+  onThisMonth,
 }: {
-  weekOffset: number;
+  isCurrentMonth: boolean;
   onPrev: () => void;
   onNext: () => void;
-  onThisWeek: () => void;
+  onThisMonth: () => void;
 }) {
   return (
     <div className="flex items-center gap-1">
@@ -199,7 +276,7 @@ function WeekNav({
         size="icon"
         className="h-8 w-8 rounded-lg"
         onClick={onPrev}
-        aria-label="Previous week"
+        aria-label="Previous month"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -207,11 +284,11 @@ function WeekNav({
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 rounded-lg px-2.5 text-xs tabular-nums"
-        disabled={weekOffset === 0}
-        onClick={onThisWeek}
+        className="h-8 rounded-lg px-2.5 text-xs"
+        disabled={isCurrentMonth}
+        onClick={onThisMonth}
       >
-        This week
+        This month
       </Button>
       <Button
         type="button"
@@ -219,7 +296,7 @@ function WeekNav({
         size="icon"
         className="h-8 w-8 rounded-lg"
         onClick={onNext}
-        aria-label="Next week"
+        aria-label="Next month"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>
@@ -227,37 +304,119 @@ function WeekNav({
   );
 }
 
+function RequestDayList({
+  dayIso,
+  entries,
+  selectedId,
+  onSelect,
+}: {
+  dayIso: string;
+  entries: DashboardTimetableEntry[];
+  selectedId: number | null;
+  onSelect: (id: number) => void;
+}) {
+  if (entries.length === 0) {
+    return (
+      <div className="border-t border-border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground sm:px-6">
+        No requests on {formatDateLabel(dayIso)}.
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-border bg-muted/20 px-4 py-3 sm:px-6">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Requests on {formatDateLabel(dayIso)}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {entries.map((entry) => (
+          <button
+            key={entry.requestId}
+            type="button"
+            onClick={() => onSelect(entry.requestId)}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-left text-xs transition-colors',
+              selectedId === entry.requestId
+                ? 'border-[oklch(0.55_0.14_290)] bg-lavender/15'
+                : 'border-border bg-card hover:bg-secondary/60',
+            )}
+          >
+            <span
+              className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_BAR[entry.status])}
+              aria-hidden
+            />
+            <span className="font-semibold text-foreground">#{entry.requestId}</span>
+            <span className="max-w-[10rem] truncate text-muted-foreground">{entry.requesterName}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RequestTimetable({
   entries,
-  weekStart,
-  weekEnd,
+  viewMonth,
   loading,
-  weekOffset,
-  onPrevWeek,
-  onNextWeek,
-  onThisWeek,
+  isCurrentMonth,
+  onPrevMonth,
+  onNextMonth,
+  onThisMonth,
 }: {
   entries: DashboardTimetableEntry[];
-  weekStart: string;
-  weekEnd: string;
+  viewMonth: { year: number; month: number };
   loading: boolean;
-  weekOffset: number;
-  onPrevWeek: () => void;
-  onNextWeek: () => void;
-  onThisWeek: () => void;
+  isCurrentMonth: boolean;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  onThisMonth: () => void;
 }) {
-  const days = useMemo(() => weekDays(weekStart), [weekStart]);
+  const todayIso = localDateToIso(new Date());
+  const cells = useMemo(
+    () => buildMonthCells(viewMonth.year, viewMonth.month),
+    [viewMonth.year, viewMonth.month],
+  );
+  const [selectedDayIso, setSelectedDayIso] = useState(todayIso);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const inMonth = cells.some((c) => c.inMonth && c.iso === selectedDayIso);
+    if (!inMonth) {
+      const fallback =
+        cells.find((c) => c.inMonth && c.iso === todayIso)?.iso ??
+        cells.find((c) => c.inMonth)?.iso ??
+        todayIso;
+      setSelectedDayIso(fallback);
+    }
+  }, [cells, selectedDayIso, todayIso]);
+
+  const dayRequests = useMemo(
+    () => entriesOnDay(entries, selectedDayIso),
+    [entries, selectedDayIso],
+  );
+
+  useEffect(() => {
+    if (dayRequests.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    if (selectedId == null || !dayRequests.some((e) => e.requestId === selectedId)) {
+      setSelectedId(dayRequests[0].requestId);
+    }
+  }, [dayRequests, selectedId]);
+
+  const selected = dayRequests.find((e) => e.requestId === selectedId) ?? null;
 
   return (
     <DashboardPanel
       title="Request timetable"
-      description={`Borrow windows · ${formatDateLabel(weekStart)} – ${formatDateLabel(weekEnd)}`}
+      description={monthLabel(viewMonth.year, viewMonth.month)}
       headerExtra={
-        <WeekNav
-          weekOffset={weekOffset}
-          onPrev={onPrevWeek}
-          onNext={onNextWeek}
-          onThisWeek={onThisWeek}
+        <MonthNav
+          isCurrentMonth={isCurrentMonth}
+          onPrev={onPrevMonth}
+          onNext={onNextMonth}
+          onThisMonth={onThisMonth}
         />
       }
       contentClassName="p-0"
@@ -271,100 +430,85 @@ function RequestTimetable({
             </span>
           ))}
         </div>
-        <ScrollArea className="max-h-[min(65vh,640px)]">
-          <div className="min-w-[640px] p-4 sm:p-6">
-            {loading ? (
-              <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading timetable…
-              </div>
-            ) : entries.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border py-14 text-center text-sm text-muted-foreground">
-                No borrow requests overlap this week.
-              </div>
-            ) : (
-              <div
-                className="grid gap-0 overflow-hidden rounded-xl border border-border"
-                style={{
-                  gridTemplateColumns: 'minmax(11rem, 14rem) repeat(7, minmax(4.5rem, 1fr))',
-                }}
-              >
-                <div className="border-b border-r bg-muted/40 p-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Request
-                </div>
-                {days.map((d) => (
+
+        <div className="p-4 sm:p-6">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading calendar…
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-border">
+              <div className="grid grid-cols-7 border-b border-border bg-muted/30">
+                {WEEKDAY_LABELS.map((label) => (
                   <div
-                    key={d.iso}
-                    className={cn(
-                      'border-b border-r p-2 text-center text-[10px] font-semibold uppercase tracking-wide last:border-r-0',
-                      d.isToday
-                        ? 'bg-lavender/10 text-[oklch(0.45_0.12_290)]'
-                        : 'bg-muted/40 text-muted-foreground',
-                    )}
+                    key={label}
+                    className="border-r border-border px-2 py-2.5 text-center text-xs font-medium text-muted-foreground last:border-r-0"
                   >
-                    <div>{d.short}</div>
-                    <div className="tabular-nums font-normal normal-case text-[9px] opacity-80">
-                      {d.iso.slice(8)}
-                    </div>
+                    {label}
                   </div>
                 ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {cells.map((cell) => {
+                  const isSelected = cell.iso === selectedDayIso;
+                  const isToday = cell.iso === todayIso;
+                  const dayEntries = entriesOnDay(entries, cell.iso);
+                  const hasRequests = dayEntries.length > 0;
 
-                {entries.map((entry, rowIdx) => {
-                  const placement = barPlacement(entry, weekStart);
-                  const gridRow = rowIdx + 2;
                   return (
-                    <div key={entry.requestId} className="contents">
-                      <Link
-                        to="/technician/requests"
-                        className="flex flex-col justify-center gap-0.5 border-b border-r bg-card p-2 text-left hover:bg-secondary/40"
-                        style={{ gridRow }}
-                      >
-                        <span className="truncate text-xs font-semibold text-foreground">
-                          {entry.requesterName}
-                        </span>
-                        <span className="font-mono text-[10px] text-muted-foreground">#{entry.requestId}</span>
-                        <span className="truncate text-[10px] text-muted-foreground">{entry.itemSummary}</span>
-                        {entry.needsAction && (
-                          <span className="mt-0.5 inline-flex w-fit items-center gap-1 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                            <AlertCircle className="h-3 w-3" />
-                            Action needed
-                          </span>
-                        )}
-                      </Link>
-                      {days.map((d, colIdx) => (
-                        <div
-                          key={d.iso}
-                          className={cn(
-                            'relative min-h-[3.25rem] border-b border-r bg-card/50 last:border-r-0',
-                            d.isToday && 'bg-lavender/[0.04]',
-                            colIdx === days.length - 1 && 'last:border-r-0',
-                          )}
-                          style={{ gridRow }}
-                        />
-                      ))}
-                      {placement && (
-                        <Link
-                          to="/technician/requests"
-                          title={`${entry.requesterName} · ${formatDateLabel(entry.borrowDate)} → ${formatDateLabel(entry.returnDate)}`}
-                          className={cn(
-                            'z-10 mx-1 flex min-h-[2rem] items-center self-center rounded-md px-2 py-1 text-[10px] font-medium text-white shadow-sm transition-opacity hover:opacity-95',
-                            STATUS_BAR[entry.status],
-                          )}
-                          style={{
-                            gridRow,
-                            gridColumn: `${placement.colStart} / span ${placement.span}`,
-                          }}
-                        >
-                          <span className="truncate">{DASHBOARD_REQUEST_STATUS_LABEL[entry.status]}</span>
-                        </Link>
+                    <button
+                      key={cell.iso}
+                      type="button"
+                      onClick={() => setSelectedDayIso(cell.iso)}
+                      className={cn(
+                        'relative min-h-[4.5rem] border-b border-r border-border p-2 text-left transition-colors last:border-r-0',
+                        'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                        isSelected && 'bg-rose-50/80 dark:bg-rose-950/25',
+                        !isSelected && isToday && 'bg-lavender/[0.06]',
                       )}
-                    </div>
+                    >
+                      <span
+                        className={cn(
+                          'inline-flex h-7 min-w-7 items-center justify-center rounded-full text-sm font-medium tabular-nums',
+                          isSelected
+                            ? 'bg-orange-500 text-white shadow-sm'
+                            : cell.inMonth
+                              ? 'text-foreground'
+                              : 'text-muted-foreground/50',
+                        )}
+                      >
+                        {cell.day}
+                      </span>
+                      {hasRequests && (
+                        <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1">
+                          {dayEntries.slice(0, 3).map((entry) => (
+                            <span
+                              key={entry.requestId}
+                              className={cn('h-1.5 w-1.5 rounded-full', STATUS_BAR[entry.status])}
+                              title={`#${entry.requestId} ${entry.requesterName}`}
+                            />
+                          ))}
+                          {dayEntries.length > 3 && (
+                            <span className="text-[9px] text-muted-foreground">+{dayEntries.length - 3}</span>
+                          )}
+                        </div>
+                      )}
+                    </button>
                   );
                 })}
               </div>
-            )}
-          </div>
-        </ScrollArea>
+            </div>
+          )}
+        </div>
+
+        <RequestDayList
+          dayIso={selectedDayIso}
+          entries={dayRequests}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
+        <RequestDetailPanel entry={selected} />
       </div>
     </DashboardPanel>
   );
@@ -492,20 +636,30 @@ function AssetDetailsPanel({
 }
 
 export function TechnicianDashboardPage() {
-  const [weekOffset, setWeekOffset] = useState(0);
+  const [viewMonth, setViewMonth] = useState(currentCalendarMonth);
   const [data, setData] = useState<TechnicianDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const current = currentCalendarMonth();
+  const isCurrentMonth = viewMonth.year === current.year && viewMonth.month === current.month;
+
+  const shiftMonth = (delta: number) => {
+    setViewMonth((prev) => {
+      const d = new Date(prev.year, prev.month - 1 + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    });
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await getTechnicianDashboardFn({ data: weekOffset }));
+      setData(await getTechnicianDashboardFn({ data: viewMonth }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load dashboard');
     } finally {
       setLoading(false);
     }
-  }, [weekOffset]);
+  }, [viewMonth]);
 
   useEffect(() => {
     void load();
@@ -525,48 +679,15 @@ export function TechnicianDashboardPage() {
     onLoan: EMPTY_SPARK,
     pool: EMPTY_SPARK,
   };
-  const programKeys = charts?.programKeys ?? [];
-  const showProgramChart = programKeys.length > 0;
-
-  const weekStart = data?.weekStart ?? localDateToIso(new Date());
-  const weekEnd = data?.weekEnd ?? localDateToIso(new Date());
   const timetable = data?.timetable ?? [];
 
   return (
     <TechnicianShell>
-      <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Dashboard</h1>
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            {todayLabel} · Live inventory & requests
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="h-8 rounded-lg" asChild>
-            <Link to="/technician/requests">Requests</Link>
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 rounded-lg" asChild>
-            <Link to="/technician/request-assets">Request pool</Link>
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 rounded-lg" asChild>
-            <Link to="/technician/laptop">
-              <Laptop className="mr-1.5 h-3.5 w-3.5" />
-              Laptops
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 rounded-lg" asChild>
-            <Link to="/technician/av">
-              <Tv className="mr-1.5 h-3.5 w-3.5" />
-              AV
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 rounded-lg" asChild>
-            <Link to="/technician/network">
-              <Network className="mr-1.5 h-3.5 w-3.5" />
-              Network
-            </Link>
-          </Button>
-        </div>
+      <div className="mb-5 sm:mb-6">
+        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Dashboard</h1>
+        <p className="text-xs text-muted-foreground sm:text-sm">
+          {todayLabel} · Live inventory & requests
+        </p>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -608,7 +729,19 @@ export function TechnicianDashboardPage() {
         />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mb-6">
+        <RequestTimetable
+          entries={timetable}
+          viewMonth={viewMonth}
+          loading={loading}
+          isCurrentMonth={isCurrentMonth}
+          onPrevMonth={() => shiftMonth(-1)}
+          onNextMonth={() => shiftMonth(1)}
+          onThisMonth={() => setViewMonth(currentCalendarMonth())}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <DashboardPanel
           title="Request activity"
           description="New submissions and returns due · last 14 days"
@@ -623,39 +756,6 @@ export function TechnicianDashboardPage() {
           )}
         </DashboardPanel>
 
-        <DashboardPanel
-          title="Requests by program"
-          description="Stacked daily counts by program type · last 7 days"
-        >
-          {loading && !charts ? (
-            <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading chart…
-            </div>
-          ) : showProgramChart ? (
-            <ProgramStackChart
-              data={charts?.requestsByProgram ?? []}
-              programKeys={programKeys}
-            />
-          ) : (
-            <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
-              No requests by program in the last 7 days.
-            </div>
-          )}
-        </DashboardPanel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.35fr_1fr]">
-        <RequestTimetable
-          entries={timetable}
-          weekStart={weekStart}
-          weekEnd={weekEnd}
-          loading={loading}
-          weekOffset={weekOffset}
-          onPrevWeek={() => setWeekOffset((w) => w - 1)}
-          onNextWeek={() => setWeekOffset((w) => w + 1)}
-          onThisWeek={() => setWeekOffset(0)}
-        />
         <AssetDetailsPanel
           stats={stats}
           inventoryMix={charts?.inventoryMix ?? []}
