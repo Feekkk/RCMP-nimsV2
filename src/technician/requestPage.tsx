@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
+  AlertTriangle,
   ArrowRight,
   Ban,
   ChevronDown,
+  ClipboardList,
   Laptop,
   Loader2,
+  PackageCheck,
+  RotateCcw,
   Search,
   Tv,
   UserX,
@@ -62,7 +66,9 @@ import type {
   RequestSlotMark,
 } from '@/lib/request-schema';
 import { kindGroupLabel, requestItemKindFromAssetType } from '@/lib/request-asset-types';
+import { formatDateLabel, isoToLocalDate, localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { sendCheckoutEmailFn } from '@/server/checkout-email.functions';
@@ -185,11 +191,88 @@ function checkedOutAwaitingReturn(req: PendingRequest): RequestAssignmentRow[] {
   return req.assignments.filter((a) => a.checkoutAt != null);
 }
 
+type RequestViewFilter = 'all' | 'pending' | 'to_return' | 'overdue';
+
+function todayIso(): string {
+  return localDateToIso(new Date());
+}
+
+function requestHasToReturn(req: PendingRequest): boolean {
+  return checkedOutAwaitingReturn(req).length > 0;
+}
+
+function requestIsOverdue(req: PendingRequest): boolean {
+  return requestHasToReturn(req) && req.returnDate < todayIso();
+}
+
+function emptySlotCount(req: PendingRequest): number {
+  let count = 0;
+  for (const group of kindGroupsForRequest(req)) {
+    count += linesForKindGroup(req, group).filter((line) => line.lineKind === 'empty').length;
+  }
+  return count;
+}
+
+function requestIsPending(req: PendingRequest): boolean {
+  if (bookedAwaitingCheckout(req).length > 0) return true;
+  return emptySlotCount(req) > 0;
+}
+
+function daysUntilReturn(req: PendingRequest): number | null {
+  if (!requestHasToReturn(req)) return null;
+  const today = isoToLocalDate(todayIso());
+  const returnDay = isoToLocalDate(req.returnDate);
+  if (!today || !returnDay) return null;
+  return Math.round((returnDay.getTime() - today.getTime()) / 86_400_000);
+}
+
+type RequestQueues = {
+  overdue: PendingRequest[];
+  toReturn: PendingRequest[];
+  pending: PendingRequest[];
+};
+
+function classifyRequests(requests: PendingRequest[]): RequestQueues {
+  const overdue: PendingRequest[] = [];
+  const toReturn: PendingRequest[] = [];
+  const pending: PendingRequest[] = [];
+
+  for (const req of requests) {
+    if (requestIsOverdue(req)) overdue.push(req);
+    if (requestHasToReturn(req)) toReturn.push(req);
+    if (requestIsPending(req)) pending.push(req);
+  }
+
+  overdue.sort((a, b) => a.returnDate.localeCompare(b.returnDate));
+  toReturn.sort((a, b) => a.returnDate.localeCompare(b.returnDate));
+  pending.sort((a, b) => a.borrowDate.localeCompare(b.borrowDate));
+
+  return { overdue, toReturn, pending };
+}
+
+function matchesSearch(req: PendingRequest, query: string): boolean {
+  if (!query) return true;
+  return [
+    String(req.requestId),
+    req.requesterName,
+    req.requestedBy,
+    req.programType,
+    req.usageLocation,
+    req.reason,
+    ...req.items.map((i) => i.assetType),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+    .includes(query);
+}
+
 export function TechnicianRequestPage() {
   const [requests, setRequests] = useState<PendingRequest[]>([]);
   const [pool, setPool] = useState<RequestPoolAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [viewFilter, setViewFilter] = useState<RequestViewFilter>('all');
   const [openId, setOpenId] = useState<number | null>(null);
   const [actionKey, setActionKey] = useState<string | null>(null);
   const [checkoutRequestId, setCheckoutRequestId] = useState<number | null>(null);
@@ -222,25 +305,25 @@ export function TechnicianRequestPage() {
     void load();
   }, [load]);
 
-  const filtered = useMemo(() => {
+  const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return requests;
-    return requests.filter((r) =>
-      [
-        String(r.requestId),
-        r.requesterName,
-        r.requestedBy,
-        r.programType,
-        r.usageLocation,
-        r.reason,
-        ...r.items.map((i) => i.assetType),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(q),
-    );
+    return requests.filter((r) => matchesSearch(r, q));
   }, [requests, search]);
+
+  const queues = useMemo(() => classifyRequests(searched), [searched]);
+
+  const displayed = useMemo(() => {
+    switch (viewFilter) {
+      case 'overdue':
+        return queues.overdue;
+      case 'to_return':
+        return queues.toReturn;
+      case 'pending':
+        return queues.pending;
+      default:
+        return searched;
+    }
+  }, [viewFilter, searched, queues]);
 
   const resolveBookingItem = (req: PendingRequest, group: KindGroup) => {
     const item = findItemForBooking(req, group);
@@ -547,17 +630,29 @@ export function TechnicianRequestPage() {
     const totalReturned = req.items.reduce((n, i) => n + i.returnedCount, 0);
     const awaitingReturn = checkedOutAwaitingReturn(req);
     const toCheckout = bookedAwaitingCheckout(req);
+    const overdue = requestIsOverdue(req);
+    const pending = requestIsPending(req);
+    const emptySlots = emptySlotCount(req);
+    const daysLeft = daysUntilReturn(req);
 
     return (
       <Collapsible
         key={req.requestId}
         open={isOpen}
         onOpenChange={(open) => setOpenId(open ? req.requestId : null)}
-        className="rounded-[12px] border border-border"
+        className={cn(
+          'rounded-[12px] border',
+          overdue
+            ? 'border-rose-300 bg-rose-50/40 dark:border-rose-900 dark:bg-rose-950/20'
+            : 'border-border',
+        )}
       >
         <CollapsibleTrigger className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-secondary/40">
           <ChevronDown
-            className={`mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={cn(
+              'mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+              isOpen && 'rotate-180',
+            )}
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -565,23 +660,90 @@ export function TechnicianRequestPage() {
               <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
                 #{req.requestId}
               </Badge>
-              <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
-                {totalCheckedOut}/{totalNeeded} checked out
-              </Badge>
+              {overdue && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 rounded-[6px] border-rose-300 bg-rose-100 text-[10px] text-rose-800 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200"
+                >
+                  <AlertTriangle className="h-3 w-3" aria-hidden />
+                  Overdue
+                </Badge>
+              )}
+              {awaitingReturn.length > 0 && !overdue && (
+                <Badge
+                  variant="outline"
+                  className="rounded-[6px] border-sky-200 bg-sky-50 text-[10px] text-sky-800"
+                >
+                  {awaitingReturn.length} to return
+                </Badge>
+              )}
+              {toCheckout.length > 0 && (
+                <Badge
+                  variant="outline"
+                  className="rounded-[6px] border-violet-200 bg-violet-50 text-[10px] text-violet-800"
+                >
+                  {toCheckout.length} ready to checkout
+                </Badge>
+              )}
+              {emptySlots > 0 && (
+                <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
+                  {emptySlots} slot{emptySlots === 1 ? '' : 's'} open
+                </Badge>
+              )}
               {totalReturned > 0 && (
                 <Badge variant="secondary" className="rounded-[6px] text-[10px] tabular-nums">
                   {totalReturned} returned
                 </Badge>
               )}
-              {awaitingReturn.length > 0 && (
-                <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
-                  {awaitingReturn.length} to return
-                </Badge>
-              )}
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {req.borrowDate} → {req.returnDate} · {req.programType} · {req.usageLocation}
+              {formatDateLabel(req.borrowDate)} → {formatDateLabel(req.returnDate)} ·{' '}
+              {req.programType} · {req.usageLocation}
             </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {totalCheckedOut}/{totalNeeded} checked out
+              {daysLeft != null &&
+                (overdue
+                  ? ` · ${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? '' : 's'} overdue`
+                  : daysLeft === 0
+                    ? ' · due today'
+                    : ` · ${daysLeft} day${daysLeft === 1 ? '' : 's'} until return`)}
+              {pending && !awaitingReturn.length && emptySlots === 0 && toCheckout.length === 0
+                ? ' · awaiting action'
+                : ''}
+            </p>
+          </div>
+          <div
+            className="flex shrink-0 flex-wrap items-center gap-1.5"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            {awaitingReturn.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'h-8 rounded-[8px] text-xs',
+                  overdue && 'border-rose-300 text-rose-800 hover:bg-rose-100',
+                )}
+                onClick={() => openReturnForm(req)}
+              >
+                <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                Return
+              </Button>
+            )}
+            {toCheckout.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 rounded-[8px] text-xs"
+                disabled={checkoutRequestId === req.requestId}
+                onClick={() => void handleCheckoutRequest(req)}
+              >
+                {checkoutRequestId === req.requestId ? 'Checking out…' : 'Checkout'}
+              </Button>
+            )}
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border px-4 py-4">
@@ -895,13 +1057,76 @@ export function TechnicianRequestPage() {
     );
   };
 
+  const toReturnNotOverdue = useMemo(
+    () => queues.toReturn.filter((req) => !requestIsOverdue(req)),
+    [queues.toReturn],
+  );
+
+  const renderRequestList = (list: PendingRequest[], emptyMessage: string) => {
+    if (list.length === 0) {
+      return <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>;
+    }
+    return <div className="space-y-3">{list.map((req) => renderRequestCollapsible(req))}</div>;
+  };
+
+  const renderAllSections = () => {
+    const hasAny =
+      queues.overdue.length > 0 ||
+      toReturnNotOverdue.length > 0 ||
+      queues.pending.length > 0;
+
+    if (!hasAny) {
+      return (
+        <p className="py-8 text-center text-sm text-muted-foreground">No pending user requests.</p>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {queues.overdue.length > 0 && (
+          <RequestQueueSection
+            title="Overdue"
+            description="Past return date — checked-out assets still outstanding"
+            count={queues.overdue.length}
+            tone="rose"
+            icon={AlertTriangle}
+          >
+            {renderRequestList(queues.overdue, '')}
+          </RequestQueueSection>
+        )}
+        {toReturnNotOverdue.length > 0 && (
+          <RequestQueueSection
+            title="Due for return"
+            description="Checked out and within or before the return window"
+            count={toReturnNotOverdue.length}
+            tone="sky"
+            icon={RotateCcw}
+          >
+            {renderRequestList(toReturnNotOverdue, '')}
+          </RequestQueueSection>
+        )}
+        {queues.pending.length > 0 && (
+          <RequestQueueSection
+            title="Pending action"
+            description="Book assets, mark slots, or checkout booked items"
+            count={queues.pending.length}
+            tone="violet"
+            icon={ClipboardList}
+          >
+            {renderRequestList(queues.pending, '')}
+          </RequestQueueSection>
+        )}
+      </div>
+    );
+  };
+
   return (
     <TechnicianShell>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">User requests</h1>
           <p className="mt-1 max-w-xl text-xs text-muted-foreground sm:text-sm">
-            Book assets or mark slots unavailable, then checkout or return the whole request.
+            Work pending bookings, checkouts, returns, and overdue loans from one queue.
           </p>
         </div>
         <Button variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-[8px]" asChild>
@@ -912,32 +1137,94 @@ export function TechnicianRequestPage() {
         </Button>
       </div>
 
-      <div className="relative mb-4 w-full sm:max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search requests…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-9 rounded-[8px] pl-9"
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <QueueStatCard
+          label="Pending"
+          count={queues.pending.length}
+          icon={ClipboardList}
+          active={viewFilter === 'pending'}
+          onClick={() => setViewFilter('pending')}
+          className="border-violet-200/80 bg-violet-50/50 dark:border-violet-900 dark:bg-violet-950/30"
+        />
+        <QueueStatCard
+          label="To return"
+          count={queues.toReturn.length}
+          icon={PackageCheck}
+          active={viewFilter === 'to_return'}
+          onClick={() => setViewFilter('to_return')}
+          className="border-sky-200/80 bg-sky-50/50 dark:border-sky-900 dark:bg-sky-950/30"
+        />
+        <QueueStatCard
+          label="Overdue"
+          count={queues.overdue.length}
+          icon={AlertTriangle}
+          active={viewFilter === 'overdue'}
+          onClick={() => setViewFilter('overdue')}
+          className="border-rose-200/80 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/30"
         />
       </div>
 
       <Card className="mb-4 rounded-[14px] border-border shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Pending requests</CardTitle>
-          <CardDescription>
-            {pool.length} asset{pool.length === 1 ? '' : 's'} in pool (status {REQUEST_STATUS_ACTIVE})
-            · <span className="font-medium">Checkout request</span> checks out all booked assets ·{' '}
-            <span className="font-medium">Return request</span> when items are checked out
-          </CardDescription>
+        <CardHeader className="flex flex-col gap-3 pb-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Request queue</CardTitle>
+              <CardDescription>
+                {searched.length} request{searched.length === 1 ? '' : 's'}
+                {searched.length !== requests.length && ` of ${requests.length}`}
+                {' · '}
+                {pool.length} asset{pool.length === 1 ? '' : 's'} in pool
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search requests…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 rounded-[8px] pl-9"
+              />
+            </div>
+          </div>
+          <ToggleGroup
+            type="single"
+            value={viewFilter}
+            onValueChange={(value) => {
+              if (value) setViewFilter(value as RequestViewFilter);
+            }}
+            className="flex flex-wrap justify-start gap-1"
+          >
+            <ToggleGroupItem value="all" className="rounded-[8px] px-3 text-xs">
+              All ({searched.length})
+            </ToggleGroupItem>
+            <ToggleGroupItem value="pending" className="gap-1.5 rounded-[8px] px-3 text-xs">
+              <ClipboardList className="h-3.5 w-3.5" />
+              Pending ({queues.pending.length})
+            </ToggleGroupItem>
+            <ToggleGroupItem value="to_return" className="gap-1.5 rounded-[8px] px-3 text-xs">
+              <RotateCcw className="h-3.5 w-3.5" />
+              To return ({queues.toReturn.length})
+            </ToggleGroupItem>
+            <ToggleGroupItem value="overdue" className="gap-1.5 rounded-[8px] px-3 text-xs">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Overdue ({queues.overdue.length})
+            </ToggleGroupItem>
+          </ToggleGroup>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           {loading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
-          ) : filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No pending user requests.</p>
+          ) : viewFilter === 'all' ? (
+            renderAllSections()
           ) : (
-            filtered.map((req) => renderRequestCollapsible(req))
+            renderRequestList(
+              displayed,
+              viewFilter === 'overdue'
+                ? 'No overdue requests.'
+                : viewFilter === 'to_return'
+                  ? 'No requests awaiting return.'
+                  : 'No requests need pending action.',
+            )
           )}
         </CardContent>
       </Card>
@@ -1036,5 +1323,78 @@ export function TechnicianRequestPage() {
         </DialogContent>
       </Dialog>
     </TechnicianShell>
+  );
+}
+
+function QueueStatCard({
+  label,
+  count,
+  icon: Icon,
+  active,
+  onClick,
+  className,
+}: {
+  label: string;
+  count: number;
+  icon: typeof ClipboardList;
+  active: boolean;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-[12px] border p-4 text-left transition-colors hover:opacity-90',
+        active && 'ring-2 ring-[oklch(0.45_0.12_290)]/40',
+        className,
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+      </div>
+      <p className="mt-1 text-2xl font-bold tabular-nums">{count}</p>
+    </button>
+  );
+}
+
+function RequestQueueSection({
+  title,
+  description,
+  count,
+  tone,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  description: string;
+  count: number;
+  tone: 'rose' | 'sky' | 'violet';
+  icon: typeof ClipboardList;
+  children: ReactNode;
+}) {
+  const toneClass =
+    tone === 'rose'
+      ? 'border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/30'
+      : tone === 'sky'
+        ? 'border-sky-200 bg-sky-50/60 dark:border-sky-900 dark:bg-sky-950/30'
+        : 'border-violet-200 bg-violet-50/60 dark:border-violet-900 dark:bg-violet-950/30';
+
+  return (
+    <section className={cn('rounded-[12px] border px-4 py-3', toneClass)}>
+      <div className="mb-3 flex items-start gap-2">
+        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <div>
+          <h2 className="text-sm font-semibold">
+            {title}{' '}
+            <span className="font-normal text-muted-foreground">({count})</span>
+          </h2>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
   );
 }
