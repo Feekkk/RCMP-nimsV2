@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowRight, ChevronDown, Laptop, Search, Tv, XCircle } from 'lucide-react';
+import {
+  ArrowRight,
+  Ban,
+  ChevronDown,
+  Laptop,
+  Loader2,
+  Search,
+  Tv,
+  UserX,
+  XCircle,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
 import { readTechnicianSession } from '@/lib/auth-session';
 import {
@@ -48,24 +59,26 @@ import type {
   RequestAssignmentRow,
   RequestItemRow,
   RequestPoolAsset,
+  RequestSlotMark,
 } from '@/lib/request-schema';
 import { kindGroupLabel, requestItemKindFromAssetType } from '@/lib/request-asset-types';
+import { cn } from '@/lib/utils';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { sendCheckoutEmailFn } from '@/server/checkout-email.functions';
 import { sendRequestReturnEmailFn } from '@/server/request-return-email.functions';
 import {
   bookPoolAssetToRequestFn,
+  cancelBookedAssignmentNotTakenFn,
   changeBookedAssignmentFn,
   checkoutUserRequestFn,
   listAvailablePoolAssetsFn,
   listPendingRequestsFn,
+  markRequestSlotNotTakenFn,
   markRequestSlotUnavailableFn,
   rejectUserRequestFn,
   returnUserRequestFn,
 } from '@/server/request.functions';
-
-const UNAVAILABLE_PICK = 'unavailable';
 import { RequestReturnFields } from '@/technician/request-return-fields';
 
 function poolAssetLabel(a: RequestPoolAsset): string {
@@ -74,8 +87,12 @@ function poolAssetLabel(a: RequestPoolAsset): string {
   return parts.join(' · ');
 }
 
+function slotMarkLabel(mark: RequestSlotMark): string {
+  return mark === 'not_taken' ? 'Not taken' : 'Unavailable';
+}
+
 function bookedAssetLabel(a: RequestAssignmentRow): string {
-  if (a.unavailable) return 'Unavailable';
+  if (a.slotMark) return slotMarkLabel(a.slotMark);
   const kind = a.kind === 'laptop' ? 'Laptop' : 'AV';
   return [kind, a.assetId != null ? `#${a.assetId}` : null, a.model, a.brand]
     .filter(Boolean)
@@ -174,7 +191,7 @@ export function TechnicianRequestPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<number | null>(null);
-  const [bookingKey, setBookingKey] = useState<string | null>(null);
+  const [actionKey, setActionKey] = useState<string | null>(null);
   const [checkoutRequestId, setCheckoutRequestId] = useState<number | null>(null);
   const [changingAssignmentId, setChangingAssignmentId] = useState<number | null>(null);
   const [rejectRequestId, setRejectRequestId] = useState<number | null>(null);
@@ -225,60 +242,40 @@ export function TechnicianRequestPage() {
     );
   }, [requests, search]);
 
-  const handleBookOnSelect = async (
-    req: PendingRequest,
-    group: KindGroup,
-    pick: string,
-  ) => {
-    if (!pick || pick === '_none') return;
+  const resolveBookingItem = (req: PendingRequest, group: KindGroup) => {
     const item = findItemForBooking(req, group);
     if (!item) {
       toast.error('All slots are filled for this category');
-      return;
+      return null;
     }
-
     const session = readTechnicianSession();
     if (!session?.staffId) {
       toast.error('Technician session required');
-      return;
+      return null;
     }
+    return { item, staffId: session.staffId };
+  };
 
-    const key = `${req.requestId}-${group.kind}`;
-    if (pick === UNAVAILABLE_PICK) {
-      setBookingKey(key);
-      try {
-        await markRequestSlotUnavailableFn({
-          data: {
-            requestId: req.requestId,
-            requestItemId: item.requestItemId,
-            markedBy: session.staffId,
-            remarks: null,
-          },
-        });
-        toast.success(`${group.label} slot marked unavailable`);
-        await load();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Could not mark unavailable');
-      } finally {
-        setBookingKey(null);
-      }
-      return;
-    }
+  const handleBookOnSelect = async (req: PendingRequest, group: KindGroup, pick: string) => {
+    if (!pick || pick === '_none') return;
+    const resolved = resolveBookingItem(req, group);
+    if (!resolved) return;
 
     const [kind, idStr] = pick.split(':');
     const assetId = Number(idStr);
     if ((kind !== 'laptop' && kind !== 'av') || Number.isNaN(assetId)) return;
     if (kind !== group.kind) return;
 
-    setBookingKey(key);
+    const key = `book-${req.requestId}-${group.kind}`;
+    setActionKey(key);
     try {
       await bookPoolAssetToRequestFn({
         data: {
           requestId: req.requestId,
-          requestItemId: item.requestItemId,
+          requestItemId: resolved.item.requestItemId,
           kind,
           assetId,
-          assignedBy: session.staffId,
+          assignedBy: resolved.staffId,
           remarks: null,
         },
       });
@@ -287,7 +284,76 @@ export function TechnicianRequestPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Booking failed');
     } finally {
-      setBookingKey(null);
+      setActionKey(null);
+    }
+  };
+
+  const handleMarkUnavailable = async (req: PendingRequest, group: KindGroup) => {
+    const resolved = resolveBookingItem(req, group);
+    if (!resolved) return;
+
+    const key = `unavail-${req.requestId}-${group.kind}`;
+    setActionKey(key);
+    try {
+      await markRequestSlotUnavailableFn({
+        data: {
+          requestId: req.requestId,
+          requestItemId: resolved.item.requestItemId,
+          markedBy: resolved.staffId,
+          remarks: null,
+        },
+      });
+      toast.success(`${group.label} slot marked unavailable`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not mark unavailable');
+    } finally {
+      setActionKey(null);
+    }
+  };
+
+  const handleMarkNotTaken = async (req: PendingRequest, group: KindGroup) => {
+    const resolved = resolveBookingItem(req, group);
+    if (!resolved) return;
+
+    const key = `nottaken-${req.requestId}-${group.kind}`;
+    setActionKey(key);
+    try {
+      await markRequestSlotNotTakenFn({
+        data: {
+          requestId: req.requestId,
+          requestItemId: resolved.item.requestItemId,
+          markedBy: resolved.staffId,
+        },
+      });
+      toast.success(`${group.label} slot marked not taken`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not mark not taken');
+    } finally {
+      setActionKey(null);
+    }
+  };
+
+  const handleBookedNotTaken = async (assignment: RequestAssignmentRow) => {
+    const session = readTechnicianSession();
+    if (!session?.staffId) {
+      toast.error('Technician session required');
+      return;
+    }
+
+    const key = `cancel-${assignment.assignmentId}`;
+    setActionKey(key);
+    try {
+      await cancelBookedAssignmentNotTakenFn({
+        data: { assignmentId: assignment.assignmentId, cancelledBy: session.staffId },
+      });
+      toast.success('Booking released — asset returned to pool');
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not mark not taken');
+    } finally {
+      setActionKey(null);
     }
   };
 
@@ -525,13 +591,20 @@ export function TechnicianRequestPage() {
             </p>
           )}
 
-          <div className="overflow-x-auto rounded-[10px] border border-border">
-            <Table>
+          <div className="rounded-[10px] border border-border">
+            <Table className="table-fixed">
+              <colgroup>
+                <col className="w-[26%]" />
+                <col className="w-[34%]" />
+                <col className="w-[22%]" />
+                <col className="w-[18%]" />
+              </colgroup>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[min(180px,28%)]">Category</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead>Asset</TableHead>
-                  <TableHead className="w-28">Status</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -539,7 +612,9 @@ export function TechnicianRequestPage() {
                   const lines = linesForKindGroup(req, group);
                   const checkedOut = checkedOutCountForGroup(req, group);
                   const options = optionsForKind(group.kind);
-                  const bookKey = `${req.requestId}-${group.kind}`;
+                  const bookKey = `book-${req.requestId}-${group.kind}`;
+                  const unavailKey = `unavail-${req.requestId}-${group.kind}`;
+                  const notTakenKey = `nottaken-${req.requestId}-${group.kind}`;
 
                   if (lines.length === 0) return [];
 
@@ -550,6 +625,11 @@ export function TechnicianRequestPage() {
                         : `e-${group.kind}-${lineIdx}`;
                     const a = line.lineKind === 'assignment' ? line.assignment : null;
                     const isCheckedOut = a?.checkoutAt != null;
+                    const isBookedAwaitingCheckout =
+                      a != null &&
+                      !a.unavailable &&
+                      !isCheckedOut &&
+                      a.assetStatusId === REQUEST_STATUS_BOOKED;
 
                     return (
                       <TableRow key={rowKey}>
@@ -575,9 +655,16 @@ export function TechnicianRequestPage() {
                         {line.lineKind === 'assignment' && a ? (
                           <>
                             <TableCell>
-                              {a.unavailable ? (
-                                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                                  Unavailable
+                              {a.slotMark ? (
+                                <span
+                                  className={cn(
+                                    'text-sm font-medium',
+                                    a.slotMark === 'not_taken'
+                                      ? 'text-muted-foreground'
+                                      : 'text-amber-800 dark:text-amber-200',
+                                  )}
+                                >
+                                  {slotMarkLabel(a.slotMark)}
                                 </span>
                               ) : !isCheckedOut && a.assetStatusId === REQUEST_STATUS_BOOKED ? (
                                 <Select
@@ -620,9 +707,9 @@ export function TechnicianRequestPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {a.unavailable ? (
+                              {a.slotMark ? (
                                 <Badge variant="outline" className="rounded-[6px] text-[10px]">
-                                  Unavailable
+                                  {slotMarkLabel(a.slotMark)}
                                 </Badge>
                               ) : (
                                 <>
@@ -635,42 +722,117 @@ export function TechnicianRequestPage() {
                                 </>
                               )}
                             </TableCell>
+                            <TableCell>
+                              {isBookedAwaitingCheckout ? (
+                                <TooltipProvider delayDuration={300}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0 rounded-[8px]"
+                                        disabled={actionKey === `cancel-${a.assignmentId}`}
+                                        aria-label="Not taken"
+                                        onClick={() => void handleBookedNotTaken(a)}
+                                      >
+                                        {actionKey === `cancel-${a.assignmentId}` ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <UserX className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">Not taken</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
                           </>
                         ) : (
-                              <>
-                                <TableCell>
-                                  <Select
-                                    disabled={bookingKey === bookKey}
-                                    onValueChange={(v) => void handleBookOnSelect(req, group, v)}
-                                  >
-                                    <SelectTrigger className="h-8 max-w-md rounded-[6px] text-xs">
-                                      <SelectValue
-                                        placeholder={
-                                          bookingKey === bookKey
-                                            ? 'Booking…'
-                                            : 'Select asset or unavailable…'
-                                        }
-                                      />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value={UNAVAILABLE_PICK}>
-                                        Unavailable (no asset in pool)
+                          <>
+                            <TableCell>
+                              <Select
+                                disabled={actionKey === bookKey}
+                                onValueChange={(v) => void handleBookOnSelect(req, group, v)}
+                              >
+                                <SelectTrigger className="h-8 max-w-md rounded-[6px] text-xs">
+                                  <SelectValue
+                                    placeholder={
+                                      actionKey === bookKey ? 'Booking…' : 'Select asset…'
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {options.length === 0 ? (
+                                    <SelectItem value="_none" disabled>
+                                      No assets in pool
+                                    </SelectItem>
+                                  ) : (
+                                    options.map((poolAsset) => (
+                                      <SelectItem
+                                        key={`${poolAsset.kind}-${poolAsset.assetId}`}
+                                        value={`${poolAsset.kind}:${poolAsset.assetId}`}
+                                      >
+                                        {poolAssetLabel(poolAsset)}
                                       </SelectItem>
-                                      {options.map((poolAsset) => (
-                                        <SelectItem
-                                          key={`${poolAsset.kind}-${poolAsset.assetId}`}
-                                          value={`${poolAsset.kind}:${poolAsset.assetId}`}
-                                        >
-                                          {poolAssetLabel(poolAsset)}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell>
-                                  <span className="text-xs text-muted-foreground">Unassigned</span>
-                                </TableCell>
-                              </>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground">Unassigned</span>
+                            </TableCell>
+                            <TableCell>
+                              <TooltipProvider delayDuration={300}>
+                                <div className="flex items-center gap-1">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0 rounded-[8px]"
+                                        disabled={actionKey != null}
+                                        aria-label="Unavailable"
+                                        onClick={() => void handleMarkUnavailable(req, group)}
+                                      >
+                                        {actionKey === unavailKey ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Ban className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">Unavailable</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0 rounded-[8px]"
+                                        disabled={actionKey != null}
+                                        aria-label="Not taken"
+                                        onClick={() => void handleMarkNotTaken(req, group)}
+                                      >
+                                        {actionKey === notTakenKey ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <UserX className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">Not taken</TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </TooltipProvider>
+                            </TableCell>
+                          </>
                         )}
                       </TableRow>
                     );

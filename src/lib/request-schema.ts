@@ -39,6 +39,8 @@ export type RequestItemRow = {
   returnedCount: number;
 };
 
+export type RequestSlotMark = 'unavailable' | 'not_taken';
+
 export type RequestAssignmentRow = {
   assignmentId: number;
   requestItemId: number | null;
@@ -51,6 +53,8 @@ export type RequestAssignmentRow = {
   /** Pool asset status; 0 when slot is unavailable (no asset). */
   assetStatusId: number;
   unavailable: boolean;
+  /** Set when slot was closed without booking an asset. */
+  slotMark: RequestSlotMark | null;
 };
 
 export type MarkRequestSlotUnavailableInput = {
@@ -58,6 +62,13 @@ export type MarkRequestSlotUnavailableInput = {
   requestItemId: number;
   markedBy: string;
   remarks?: string | null;
+};
+
+export type MarkRequestSlotNotTakenInput = MarkRequestSlotUnavailableInput;
+
+export type CancelBookedNotTakenInput = {
+  assignmentId: number;
+  cancelledBy: string;
 };
 
 export type CheckoutUserRequestInput = {
