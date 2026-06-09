@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Laptop, Search, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Collapsible,
@@ -9,6 +10,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -17,8 +19,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { isoToLocalDate, localDateToIso } from '@/lib/date-format';
 import type { RequestLogAssignment, RequestLogEntry } from '@/lib/request-schema';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
+import { DatePickerField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { listRequestLogFn } from '@/server/request.functions';
 
@@ -86,6 +90,14 @@ function buildLogEvents(entry: RequestLogEntry): LogEvent[] {
   return events.sort((x, y) => y.sortKey - x.sortKey);
 }
 
+/** Inclusive borrow-period overlap with optional from/to ISO dates. */
+function requestMatchesDateFilter(entry: RequestLogEntry, fromIso: string, toIso: string): boolean {
+  if (!fromIso && !toIso) return true;
+  if (fromIso && entry.returnDate < fromIso) return false;
+  if (toIso && entry.borrowDate > toIso) return false;
+  return true;
+}
+
 function logStatusLabel(entry: RequestLogEntry): { text: string; variant: 'default' | 'destructive' | 'outline' | 'secondary' } {
   if (entry.rejectedAt) return { text: 'Rejected', variant: 'destructive' };
   const totalQty = entry.items.reduce((n, i) => n + i.quantity, 0);
@@ -101,7 +113,18 @@ export function TechnicianRequestLogPage() {
   const [entries, setEntries] = useState<RequestLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [openId, setOpenId] = useState<number | null>(null);
+
+  const dateRangeInvalid = useMemo(() => {
+    if (!dateFrom || !dateTo) return false;
+    const from = isoToLocalDate(dateFrom);
+    const to = isoToLocalDate(dateTo);
+    return Boolean(from && to && from > to);
+  }, [dateFrom, dateTo]);
+
+  const hasDateFilter = Boolean(dateFrom || dateTo);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -119,10 +142,12 @@ export function TechnicianRequestLogPage() {
   }, [load]);
 
   const filtered = useMemo(() => {
+    if (dateRangeInvalid) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return entries;
-    return entries.filter((e) =>
-      [
+    return entries.filter((e) => {
+      if (!requestMatchesDateFilter(e, dateFrom, dateTo)) return false;
+      if (!q) return true;
+      return [
         String(e.requestId),
         e.requesterName,
         e.requestedBy,
@@ -135,9 +160,9 @@ export function TechnicianRequestLogPage() {
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
-        .includes(q),
-    );
-  }, [entries, search]);
+        .includes(q);
+    });
+  }, [entries, search, dateFrom, dateTo, dateRangeInvalid]);
 
   return (
     <TechnicianShell>
@@ -150,21 +175,73 @@ export function TechnicianRequestLogPage() {
       </div>
 
       <Card className="mb-4 rounded-[14px] border-border shadow-sm">
-        <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="text-base">All requests</CardTitle>
-            <CardDescription>
-              {filtered.length} request{filtered.length === 1 ? '' : 's'}
-            </CardDescription>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="text-base">All requests</CardTitle>
+              <CardDescription>
+                {filtered.length} request{filtered.length === 1 ? '' : 's'}
+                {filtered.length !== entries.length && ` of ${entries.length}`}
+                {dateRangeInvalid && ' · End date must be on or after start date'}
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search log…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 rounded-[8px] pl-9"
+              />
+            </div>
           </div>
-          <div className="relative w-full sm:max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search log…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 rounded-[8px] pl-9"
-            />
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+            <DatePickerField label="From date" value={dateFrom} onChange={setDateFrom} />
+            <DatePickerField label="To date" value={dateTo} onChange={setDateTo} />
+            <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-[8px]"
+                disabled={!hasDateFilter}
+                onClick={() => {
+                  setDateFrom('');
+                  setDateTo('');
+                }}
+              >
+                Clear dates
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="rounded-[8px]"
+                onClick={() => {
+                  const today = new Date();
+                  const weekAgo = new Date(today);
+                  weekAgo.setDate(weekAgo.getDate() - 7);
+                  setDateFrom(localDateToIso(weekAgo));
+                  setDateTo(localDateToIso(today));
+                }}
+              >
+                Last 7 days
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="rounded-[8px]"
+                onClick={() => {
+                  const today = new Date();
+                  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                  setDateFrom(localDateToIso(monthStart));
+                  setDateTo(localDateToIso(today));
+                }}
+              >
+                This month
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
