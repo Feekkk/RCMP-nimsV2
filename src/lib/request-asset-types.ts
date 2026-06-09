@@ -14,6 +14,71 @@ export const USER_REQUEST_ASSET_TYPES = [
 
 export type UserRequestAssetType = (typeof USER_REQUEST_ASSET_TYPES)[number];
 
+export type UserRequestAssetCatalogEntry = {
+  assetType: UserRequestAssetType;
+  kind: RequestAssignableKind;
+  description: string;
+  includes: string;
+};
+
+/** Reference info shown on the user request equipment step. */
+export const USER_REQUEST_ASSET_CATALOG: UserRequestAssetCatalogEntry[] = [
+  {
+    assetType: 'Laptop',
+    kind: 'laptop',
+    description: 'Windows laptop for coursework, presentations, and general computing.',
+    includes: 'Charger and carry bag where available.',
+  },
+  {
+    assetType: 'Portable Speaker',
+    kind: 'av',
+    description: 'Battery-powered speaker for events, rehearsals, and small venues.',
+    includes: 'Speaker unit, power adapter, and audio cable.',
+  },
+  {
+    assetType: 'Microphone',
+    kind: 'av',
+    description: 'Handheld or stand microphone for speeches, panels, and recordings.',
+    includes: 'Microphone unit and basic cable; stand may be issued separately.',
+  },
+  {
+    assetType: 'Pocket Mic',
+    kind: 'av',
+    description: 'Compact clip-on microphone for interviews and mobile recording.',
+    includes: 'Pocket mic, receiver, and charging cable.',
+  },
+  {
+    assetType: 'Tripod',
+    kind: 'av',
+    description: 'Stable stand for cameras, projectors, or presentation equipment.',
+    includes: 'Tripod unit with adjustable head.',
+  },
+  {
+    assetType: 'Projector',
+    kind: 'av',
+    description: 'Portable projector for classrooms, briefings, and events.',
+    includes: 'Projector unit, power cable, and HDMI cable.',
+  },
+  {
+    assetType: 'Video Camera',
+    kind: 'av',
+    description: 'Handheld video camera for lectures, events, and field recording.',
+    includes: 'Camera unit, battery, charger, and memory card where available.',
+  },
+  {
+    assetType: 'Webcam',
+    kind: 'av',
+    description: 'USB webcam for online classes, meetings, and streaming.',
+    includes: 'Webcam unit and USB cable.',
+  },
+];
+
+export function getUserRequestAssetCatalogEntry(
+  assetType: string,
+): UserRequestAssetCatalogEntry | undefined {
+  return USER_REQUEST_ASSET_CATALOG.find((e) => e.assetType === assetType);
+}
+
 /** Maps a requested category label to pool kind (laptop vs av). */
 export function requestItemKindFromAssetType(assetType: string): RequestAssignableKind {
   const t = assetType.trim().toLowerCase();

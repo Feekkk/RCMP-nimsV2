@@ -193,7 +193,8 @@ export type UserRequestHistoryStatus =
   | 'completed'
   | 'in_use'
   | 'preparing'
-  | 'submitted';
+  | 'submitted'
+  | 'unavailable';
 
 /** Per category line — counts only, no asset identifiers */
 export type UserRequestItemProgress = {
@@ -203,6 +204,8 @@ export type UserRequestItemProgress = {
   bookedCount: number;
   checkedOutCount: number;
   returnedCount: number;
+  unavailableCount: number;
+  notTakenCount: number;
 };
 
 export type UserRequestHistory = {
