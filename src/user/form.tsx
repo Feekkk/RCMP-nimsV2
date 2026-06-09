@@ -6,12 +6,23 @@ import {
   Check,
   ClipboardCheck,
   FileText,
+  Laptop,
   ListChecks,
+  Mic,
+  Minus,
+  Monitor,
   Package,
+  Plus,
+  Projector,
   Send,
+  Speaker,
+  Tv,
+  Video,
+  Webcam,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,9 +32,7 @@ import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -35,9 +44,11 @@ import {
   type UserRequestItemDraft,
 } from '@/lib/request-schema';
 import {
-  USER_REQUEST_ASSET_TYPES,
-  USER_REQUEST_AV_TYPES,
-  USER_REQUEST_LAPTOP_TYPES,
+  USER_REQUEST_ASSET_CATALOG,
+  type UserRequestAssetCatalogEntry,
+  type UserRequestAssetType,
+  getUserRequestAssetCatalogEntry,
+  kindGroupLabel,
   requestItemKindFromAssetType,
 } from '@/lib/request-asset-types';
 import { sendRequestEmailFn } from '@/server/request-email.functions';
@@ -105,26 +116,24 @@ export function UserRequestFormPage() {
     void navigate({ to: '/login' });
   };
 
-  const addItem = () => {
-    setItems((prev) => [
-      ...prev,
-      { id: newItemId(), assetType: USER_REQUEST_ASSET_TYPES[0], quantity: 1 },
-    ]);
-  };
-
-  const updateItem = (id: string, patch: Partial<UserRequestItemDraft>) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
-  };
-
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const setItemQuantity = (assetType: string, quantity: number) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.assetType === assetType);
+      if (quantity < 1) {
+        return idx === -1 ? prev : prev.filter((_, i) => i !== idx);
+      }
+      if (idx === -1) {
+        return [...prev, { id: newItemId(), assetType, quantity }];
+      }
+      return prev.map((i, iIdx) => (iIdx === idx ? { ...i, quantity } : i));
+    });
   };
 
   const handleNext = () => {
     if (!canContinue) {
       if (step === 0) toast.error('Please accept the terms to continue');
       else if (step === 1) toast.error('Complete all required request details');
-      else if (step === 2) toast.error('Add at least one equipment category');
+      else if (step === 2) toast.error('Select at least one equipment item');
       return;
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -260,12 +269,7 @@ export function UserRequestFormPage() {
               />
             )}
             {step === 2 && (
-              <ItemsStep
-                items={items}
-                onAdd={addItem}
-                onUpdate={updateItem}
-                onRemove={removeItem}
-              />
+              <ItemsStep items={items} onSetQuantity={setItemQuantity} />
             )}
             {step === 3 && (
               <PreviewStep
@@ -486,97 +490,216 @@ function DetailsStep({
   );
 }
 
+const ASSET_TYPE_ICONS: Record<UserRequestAssetType, typeof Laptop> = {
+  Laptop: Laptop,
+  'Portable Speaker': Speaker,
+  Microphone: Mic,
+  'Pocket Mic': Mic,
+  Tripod: Monitor,
+  Projector: Projector,
+  'Video Camera': Video,
+  Webcam: Webcam,
+};
+
 function ItemsStep({
   items,
-  onAdd,
-  onUpdate,
-  onRemove,
+  onSetQuantity,
 }: {
   items: UserRequestItemDraft[];
-  onAdd: () => void;
-  onUpdate: (id: string, patch: Partial<UserRequestItemDraft>) => void;
-  onRemove: (id: string) => void;
+  onSetQuantity: (assetType: string, quantity: number) => void;
 }) {
+  const quantityByType = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of items) map.set(item.assetType, item.quantity);
+    return map;
+  }, [items]);
+
+  const totalUnits = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items],
+  );
+
+  const laptopCatalog = USER_REQUEST_ASSET_CATALOG.filter((e) => e.kind === 'laptop');
+  const avCatalog = USER_REQUEST_ASSET_CATALOG.filter((e) => e.kind === 'av');
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        Choose what you need (laptop or AV equipment). Quantities are per item; technicians assign
-        from the laptop or AV pool — you will not see specific asset numbers.
+        Browse available equipment below. Set a quantity for each item you need; technicians
+        assign specific units from inventory after approval.
       </p>
-      {items.length === 0 ? (
-        <div className="rounded-[12px] border border-dashed border-border bg-muted/30 px-4 py-10 text-center">
-          <Package className="mx-auto mb-2 h-8 w-8 text-muted-foreground/60" />
-          <p className="text-sm text-muted-foreground">No categories added yet.</p>
-          <Button type="button" variant="outline" size="sm" className="mt-4 rounded-[8px]" onClick={onAdd}>
-            Add category
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {items.map((item, index) => (
-            <div
-              key={item.id}
-              className="flex flex-col gap-3 rounded-[12px] border border-border bg-card/50 p-3 sm:flex-row sm:items-end"
-            >
-              <FormField label={`Category ${index + 1}`} required>
-                <Select
-                  value={item.assetType}
-                  onValueChange={(v) => onUpdate(item.id, { assetType: v })}
-                >
-                  <SelectTrigger className="rounded-[8px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {USER_REQUEST_LAPTOP_TYPES.length > 0 && (
-                      <SelectGroup>
-                        <SelectLabel>Laptop</SelectLabel>
-                        {USER_REQUEST_LAPTOP_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    )}
-                    {USER_REQUEST_AV_TYPES.length > 0 && (
-                      <SelectGroup>
-                        <SelectLabel>AV equipment</SelectLabel>
-                        {USER_REQUEST_AV_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    )}
-                  </SelectContent>
-                </Select>
-              </FormField>
-              <FormField label="Quantity" required>
-                <Input
-                  type="number"
-                  min={1}
-                  value={item.quantity}
-                  onChange={(e) =>
-                    onUpdate(item.id, { quantity: Math.max(1, Number(e.target.value) || 1) })
-                  }
-                  className="w-full rounded-[8px] sm:w-24"
-                />
-              </FormField>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive sm:mb-0.5"
-                onClick={() => onRemove(item.id)}
-              >
-                Remove
-              </Button>
-            </div>
-          ))}
-          <Button type="button" variant="outline" size="sm" className="rounded-[8px]" onClick={onAdd}>
-            Add another category
-          </Button>
+
+      {items.length > 0 && (
+        <div className="rounded-[12px] border border-[oklch(0.45_0.12_290)]/25 bg-lavender/10 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[oklch(0.45_0.12_290)]">
+            Your selection
+          </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {items.length} categor{items.length === 1 ? 'y' : 'ies'} · {totalUnits} unit
+            {totalUnits === 1 ? '' : 's'}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {items.map((item) => (
+              <Badge key={item.id} variant="secondary" className="rounded-[6px] text-[11px]">
+                {item.assetType} × {item.quantity}
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
+
+      <EquipmentCatalogGroup
+        title="Laptop"
+        icon={Laptop}
+        entries={laptopCatalog}
+        quantityByType={quantityByType}
+        onSetQuantity={onSetQuantity}
+      />
+      <EquipmentCatalogGroup
+        title="AV equipment"
+        icon={Tv}
+        entries={avCatalog}
+        quantityByType={quantityByType}
+        onSetQuantity={onSetQuantity}
+      />
+    </div>
+  );
+}
+
+function EquipmentCatalogGroup({
+  title,
+  icon: GroupIcon,
+  entries,
+  quantityByType,
+  onSetQuantity,
+}: {
+  title: string;
+  icon: typeof Laptop;
+  entries: UserRequestAssetCatalogEntry[];
+  quantityByType: Map<string, number>;
+  onSetQuantity: (assetType: string, quantity: number) => void;
+}) {
+  if (entries.length === 0) return null;
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <GroupIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="text-xs text-muted-foreground">({entries.length} available)</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {entries.map((entry) => (
+          <EquipmentCatalogCard
+            key={entry.assetType}
+            entry={entry}
+            quantity={quantityByType.get(entry.assetType) ?? 0}
+            onSetQuantity={onSetQuantity}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function EquipmentCatalogCard({
+  entry,
+  quantity,
+  onSetQuantity,
+}: {
+  entry: UserRequestAssetCatalogEntry;
+  quantity: number;
+  onSetQuantity: (assetType: string, quantity: number) => void;
+}) {
+  const Icon = ASSET_TYPE_ICONS[entry.assetType];
+  const selected = quantity > 0;
+
+  return (
+    <div
+      className={cn(
+        'flex h-full flex-col rounded-[12px] border p-3 transition-colors',
+        selected
+          ? 'border-[oklch(0.45_0.12_290)]/40 bg-lavender/5'
+          : 'border-border bg-card/50',
+      )}
+    >
+      <div className="flex gap-3">
+        <div
+          className={cn(
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]',
+            selected ? 'bg-[oklch(0.45_0.12_290)]/15 text-[oklch(0.45_0.12_290)]' : 'bg-muted',
+          )}
+        >
+          <Icon className="h-5 w-5" aria-hidden />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium leading-snug">{entry.assetType}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{entry.description}</p>
+          <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground/90">
+            <span className="font-medium text-foreground/80">Includes:</span> {entry.includes}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/80 pt-3">
+        {selected ? (
+          <>
+            <span className="text-xs font-medium text-[oklch(0.45_0.12_290)]">Selected</span>
+            <QuantityStepper
+              quantity={quantity}
+              onChange={(qty) => onSetQuantity(entry.assetType, qty)}
+            />
+          </>
+        ) : (
+          <>
+            <span className="text-xs text-muted-foreground">Not selected</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-[8px] px-3"
+              onClick={() => onSetQuantity(entry.assetType, 1)}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Add
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QuantityStepper({
+  quantity,
+  onChange,
+}: {
+  quantity: number;
+  onChange: (quantity: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 rounded-[8px]"
+        aria-label="Decrease quantity"
+        onClick={() => onChange(Math.max(0, quantity - 1))}
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </Button>
+      <span className="w-8 text-center text-sm font-medium tabular-nums">{quantity}</span>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 rounded-[8px]"
+        aria-label="Increase quantity"
+        onClick={() => onChange(quantity + 1)}
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
@@ -614,20 +737,30 @@ function PreviewStep({
           Equipment
         </p>
         <ul className="space-y-2">
-          {items.map((i) => (
-            <li
-              key={i.id}
-              className="flex items-center justify-between gap-2 rounded-[10px] border border-border px-3 py-2 text-sm"
-            >
-              <span>
-                {i.assetType}
-                <span className="ml-1.5 text-xs text-muted-foreground">
-                  ({requestItemKindFromAssetType(i.assetType) === 'laptop' ? 'Laptop' : 'AV'})
-                </span>
-              </span>
-              <span className="shrink-0 tabular-nums text-muted-foreground">× {i.quantity}</span>
-            </li>
-          ))}
+          {items.map((i) => {
+            const info = getUserRequestAssetCatalogEntry(i.assetType);
+            return (
+              <li
+                key={i.id}
+                className="rounded-[10px] border border-border px-3 py-2.5 text-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium">
+                    {i.assetType}
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                      ({kindGroupLabel(requestItemKindFromAssetType(i.assetType))})
+                    </span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">× {i.quantity}</span>
+                </div>
+                {info && (
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {info.description}
+                  </p>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>
