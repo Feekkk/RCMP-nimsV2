@@ -26,14 +26,18 @@ import type {
   CheckoutRequestAssignmentInput,
   CheckoutUserRequestInput,
   CheckoutUserRequestResult,
+  CancelBookedNotTakenInput,
+  MarkRequestSlotNotTakenInput,
   MarkRequestSlotUnavailableInput,
   RejectUserRequestInput,
+  RequestSlotMark,
   ReturnRequestAssignmentInput,
   ReturnUserRequestInput,
   ReturnUserRequestResult,
 } from '@/lib/request-schema';
 import { STATUS_ID } from '@/lib/asset-status-actions';
 import { requestItemKindFromAssetType } from '@/lib/request-asset-types';
+import { isUserProfileComplete } from '@/lib/user-profile';
 import { getDbPool } from '@/server/db';
 
 const ACTIVE_STATUS = STATUS_ID.ACTIVE;
@@ -385,8 +389,18 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
   }
 }
 
-export async function markRequestSlotUnavailable(
+function parseSlotMark(
+  unavailableAt: Date | string | null,
+  assetId: number | null,
+  remarks: string | null,
+): RequestSlotMark | null {
+  if (unavailableAt == null || assetId != null) return null;
+  return String(remarks ?? '').toLowerCase().includes('not taken') ? 'not_taken' : 'unavailable';
+}
+
+async function insertClosedRequestSlot(
   input: MarkRequestSlotUnavailableInput,
+  remarks: string,
 ): Promise<number> {
   const pool = getDbPool();
 
@@ -406,9 +420,73 @@ export async function markRequestSlotUnavailable(
     `INSERT INTO request_assignment
       (request_id, request_item_id, asset_id, assigned_by, assigned_at, unavailable_at, remarks)
      VALUES (?, ?, NULL, ?, NOW(), NOW(), ?)`,
-    [input.requestId, input.requestItemId, input.markedBy, input.remarks ?? null],
+    [input.requestId, input.requestItemId, input.markedBy, remarks],
   );
   return (result as { insertId: number }).insertId;
+}
+
+export async function markRequestSlotUnavailable(
+  input: MarkRequestSlotUnavailableInput,
+): Promise<number> {
+  return insertClosedRequestSlot(input, input.remarks ?? 'Unavailable');
+}
+
+export async function markRequestSlotNotTaken(
+  input: MarkRequestSlotNotTakenInput,
+): Promise<number> {
+  return insertClosedRequestSlot(input, 'Not taken');
+}
+
+/** Booked asset was not collected by the requester — release back to the request pool. */
+export async function cancelBookedAssignmentNotTaken(
+  input: CancelBookedNotTakenInput,
+): Promise<void> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<
+    (RowDataPacket & {
+      asset_id: number;
+      checkout_at: Date | string | null;
+      rejected_at: Date | string | null;
+      kind: string;
+      status_id: number;
+    })[]
+  >(
+    `SELECT ra.asset_id, ra.checkout_at, r.rejected_at,
+            IF(l.asset_id IS NOT NULL, 'laptop', 'av') AS kind,
+            COALESCE(l.status_id, av.status_id) AS status_id
+     FROM request_assignment ra
+     INNER JOIN request r ON r.request_id = ra.request_id
+     LEFT JOIN laptop l ON l.asset_id = ra.asset_id
+     LEFT JOIN av av ON av.asset_id = ra.asset_id
+     WHERE ra.assignment_id = ? AND ra.returned_at IS NULL`,
+    [input.assignmentId],
+  );
+  const row = rows[0];
+  if (!row) throw new Error('Assignment not found');
+  if (row.rejected_at) throw new Error('Request was rejected');
+  if (row.checkout_at) throw new Error('Asset is already checked out');
+  if (row.status_id !== REQUEST_STATUS_BOOKED) {
+    throw new Error('Only booked assets can be marked not taken');
+  }
+
+  const kind: RequestAssignableKind = row.kind === 'laptop' ? 'laptop' : 'av';
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute(
+      `UPDATE request_assignment
+       SET returned_at = NOW(), return_condition = 'Not taken', returned_by = ?, remarks = 'Not taken'
+       WHERE assignment_id = ?`,
+      [input.cancelledBy, input.assignmentId],
+    );
+    await setAssetRequestStatus(kind, row.asset_id, REQUEST_STATUS_ACTIVE, conn);
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
 }
 
 export async function checkoutUserRequest(
@@ -725,6 +803,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
         unavailable_at: Date | string | null;
         assigned_at: Date | string | null;
         checkout_at: Date | string | null;
+        remarks: string | null;
         model: string | null;
         brand: string | null;
         asset_type: string | null;
@@ -733,7 +812,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
       })[]
     >(
       `SELECT ra.assignment_id, ra.request_item_id, ra.asset_id, ra.unavailable_at,
-              ra.assigned_at, ra.checkout_at,
+              ra.assigned_at, ra.checkout_at, ra.remarks,
               COALESCE(l.model, av.model) AS model,
               COALESCE(l.brand, av.brand) AS brand,
               ri.asset_type,
@@ -748,7 +827,8 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
     );
 
     const assignmentRows: RequestAssignmentRow[] = assignments.map((a) => {
-      const unavailable = a.unavailable_at != null || a.asset_id == null;
+      const slotMark = parseSlotMark(a.unavailable_at, a.asset_id, a.remarks);
+      const unavailable = slotMark != null;
       const kind: RequestAssignableKind =
         a.pool_kind === 'laptop'
           ? 'laptop'
@@ -767,6 +847,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
         checkoutAt: formatTs(a.checkout_at),
         assetStatusId: unavailable ? 0 : (a.asset_status_id ?? 0),
         unavailable,
+        slotMark,
       };
     });
 
@@ -801,24 +882,59 @@ function assignmentMatchesItem(
   return a.kind === requestItemKindFromAssetType(item.asset_type);
 }
 
+function isAssignmentNotTaken(remarks: string | null, returnCondition: string | null): boolean {
+  const text = `${remarks ?? ''} ${returnCondition ?? ''}`.toLowerCase();
+  return text.includes('not taken');
+}
+
 function buildUserItemProgress(
   items: { request_item_id: number; asset_type: string; quantity: number }[],
   assignments: {
     request_item_id: number | null;
     kind: string;
+    asset_id: number | null;
     checkout_at: Date | string | null;
     returned_at: Date | string | null;
+    unavailable_at: Date | string | null;
+    remarks: string | null;
+    return_condition: string | null;
   }[],
 ): UserRequestItemProgress[] {
   return items.map((item) => {
     const linked = assignments.filter((a) => assignmentMatchesItem(a, item));
-    const returnedCount = linked.filter((a) => a.returned_at != null).length;
-    const checkedOutCount = linked.filter(
-      (a) => a.returned_at == null && a.checkout_at != null,
-    ).length;
-    const bookedCount = linked.filter(
-      (a) => a.returned_at == null && a.checkout_at == null,
-    ).length;
+    let bookedCount = 0;
+    let checkedOutCount = 0;
+    let returnedCount = 0;
+    let unavailableCount = 0;
+    let notTakenCount = 0;
+
+    for (const a of linked) {
+      const slotMark = parseSlotMark(a.unavailable_at, a.asset_id, a.remarks);
+      if (slotMark === 'unavailable') {
+        unavailableCount += 1;
+        continue;
+      }
+      if (slotMark === 'not_taken') {
+        notTakenCount += 1;
+        continue;
+      }
+      if (a.returned_at != null) {
+        if (isAssignmentNotTaken(a.remarks, a.return_condition)) {
+          notTakenCount += 1;
+        } else {
+          returnedCount += 1;
+        }
+        continue;
+      }
+      if (a.checkout_at != null) {
+        checkedOutCount += 1;
+        continue;
+      }
+      if (a.asset_id != null) {
+        bookedCount += 1;
+      }
+    }
+
     return {
       requestItemId: item.request_item_id,
       assetType: item.asset_type,
@@ -826,6 +942,8 @@ function buildUserItemProgress(
       bookedCount,
       checkedOutCount,
       returnedCount,
+      unavailableCount,
+      notTakenCount,
     };
   });
 }
@@ -835,13 +953,34 @@ function deriveUserRequestStatus(
   items: UserRequestItemProgress[],
 ): UserRequestHistoryStatus {
   if (rejectedAt) return 'rejected';
+
   const totalQty = items.reduce((n, i) => n + i.quantity, 0);
   const totalReturned = items.reduce((n, i) => n + i.returnedCount, 0);
-  if (totalQty > 0 && totalReturned >= totalQty) return 'completed';
   const anyCheckedOut = items.some((i) => i.checkedOutCount > 0);
-  if (anyCheckedOut) return 'in_use';
   const anyBooked = items.some((i) => i.bookedCount > 0);
+
+  const resolvedUnits = (item: UserRequestItemProgress) =>
+    item.returnedCount +
+    item.unavailableCount +
+    item.notTakenCount +
+    item.checkedOutCount +
+    item.bookedCount;
+
+  const allResolved = totalQty > 0 && items.every((item) => resolvedUnits(item) >= item.quantity);
+
+  if (anyCheckedOut) return 'in_use';
   if (anyBooked) return 'preparing';
+
+  if (allResolved || totalReturned >= totalQty) {
+    const nothingIssued = items.every(
+      (item) => item.returnedCount === 0 && item.checkedOutCount === 0 && item.bookedCount === 0,
+    );
+    if (nothingIssued && items.some((item) => item.unavailableCount + item.notTakenCount > 0)) {
+      return 'unavailable';
+    }
+    return 'completed';
+  }
+
   return 'submitted';
 }
 
@@ -882,13 +1021,17 @@ export async function listUserRequestHistory(staffId: string): Promise<UserReque
       (RowDataPacket & {
         request_item_id: number | null;
         kind: string;
+        asset_id: number | null;
         checkout_at: Date | string | null;
         returned_at: Date | string | null;
+        unavailable_at: Date | string | null;
+        remarks: string | null;
+        return_condition: string | null;
       })[]
     >(
-      `SELECT ra.request_item_id,
+      `SELECT ra.request_item_id, ra.asset_id,
               IF(l.asset_id IS NOT NULL, 'laptop', 'av') AS kind,
-              ra.checkout_at, ra.returned_at
+              ra.checkout_at, ra.returned_at, ra.unavailable_at, ra.remarks, ra.return_condition
        FROM request_assignment ra
        LEFT JOIN laptop l ON l.asset_id = ra.asset_id
        LEFT JOIN av av ON av.asset_id = ra.asset_id
@@ -1058,11 +1201,23 @@ export async function submitUserRequest(
   try {
     await conn.beginTransaction();
 
-    const [userRows] = await conn.query<RowDataPacket[]>(
-      `SELECT staff_id FROM users WHERE staff_id = ?`,
+    const [userRows] = await conn.query<
+      (RowDataPacket & { full_name: string; email: string; phone: string | null })[]
+    >(
+      `SELECT full_name, email, phone FROM users WHERE staff_id = ?`,
       [input.requestedBy],
     );
-    if (!userRows[0]) throw new Error('User account not found');
+    const userRow = userRows[0];
+    if (!userRow) throw new Error('User account not found');
+    if (
+      !isUserProfileComplete({
+        fullName: userRow.full_name,
+        email: userRow.email,
+        phone: userRow.phone,
+      })
+    ) {
+      throw new Error('Complete your profile (name, email, and phone) before submitting a request');
+    }
 
     const [result] = await conn.execute(
       `INSERT INTO request

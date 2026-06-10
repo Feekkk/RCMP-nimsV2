@@ -4,6 +4,8 @@ import type {
   ChangeBookedAssignmentInput,
   CheckoutRequestAssignmentInput,
   CheckoutUserRequestInput,
+  CancelBookedNotTakenInput,
+  MarkRequestSlotNotTakenInput,
   MarkRequestSlotUnavailableInput,
   ReturnRequestAssignmentInput,
   ReturnUserRequestInput,
@@ -104,6 +106,20 @@ export const markRequestSlotUnavailableFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: input }) => {
     const { markRequestSlotUnavailable } = await import('@/server/request-repo.server');
     return markRequestSlotUnavailable(input);
+  });
+
+export const markRequestSlotNotTakenFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: MarkRequestSlotNotTakenInput) => input)
+  .handler(async ({ data: input }) => {
+    const { markRequestSlotNotTaken } = await import('@/server/request-repo.server');
+    return markRequestSlotNotTaken(input);
+  });
+
+export const cancelBookedAssignmentNotTakenFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: CancelBookedNotTakenInput) => input)
+  .handler(async ({ data: input }) => {
+    const { cancelBookedAssignmentNotTaken } = await import('@/server/request-repo.server');
+    await cancelBookedAssignmentNotTaken(input);
   });
 
 export const returnRequestAssignmentFn = createServerFn({ method: 'POST' })

@@ -36,6 +36,7 @@ import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminExportRouteImport } from './routes/admin/export'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AuthMicrosoftCallbackRouteImport } from './routes/auth/microsoft.callback'
+import { Route as ApiCronOverdueReturnEmailsRouteImport } from './routes/api/cron/overdue-return-emails'
 import { Route as TechnicianAssetKindAssetIdRouteImport } from './routes/technician/asset.$kind.$assetId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -173,6 +174,12 @@ const AuthMicrosoftCallbackRoute = AuthMicrosoftCallbackRouteImport.update({
   path: '/auth/microsoft/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronOverdueReturnEmailsRoute =
+  ApiCronOverdueReturnEmailsRouteImport.update({
+    id: '/api/cron/overdue-return-emails',
+    path: '/api/cron/overdue-return-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const TechnicianAssetKindAssetIdRoute =
   TechnicianAssetKindAssetIdRouteImport.update({
     id: '/technician/asset/$kind/$assetId',
@@ -207,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
   '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
@@ -237,6 +245,7 @@ export interface FileRoutesByTo {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
   '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
@@ -268,6 +277,7 @@ export interface FileRoutesById {
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
+  '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
   '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/api/cron/overdue-return-emails'
     | '/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   fileRoutesByTo: FileRoutesByTo
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/api/cron/overdue-return-emails'
     | '/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   id:
@@ -360,6 +372,7 @@ export interface FileRouteTypes {
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
+    | '/api/cron/overdue-return-emails'
     | '/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   fileRoutesById: FileRoutesById
@@ -391,6 +404,7 @@ export interface RootRouteChildren {
   UserEditProfileRoute: typeof UserEditProfileRoute
   UserHistoryRoute: typeof UserHistoryRoute
   UserRequestRoute: typeof UserRequestRoute
+  ApiCronOverdueReturnEmailsRoute: typeof ApiCronOverdueReturnEmailsRoute
   AuthMicrosoftCallbackRoute: typeof AuthMicrosoftCallbackRoute
   TechnicianAssetKindAssetIdRoute: typeof TechnicianAssetKindAssetIdRoute
 }
@@ -586,6 +600,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthMicrosoftCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/overdue-return-emails': {
+      id: '/api/cron/overdue-return-emails'
+      path: '/api/cron/overdue-return-emails'
+      fullPath: '/api/cron/overdue-return-emails'
+      preLoaderRoute: typeof ApiCronOverdueReturnEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/asset/$kind/$assetId': {
       id: '/technician/asset/$kind/$assetId'
       path: '/technician/asset/$kind/$assetId'
@@ -623,6 +644,7 @@ const rootRouteChildren: RootRouteChildren = {
   UserEditProfileRoute: UserEditProfileRoute,
   UserHistoryRoute: UserHistoryRoute,
   UserRequestRoute: UserRequestRoute,
+  ApiCronOverdueReturnEmailsRoute: ApiCronOverdueReturnEmailsRoute,
   AuthMicrosoftCallbackRoute: AuthMicrosoftCallbackRoute,
   TechnicianAssetKindAssetIdRoute: TechnicianAssetKindAssetIdRoute,
 }

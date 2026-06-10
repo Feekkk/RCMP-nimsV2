@@ -33,6 +33,15 @@ export function weekRange(anchor: Date, weekOffset = 0): { start: string; end: s
   return { start, end };
 }
 
+export type DashboardCalendarMonth = { year: number; month: number };
+
+/** First and last ISO date of a calendar month (month is 1–12). */
+export function monthRange(year: number, month: number): { start: string; end: string } {
+  const start = formatDate(new Date(year, month - 1, 1));
+  const end = formatDate(new Date(year, month, 0));
+  return { start, end };
+}
+
 function requestNeedsTechnicianWork(
   items: RequestItemRow[],
   openAssignmentCount: number,
@@ -69,9 +78,11 @@ function computeRequestStatus(
   return 'preparing';
 }
 
-export async function getTechnicianDashboard(weekOffset = 0): Promise<TechnicianDashboardData> {
+export async function getTechnicianDashboard(
+  calendar: DashboardCalendarMonth,
+): Promise<TechnicianDashboardData> {
   const pool = getDbPool();
-  const { start: weekStart, end: weekEnd } = weekRange(new Date(), weekOffset);
+  const { start: weekStart, end: weekEnd } = monthRange(calendar.year, calendar.month);
   const charts = await loadDashboardCharts(pool, 14);
 
   const [statRows] = await pool.query<

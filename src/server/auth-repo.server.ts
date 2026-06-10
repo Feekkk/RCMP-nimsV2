@@ -321,6 +321,9 @@ export async function updateUserProfile(input: UpdateUserProfileInput): Promise<
   if (!fullName || !email) {
     throw new Error('Name and email are required');
   }
+  if (!phone) {
+    throw new Error('Phone number is required');
+  }
 
   const row = await findUserByStaffId(staffId);
   if (!row) throw new Error('User not found');
