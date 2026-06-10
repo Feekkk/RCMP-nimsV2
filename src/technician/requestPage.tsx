@@ -72,6 +72,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { sendCheckoutEmailFn } from '@/server/checkout-email.functions';
+import { sendRequestRejectEmailFn } from '@/server/request-reject-email.functions';
 import { sendRequestReturnEmailFn } from '@/server/request-return-email.functions';
 import {
   bookPoolAssetToRequestFn,
@@ -199,6 +200,10 @@ function todayIso(): string {
 
 function requestHasToReturn(req: PendingRequest): boolean {
   return checkedOutAwaitingReturn(req).length > 0;
+}
+
+function requestCanReject(req: PendingRequest): boolean {
+  return !req.assignments.some((a) => a.checkoutAt != null);
 }
 
 function requestIsOverdue(req: PendingRequest): boolean {
@@ -543,7 +548,17 @@ export function TechnicianRequestPage() {
           rejectionReason: reason,
         },
       });
-      toast.success('Request rejected');
+      try {
+        await sendRequestRejectEmailFn({ data: rejectRequestId });
+        toast.success('Request rejected — notification sent to requester');
+      } catch (emailErr) {
+        toast.success('Request rejected');
+        toast.warning(
+          emailErr instanceof Error
+            ? emailErr.message
+            : 'Request rejected but notification email could not be sent',
+        );
+      }
       setRejectRequestId(null);
       setRejectReason('');
       await load();
@@ -1038,19 +1053,21 @@ export function TechnicianRequestPage() {
                   : `Checkout request (${toCheckout.length})`}
               </Button>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 rounded-[8px] border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950"
-              onClick={() => {
-                setRejectRequestId(req.requestId);
-                setRejectReason('');
-              }}
-            >
-              <XCircle className="h-3.5 w-3.5" />
-              Reject request
-            </Button>
+            {requestCanReject(req) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 rounded-[8px] border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950"
+                onClick={() => {
+                  setRejectRequestId(req.requestId);
+                  setRejectReason('');
+                }}
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                Reject request
+              </Button>
+            )}
           </div>
         </CollapsibleContent>
       </Collapsible>
