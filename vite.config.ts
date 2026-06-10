@@ -159,6 +159,21 @@ function devServerFnErrorLogger() {
   };
 }
 
+function overdueReturnEmailSchedulerPlugin() {
+  return {
+    name: 'overdue-return-email-scheduler',
+    apply: 'serve' as const,
+    configureServer() {
+      if (process.env.OVERDUE_EMAIL_SCHEDULER !== 'true') return;
+      void import('./src/server/overdue-return-email-scheduler.server.ts').then(
+        ({ startOverdueReturnEmailScheduler }) => {
+          startOverdueReturnEmailScheduler();
+        },
+      );
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   // Use Cloudflare Workers plugin for builds (produces worker output)
   // Skip for dev server (command=serve) since workerd runtime isn't available
@@ -173,7 +188,7 @@ export default defineConfig(({ command, mode }) => {
   }
 
   // Server-side OAuth / DB (not exposed to client bundle)
-  const serverEnv = loadEnv(mode, process.cwd(), ["AZURE_", "MYSQL_", "SMTP_"]);
+  const serverEnv = loadEnv(mode, process.cwd(), ["AZURE_", "MYSQL_", "SMTP_", "CRON_", "OVERDUE_"]);
   for (const [key, value] of Object.entries(serverEnv)) {
     if (process.env[key] === undefined) {
       process.env[key] = value;
@@ -199,6 +214,7 @@ export default defineConfig(({ command, mode }) => {
       }),
       devClientErrorLogger(),
       devServerFnErrorLogger(),
+      overdueReturnEmailSchedulerPlugin(),
       ...(useCloudflare ? [cloudflare({ viteEnvironment: { name: "ssr" } })] : []),
       tanstackStart(),
       viteReact(),

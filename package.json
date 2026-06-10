@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "mailpit": "docker compose -f docker-compose.mailpit.yml up",
-    "mailpit:down": "docker compose -f docker-compose.mailpit.yml down"
+    "mailpit:down": "docker compose -f docker-compose.mailpit.yml down",
+    "overdue-emails": "npx tsx scripts/run-overdue-return-emails.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
