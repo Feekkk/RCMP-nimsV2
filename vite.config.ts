@@ -1,4 +1,5 @@
 import path from "path";
+import { pathToFileURL } from "url";
 import { defineConfig, loadEnv } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 import { cloudflare } from "@cloudflare/vite-plugin";
@@ -163,13 +164,19 @@ function overdueReturnEmailSchedulerPlugin() {
   return {
     name: 'overdue-return-email-scheduler',
     apply: 'serve' as const,
-    configureServer() {
+    configureServer(server: import('vite').ViteDevServer) {
       if (process.env.OVERDUE_EMAIL_SCHEDULER !== 'true') return;
-      void import('./src/server/overdue-return-email-scheduler.server.ts').then(
-        ({ startOverdueReturnEmailScheduler }) => {
+      const schedulerModule = pathToFileURL(
+        path.resolve(process.cwd(), 'src/server/overdue-return-email-scheduler.server.ts'),
+      ).href;
+      void server
+        .ssrLoadModule(schedulerModule)
+        .then(({ startOverdueReturnEmailScheduler }) => {
           startOverdueReturnEmailScheduler();
-        },
-      );
+        })
+        .catch((err) => {
+          console.error('[overdue-email] Failed to start scheduler:', err);
+        });
     },
   };
 }
