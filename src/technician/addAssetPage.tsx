@@ -66,7 +66,7 @@ export function TechnicianAddAssetPage() {
         <div className="mb-6">
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Register asset</h1>
           <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-            Choose a category. All columns from database/schema.sql (lines 55–131) are supported.
+            Choose a category to add the asset to the inventory system.
           </p>
         </div>
 
