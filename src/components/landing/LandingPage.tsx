@@ -169,9 +169,9 @@ const features = [
 ];
 
 const steps = [
-  { num: '01', icon: ScanBarcode, title: 'Add your items', description: 'Enter products with SKU, quantity, supplier, and location.' },
-  { num: '02', icon: Activity, title: 'Track movement', description: 'Update quantities as stock comes in or goes out. Status updates automatically.' },
-  { num: '03', icon: Bell, title: 'Stay ahead', description: 'Get a clear view of low and out-of-stock items so you reorder on time.' },
+  { num: '01', icon: ScanBarcode, title: 'Add your items', description: 'Enter products details to add to the inventory system.' },
+  { num: '02', icon: Activity, title: 'Track movement', description: 'Update quantities as stock comes in or goes out.' },
+  { num: '03', icon: Bell, title: 'Stay ahead', description: 'Get a clear view of low and out-of-stock items to reorder on time.' },
 ];
 
 export function LandingPage() {
@@ -250,7 +250,7 @@ export function LandingPage() {
                   </span>
                 </h1>
                 <p className="mt-6 max-w-md text-base leading-[1.6] text-muted-foreground sm:mt-8 sm:text-lg">
-                  NIMS This system is designed to help IT department manage inventory effectively and efficiently.
+                  This system is designed to help IT Department manage inventory effectively and efficiently.
                 </p>
                 <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:gap-4">
                   <Link
@@ -259,12 +259,6 @@ export function LandingPage() {
                   >
                     Sign in
                   </Link>
-                  <button
-                    onClick={scrollToHowItWorks}
-                    className="inline-flex items-center justify-center rounded-[10px] border border-border bg-white px-8 py-3 text-base font-semibold text-foreground transition-colors hover:bg-muted"
-                  >
-                    See how it works
-                  </button>
                 </div>
               </div>
               <div className="w-full max-w-md lg:max-w-lg flex-shrink-0">

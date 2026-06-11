@@ -77,12 +77,12 @@ function LoginPage() {
   const subtitle =
     role === 'user'
       ? userUsesSsoOnly
-        ? 'Access system with Microsoft account. Please check authenticator app for verification code.'
-        : 'Access system with staff ID and password.'
-      : 'Access system with staff ID and password.';
+        ? 'Access system with Microsoft Single Sign-On. '
+          : 'Access system with staff ID and passwor.'
+        : 'Access system with staff ID and password.';
 
-  return (
-    <div className="relative min-h-screen bg-background">
+    return (
+      <div className="relative min-h-screen bg-background">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-[200px] right-[10%] h-[600px] w-[600px] rounded-full bg-lavender/[0.12] blur-[100px]" />
         <div className="absolute -top-[100px] -left-[200px] h-[500px] w-[500px] rounded-full bg-[oklch(0.65_0.20_350)]/[0.08] blur-[80px]" />
@@ -145,8 +145,7 @@ function LoginPage() {
 
           {userUsesSsoOnly && (
             <p className="text-center text-xs text-muted-foreground">
-              No password or manual registration. Your profile is saved on first sign-in so you can return and
-              submit requests later.
+              No password or manual registration. Your personal data is managed by Microsoft. Please check your authenticator app for verification code.
             </p>
           )}
 
