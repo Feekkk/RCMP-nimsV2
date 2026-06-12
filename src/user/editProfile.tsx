@@ -99,14 +99,13 @@ export function UserEditProfilePage() {
 
       <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
         <div className="mb-6">
-          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Edit profile</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Update your account details.</p>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">User Profile</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Your personal data is managed by Microsoft. IT department does not have access to this data.</p>
         </div>
 
         <Card className="rounded-[16px] border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Account</CardTitle>
-            <CardDescription>User ID cannot be changed</CardDescription>
+            <CardTitle className="text-base font-bold">User Details</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -159,6 +158,9 @@ export function UserEditProfilePage() {
                       className="rounded-[8px] pl-9"
                     />
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    Technician will use this phone number to contact you.
+                  </p>
                 </FormField>
 
                 <Button type="submit" className="w-full rounded-[8px]" disabled={saving}>

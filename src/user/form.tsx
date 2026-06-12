@@ -410,25 +410,19 @@ function SlaStep({
       <Alert className="rounded-[10px] border-border bg-muted/40">
         <AlertDescription className="text-sm leading-relaxed text-muted-foreground">
           <p className="mb-2 font-medium text-foreground">Eligibility</p>
-          <p>All equipment is available for reservation only to registered students and staff of UniKL with a valid ID.
+          <p>All equipment is available for reservation only to registered students and staff.
           </p><br />
           <p className="mb-2 font-medium text-foreground">Reservation Duration</p>
           <p>The duration of the reservation is as specified in your request.
           </p><br />
-          <p className="mb-2 font-medium text-foreground">Eligibility</p>
-          <p>All equipment is available for reservation only to registered students and staff of UniKL with a valid ID.
-          </p><br />
           <p className="mb-2 font-medium text-foreground">Responsibility</p>
           <p>The party making the reservation is fully responsible for the reserved equipment from the moment of collection until they are returned and checked in by a technician.
           </p><br />
-          <p className="mb-2 font-medium text-foreground">Condition of Items</p>
-          <p>The reserving party must inspect the item(s) at the time of collection. Any existing damage must be reported immediately, or the reserving party may be held responsible.
+          <p className="mb-2 font-bold text-red-500">Condition of Items</p>
+          <p className='font-medium text-red-500'>The reserving party must inspect the item(s) at the time of collection. Any existing damage must be reported immediately, or the reserving party may be held responsible.
           </p><br />
           <p className="mb-2 font-medium text-foreground">Damage or loss</p>
-          <p>All equipment is available for reservation only to registered students and staff of UniKL with a valid ID.
-          </p><br />
-          <p className="mb-2 font-bold text-foreground text-red-500">Damage or loss</p>
-          <p className="font-bold text-red-500">The reserving party will be held financially responsible for the full replacement cost of any lost, stolen, or damaged items.
+          <p>The reserving party will be held financially responsible for the full replacement cost of any lost, stolen, or damaged items.
           </p><br />
           <p className="mb-2 font-medium text-foreground">Late Returns</p>
           <p>Failure to return items by the specified return date will result in a fine and a temporary suspension of reservation privileges.
@@ -438,6 +432,9 @@ function SlaStep({
           </p><br />
           <p className="mb-2 font-medium text-foreground">Collection</p>
           <p>Approved items must be collected within 24 hours of the "Approved" status, or the reservation may be cancelled.
+          </p><br />
+          <p className="mb-2 font-bold text-red-500">Personal Data</p>
+          <p className="font-medium text-red-500">Your personal data is managed by Microsoft. IT department just use phone number to contact you.
           </p><br />
         </AlertDescription>
       </Alert>
@@ -563,8 +560,7 @@ function ItemsStep({
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        Browse available equipment below. Set a quantity for each item you need; technicians
-        assign specific units from inventory after approval.
+        Browse available equipment below. Please contact IT staff first before submitting a request if you have any enquiries.
       </p>
 
       {items.length > 0 && (
@@ -624,7 +620,6 @@ function EquipmentCatalogGroup({
       <div className="flex items-center gap-2">
         <GroupIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
         <h3 className="text-sm font-semibold">{title}</h3>
-        <span className="text-xs text-muted-foreground">({entries.length} available)</span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {entries.map((entry) => (
