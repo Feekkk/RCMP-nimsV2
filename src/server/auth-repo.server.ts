@@ -130,8 +130,6 @@ export async function prepareLogin(email: string, loginRole: LoginRole): Promise
 export type MicrosoftLoginInput = {
   entraOid: string;
   email: string;
-  loginRole: LoginRole;
-  expectedEmail?: string;
 };
 
 export type MicrosoftLoginResult = AuthUserRow & {
@@ -151,19 +149,11 @@ async function createMicrosoftUserAccount(oid: string, email: string): Promise<U
 }
 
 /**
- * Sign in via Entra ID after email + role were checked on the login page.
- * Lookup order: email, then oid. New user accounts (role user only) store oid from Microsoft.
+ * Sign in via Entra ID. Lookup by email, then oid. New accounts are created as user role only.
  */
 export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<MicrosoftLoginResult> {
   const email = input.email.trim().toLowerCase();
   const oid = input.entraOid.trim();
-  const { loginRole } = input;
-
-  if (input.expectedEmail && input.expectedEmail !== email) {
-    throw new Error(
-      'Microsoft email does not match the email you entered. Sign in with the same Microsoft account.',
-    );
-  }
 
   let row = await findUserByEmail(email);
   let accountCreated = false;
@@ -173,13 +163,9 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
   }
 
   if (!row) {
-    if (loginRole === 'staff') {
-      throw new Error('Your email is not registered. Contact an administrator.');
-    }
     row = await createMicrosoftUserAccount(oid, email);
     accountCreated = true;
   } else {
-    assertLoginRole(row, loginRole);
     if (row.email !== email) {
       throw new Error(
         'Microsoft email does not match your NIMS account. Contact an administrator to update your email.',

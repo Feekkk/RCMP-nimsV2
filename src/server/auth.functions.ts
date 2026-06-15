@@ -1,16 +1,9 @@
 import { createServerFn } from '@tanstack/react-start';
 
-export const getMicrosoftLoginUrlFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { email: string; loginRole: 'user' | 'staff' }) => data)
-  .handler(async ({ data }) => {
-    const { prepareLogin } = await import('@/server/auth-repo.server');
-    await prepareLogin(data.email, data.loginRole);
-    const { getMicrosoftLoginRedirect } = await import('@/server/microsoft-auth.server');
-    return getMicrosoftLoginRedirect({
-      email: data.email.trim().toLowerCase(),
-      loginRole: data.loginRole,
-    });
-  });
+export const getMicrosoftLoginUrlFn = createServerFn({ method: 'POST' }).handler(async () => {
+  const { getMicrosoftLoginRedirect } = await import('@/server/microsoft-auth.server');
+  return getMicrosoftLoginRedirect();
+});
 
 export const completeMicrosoftLoginFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { code: string; state: string }) => data)

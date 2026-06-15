@@ -12,8 +12,6 @@ const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read'];
 type OAuthStatePayload = {
   nonce: string;
   exp: number;
-  email: string;
-  loginRole: 'user' | 'staff';
 };
 
 type TokenResponse = {
@@ -36,15 +34,10 @@ function stateSecret(config: MicrosoftAuthConfig): string {
   return config.clientSecret;
 }
 
-export function createMicrosoftOAuthState(
-  config: MicrosoftAuthConfig,
-  context: { email: string; loginRole: 'user' | 'staff' },
-): string {
+export function createMicrosoftOAuthState(config: MicrosoftAuthConfig): string {
   const payload: OAuthStatePayload = {
     nonce: randomBytes(16).toString('hex'),
     exp: Date.now() + OAUTH_STATE_TTL_MS,
-    email: context.email.trim().toLowerCase(),
-    loginRole: context.loginRole,
   };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = createHmac('sha256', stateSecret(config)).update(body).digest('base64url');
@@ -138,15 +131,12 @@ function resolveEmail(profile: GraphMe, allowedDomains: string[]): string {
   return raw;
 }
 
-export function getMicrosoftLoginRedirect(context: {
-  email: string;
-  loginRole: 'user' | 'staff';
-}): { url: string; state: string } {
+export function getMicrosoftLoginRedirect(): { url: string; state: string } {
   const config = getMicrosoftAuthConfig();
   if (!config) {
     throw new Error('Microsoft SSO is not configured on this server');
   }
-  const state = createMicrosoftOAuthState(config, context);
+  const state = createMicrosoftOAuthState(config);
   return { url: buildMicrosoftAuthorizeUrl(config, state), state };
 }
 
@@ -167,7 +157,7 @@ export async function completeMicrosoftLogin(code: string, state: string): Promi
     throw new Error('Microsoft SSO is not configured on this server');
   }
   const statePayload = parseOAuthStatePayload(config, state);
-  if (!statePayload?.email || !statePayload.loginRole) {
+  if (!statePayload) {
     throw new Error('Invalid or expired sign-in session. Please try again.');
   }
 
@@ -178,7 +168,5 @@ export async function completeMicrosoftLogin(code: string, state: string): Promi
   return loginMicrosoftUser({
     entraOid: profile.id,
     email,
-    loginRole: statePayload.loginRole,
-    expectedEmail: statePayload.email,
   });
 }

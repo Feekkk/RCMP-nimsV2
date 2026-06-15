@@ -1,17 +1,24 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { isMicrosoftSsoEnabledForClient } from '@/lib/microsoft-auth-config';
 import { getMicrosoftLoginUrlFn } from '@/server/auth.functions';
 
 const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
+
+function MicrosoftIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <rect x="1" y="1" width="10.5" height="10.5" rx="1" fill="#f35325" />
+      <rect x="12.5" y="1" width="10.5" height="10.5" rx="1" fill="#81bc06" />
+      <rect x="1" y="12.5" width="10.5" height="10.5" rx="1" fill="#00a4ef" />
+      <rect x="12.5" y="12.5" width="10.5" height="10.5" rx="1" fill="#ffba08" />
+    </svg>
+  );
+}
 
 export const Route = createFileRoute('/login')({
   head: () => ({
@@ -24,27 +31,13 @@ export const Route = createFileRoute('/login')({
 });
 
 function LoginPage() {
-  const [role, setRole] = useState<'staff' | 'user'>('user');
-  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const microsoftSsoEnabled = isMicrosoftSsoEnabledForClient();
 
-  const handleContinue = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) return;
-
-    if (!microsoftSsoEnabled) {
-      toast.error('Microsoft sign-in is not configured. Contact your administrator.');
-      return;
-    }
-
+  const handleMicrosoftSignIn = async () => {
     setIsLoading(true);
 
     try {
-      const { url, state } = await getMicrosoftLoginUrlFn({
-        data: { email: trimmedEmail, loginRole: role },
-      });
+      const { url, state } = await getMicrosoftLoginUrlFn();
       sessionStorage.setItem(MICROSOFT_OAUTH_STATE_KEY, state);
       window.location.href = url;
     } catch (err) {
@@ -77,73 +70,25 @@ function LoginPage() {
                 Welcome to NIMS
               </h1>
               <p className="mt-2 text-sm leading-[1.5] text-muted-foreground">
-                {microsoftSsoEnabled
-                  ? 'Enter your email and role. We verify your account, then sign you in with Microsoft.'
-                  : 'Microsoft sign-in is not configured.'}
+                Sign in with your organization Microsoft account.
               </p>
             </div>
           </div>
 
-          <form onSubmit={handleContinue} className="space-y-4">
-            <div>
-              <Label>Access the System</Label>
-              <Select
-                value={role}
-                onValueChange={(v) => setRole(v as 'staff' | 'user')}
-                disabled={isLoading || !microsoftSsoEnabled}
-              >
-                <SelectTrigger className="mt-1.5 rounded-[8px]">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <Button
+            type="button"
+            className="h-11 w-full gap-2 rounded-[8px] bg-foreground font-semibold text-background hover:opacity-90"
+            disabled={isLoading}
+            onClick={() => void handleMicrosoftSignIn()}
+          >
+            <MicrosoftIcon />
+            {isLoading ? 'Redirecting to Microsoft…' : 'Sign in with Microsoft'}
+          </Button>
 
-            <div className="relative">
-              <Label htmlFor="login-email">Email</Label>
-              <Mail className="pointer-events-none absolute left-3 top-[calc(50%+0.625rem)] h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="login-email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                className="mt-1.5 h-11 rounded-[8px] pl-9 sm:h-9"
-                disabled={isLoading || !microsoftSsoEnabled}
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full gap-2 rounded-[8px] bg-foreground font-semibold text-background hover:opacity-90"
-              disabled={isLoading || !microsoftSsoEnabled}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <rect x="1" y="1" width="10.5" height="10.5" rx="1" fill="#f35325" />
-                <rect x="12.5" y="1" width="10.5" height="10.5" rx="1" fill="#81bc06" />
-                <rect x="1" y="12.5" width="10.5" height="10.5" rx="1" fill="#00a4ef" />
-                <rect x="12.5" y="12.5" width="10.5" height="10.5" rx="1" fill="#ffba08" />
-              </svg>
-              {isLoading ? 'Redirecting to Microsoft…' : 'Continue with Microsoft'}
-            </Button>
-          </form>
-
-          {microsoftSsoEnabled ? (
-            <p className="text-center text-xs text-muted-foreground">
-              {role === 'user'
-                ? 'New users: if your email is not registered yet, we create your account using your Microsoft Entra ID after sign-in.'
-                : 'Staff must be registered by an administrator before signing in.'}
-            </p>
-          ) : (
-            <p className="text-center text-xs text-muted-foreground">
-              Contact your administrator to enable Microsoft sign-in.
-            </p>
-          )}
+          <p className="text-center text-xs text-muted-foreground">
+            Users and staff sign in the same way. Your role is assigned from your NIMS account after
+            Microsoft verifies your identity.
+          </p>
         </div>
       </div>
       <Toaster />

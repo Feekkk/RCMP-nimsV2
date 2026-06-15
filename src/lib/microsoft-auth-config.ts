@@ -13,11 +13,10 @@ export function isMicrosoftSsoEnabled(): boolean {
   return getMicrosoftAuthConfig() != null;
 }
 
-/** True when the login page should show the Microsoft button (dev + prod). */
+/** True when the login page should show Microsoft sign-in (default on unless explicitly disabled). */
 export function isMicrosoftSsoEnabledForClient(): boolean {
-  if (import.meta.env.VITE_MICROSOFT_SSO_ENABLED === 'true') return true;
   if (import.meta.env.VITE_MICROSOFT_SSO_ENABLED === 'false') return false;
-  return import.meta.env.DEV;
+  return true;
 }
 
 export function getMicrosoftAuthConfig(): MicrosoftAuthConfig | null {
