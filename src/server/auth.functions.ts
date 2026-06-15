@@ -1,9 +1,16 @@
 import { createServerFn } from '@tanstack/react-start';
 
-export const getMicrosoftLoginUrlFn = createServerFn({ method: 'GET' }).handler(async () => {
-  const { getMicrosoftLoginRedirect } = await import('@/server/microsoft-auth.server');
-  return getMicrosoftLoginRedirect();
-});
+export const getMicrosoftLoginUrlFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { email: string; loginRole: 'user' | 'staff' }) => data)
+  .handler(async ({ data }) => {
+    const { prepareLogin } = await import('@/server/auth-repo.server');
+    await prepareLogin(data.email, data.loginRole);
+    const { getMicrosoftLoginRedirect } = await import('@/server/microsoft-auth.server');
+    return getMicrosoftLoginRedirect({
+      email: data.email.trim().toLowerCase(),
+      loginRole: data.loginRole,
+    });
+  });
 
 export const completeMicrosoftLoginFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { code: string; state: string }) => data)
@@ -12,33 +19,15 @@ export const completeMicrosoftLoginFn = createServerFn({ method: 'POST' })
     return completeMicrosoftLogin(data.code, data.state);
   });
 
-export const loginStaffFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { staffId: string; password: string }) => data)
+export const loginDevByEmailFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: { email: string; loginRole: 'user' | 'staff' }) => data)
   .handler(async ({ data }) => {
-    const { loginStaff } = await import('@/server/auth-repo.server');
-    return loginStaff(data.staffId, data.password);
-  });
-
-export const loginUserFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { email: string; password: string }) => data)
-  .handler(async ({ data }) => {
-    const { loginUser } = await import('@/server/auth-repo.server');
-    return loginUser(data.email, data.password);
-  });
-
-export const registerUserFn = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (data: { staffId: string; fullName: string; email: string; password: string; phone?: string }) => data,
-  )
-  .handler(async ({ data }) => {
-    const { registerUser } = await import('@/server/auth-repo.server');
-    return registerUser({
-      staffId: data.staffId,
-      fullName: data.fullName,
-      email: data.email,
-      password: data.password,
-      phone: data.phone,
-    });
+    const { isEmailOnlyUserLoginEnabled } = await import('@/lib/email-login-config');
+    if (!isEmailOnlyUserLoginEnabled()) {
+      throw new Error('Dev email sign-in is not enabled');
+    }
+    const { loginDevByEmail } = await import('@/server/auth-repo.server');
+    return loginDevByEmail(data.email, data.loginRole);
   });
 
 export const getUserProfileFn = createServerFn({ method: 'POST' })

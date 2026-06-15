@@ -53,14 +53,18 @@ export function DatePickerField({
   value,
   onChange,
   required,
+  minDate,
 }: {
   label: string;
   value: string;
   onChange: (isoDate: string) => void;
   required?: boolean;
+  /** ISO YYYY-MM-DD; dates before this are not selectable. */
+  minDate?: string;
 }) {
   const [open, setOpen] = useState(false);
   const selected = value ? isoToLocalDate(value) : undefined;
+  const minLocal = minDate ? isoToLocalDate(minDate) : undefined;
   const ddmmyy = value ? formatIsoToDdMmYy(value) : null;
 
   return (
@@ -101,7 +105,8 @@ export function DatePickerField({
                 setOpen(false);
               }
             }}
-            defaultMonth={selected}
+            disabled={minLocal ? { before: minLocal } : undefined}
+            defaultMonth={selected ?? minLocal}
             initialFocus
           />
         </PopoverContent>

@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { IdCard, Lock, Mail, Phone, Shield, User, UserCircle } from 'lucide-react';
+import { IdCard, Mail, Phone, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  clearAllSessions,
-  persistSession,
-  readTechnicianSession,
-  type SessionUser,
-} from '@/lib/auth-session';
-import { getStaffProfileFn, updateStaffProfileFn } from '@/server/auth.functions';
+import { clearAllSessions, readTechnicianSession, type SessionUser } from '@/lib/auth-session';
+import { getStaffProfileFn } from '@/server/auth.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
 
@@ -32,13 +27,10 @@ export function TechnicianProfilePage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<SessionUser | null>(() => readTechnicianSession());
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     const tech = readTechnicianSession();
@@ -70,46 +62,6 @@ export function TechnicianProfilePage() {
     void navigate({ to: '/login' });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!session) return;
-
-    if (password && password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const updated = await updateStaffProfileFn({
-        data: {
-          staffId: session.staffId,
-          fullName: fullName.trim(),
-          email: email.trim(),
-          phone: phone.trim() || null,
-          password: password || undefined,
-        },
-      });
-      const nextSession: SessionUser = {
-        staffId: updated.staffId,
-        fullName: updated.fullName,
-        email: updated.email,
-        roleId: updated.roleId,
-        roleName: updated.roleName,
-        phone: updated.phone,
-      };
-      persistSession(nextSession);
-      setSession(nextSession);
-      setPassword('');
-      setConfirmPassword('');
-      toast.success('Profile updated');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not update profile');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (!session) {
     return (
       <TechnicianShell>
@@ -124,7 +76,7 @@ export function TechnicianProfilePage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">My profile</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Update your technician account details and password.
+            View your technician account details.
           </p>
         </div>
         <Button
@@ -173,41 +125,33 @@ export function TechnicianProfilePage() {
                 <User className="h-4 w-4 text-muted-foreground" />
                 Personal details
               </CardTitle>
-              <CardDescription>Staff ID is assigned by your administrator and cannot be changed.</CardDescription>
+              <CardDescription>Profile details are managed by your administrator.</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">Loading profile…</p>
               ) : (
-                <form id="technician-profile-form" onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+                <div className="space-y-4">
                   <FormField label="Staff ID">
                     <div className="relative">
                       <IdCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input value={session.staffId} disabled className="rounded-[8px] bg-muted/50 pl-9 font-mono" />
                     </div>
                   </FormField>
-                  <FormField label="Full name" required>
+                  <FormField label="Full name">
                     <div className="relative">
                       <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        required
-                        autoComplete="name"
-                        className="rounded-[8px] pl-9"
-                      />
+                      <Input value={fullName} disabled className="rounded-[8px] bg-muted/50 pl-9" />
                     </div>
                   </FormField>
-                  <FormField label="Email" required>
+                  <FormField label="Email">
                     <div className="relative">
                       <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         type="email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        autoComplete="email"
-                        className="rounded-[8px] pl-9"
+                        disabled
+                        className="rounded-[8px] bg-muted/50 pl-9"
                       />
                     </div>
                   </FormField>
@@ -217,68 +161,16 @@ export function TechnicianProfilePage() {
                       <Input
                         type="tel"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        autoComplete="tel"
-                        placeholder="Optional"
-                        className="rounded-[8px] pl-9"
+                        disabled
+                        placeholder="—"
+                        className="rounded-[8px] bg-muted/50 pl-9"
                       />
                     </div>
                   </FormField>
-                </form>
+                </div>
               )}
             </CardContent>
           </Card>
-
-          <Card className="rounded-[14px] border-border shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Shield className="h-4 w-4 text-muted-foreground" />
-                Security
-              </CardTitle>
-              <CardDescription>Leave password fields blank to keep your current password.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField label="New password">
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    minLength={6}
-                    autoComplete="new-password"
-                    disabled={loading}
-                    className="rounded-[8px] pl-9"
-                  />
-                </div>
-              </FormField>
-              <FormField label="Confirm new password">
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    minLength={6}
-                    autoComplete="new-password"
-                    disabled={loading}
-                    className="rounded-[8px] pl-9"
-                  />
-                </div>
-              </FormField>
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="submit"
-              form="technician-profile-form"
-              className="rounded-[8px] sm:min-w-[160px]"
-              disabled={loading || saving}
-            >
-              {saving ? 'Saving…' : 'Save changes'}
-            </Button>
-          </div>
         </div>
       </div>
     </TechnicianShell>

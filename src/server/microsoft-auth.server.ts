@@ -12,6 +12,8 @@ const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read'];
 type OAuthStatePayload = {
   nonce: string;
   exp: number;
+  email: string;
+  loginRole: 'user' | 'staff';
 };
 
 type TokenResponse = {
@@ -34,10 +36,15 @@ function stateSecret(config: MicrosoftAuthConfig): string {
   return config.clientSecret;
 }
 
-export function createMicrosoftOAuthState(config: MicrosoftAuthConfig): string {
+export function createMicrosoftOAuthState(
+  config: MicrosoftAuthConfig,
+  context: { email: string; loginRole: 'user' | 'staff' },
+): string {
   const payload: OAuthStatePayload = {
     nonce: randomBytes(16).toString('hex'),
     exp: Date.now() + OAUTH_STATE_TTL_MS,
+    email: context.email.trim().toLowerCase(),
+    loginRole: context.loginRole,
   };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = createHmac('sha256', stateSecret(config)).update(body).digest('base64url');
@@ -131,13 +138,27 @@ function resolveEmail(profile: GraphMe, allowedDomains: string[]): string {
   return raw;
 }
 
-export function getMicrosoftLoginRedirect(): { url: string; state: string } {
+export function getMicrosoftLoginRedirect(context: {
+  email: string;
+  loginRole: 'user' | 'staff';
+}): { url: string; state: string } {
   const config = getMicrosoftAuthConfig();
   if (!config) {
     throw new Error('Microsoft SSO is not configured on this server');
   }
-  const state = createMicrosoftOAuthState(config);
+  const state = createMicrosoftOAuthState(config, context);
   return { url: buildMicrosoftAuthorizeUrl(config, state), state };
+}
+
+function parseOAuthStatePayload(config: MicrosoftAuthConfig, state: string): OAuthStatePayload | null {
+  if (!verifyMicrosoftOAuthState(config, state)) return null;
+  const parts = state.split('.');
+  if (parts.length !== 2) return null;
+  try {
+    return JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')) as OAuthStatePayload;
+  } catch {
+    return null;
+  }
 }
 
 export async function completeMicrosoftLogin(code: string, state: string): Promise<MicrosoftLoginResult> {
@@ -145,7 +166,8 @@ export async function completeMicrosoftLogin(code: string, state: string): Promi
   if (!config) {
     throw new Error('Microsoft SSO is not configured on this server');
   }
-  if (!verifyMicrosoftOAuthState(config, state)) {
+  const statePayload = parseOAuthStatePayload(config, state);
+  if (!statePayload?.email || !statePayload.loginRole) {
     throw new Error('Invalid or expired sign-in session. Please try again.');
   }
 
@@ -156,6 +178,7 @@ export async function completeMicrosoftLogin(code: string, state: string): Promi
   return loginMicrosoftUser({
     entraOid: profile.id,
     email,
-    fullName: profile.displayName?.trim() || email.split('@')[0],
+    loginRole: statePayload.loginRole,
+    expectedEmail: statePayload.email,
   });
 }
