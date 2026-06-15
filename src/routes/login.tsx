@@ -85,8 +85,7 @@ function LoginPage() {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Users and staff sign in the same way. Your role is assigned from your NIMS account after
-            Microsoft verifies your identity.
+            All the personal data is managed by Microsoft Entra ID. We do not store any of your personal data in our database.
           </p>
         </div>
       </div>
