@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import type { LandingSampleAsset, LandingStatusRow, LandingSystemStatus } from '@/lib/landing-status-types';
 import { isEmailConfigured, isMailpitMode } from '@/lib/microsoft-email-config';
-import { getDbPool } from '@/server/db';
+import { getDbPool, formatDatabaseError } from '@/server/db';
 
 type SampleRow = RowDataPacket & {
   kind: string;
@@ -30,8 +30,7 @@ async function pingDatabase(): Promise<{ ok: boolean; message: string }> {
     const db = process.env.MYSQL_DATABASE ?? 'nimsV2';
     return { ok: true, message: `Connected · ${db}` };
   } catch (e) {
-    const message = e instanceof Error ? e.message : 'Connection failed';
-    return { ok: false, message };
+    return { ok: false, message: formatDatabaseError(e) };
   }
 }
 

@@ -204,6 +204,9 @@ export default defineConfig(({ mode }) => {
       port: 8080,
     },
     define: envDefine,
+    ssr: {
+      external: ['mysql2', 'mysql2/promise', 'nodemailer', 'bcrypt'],
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
@@ -220,7 +223,12 @@ export default defineConfig(({ mode }) => {
       overdueReturnEmailSchedulerPlugin(),
       tanstackStart(),
       viteReact(),
-      nitro(),
+      nitro({
+        preset: 'node-server',
+        rollupConfig: {
+          external: ['mysql2', 'mysql2/promise', 'nodemailer', 'bcrypt'],
+        },
+      }),
     ],
   };
 });
