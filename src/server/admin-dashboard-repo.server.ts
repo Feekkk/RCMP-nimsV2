@@ -9,6 +9,7 @@ import type {
   TopRequesterRow,
 } from '@/lib/admin-dashboard-schema';
 import { ROLE_USER } from '@/lib/auth-session';
+import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 import { loadDashboardCharts } from '@/server/dashboard-charts.server';
 
@@ -82,19 +83,20 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
   }));
 
   const [topRows] = await pool.query<
-    (RowDataPacket & { staff_id: string; full_name: string; cnt: number })[]
+    (RowDataPacket & { id: number; oid: string | null; full_name: string; cnt: number })[]
   >(
-    `SELECT u.staff_id, u.full_name, COUNT(*) AS cnt
+    `SELECT u.id, u.oid, COUNT(*) AS cnt
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
+     INNER JOIN users u ON u.id = r.requested_by
      WHERE r.created_at >= ?
-     GROUP BY u.staff_id, u.full_name
+     GROUP BY u.id, u.oid
      ORDER BY cnt DESC
      LIMIT 10`,
     [rangeStart],
   );
+  await attachDisplayNames(topRows, 'oid', 'full_name');
   const topRequesters: TopRequesterRow[] = topRows.map((r) => ({
-    staffId: r.staff_id,
+    staffId: String(r.id),
     fullName: r.full_name,
     requestCount: Number(r.cnt),
   }));
@@ -103,19 +105,21 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
     (RowDataPacket & {
       request_id: number;
       rejected_at: Date | string;
+      requester_oid: string | null;
       requester_name: string;
       program_type: string;
       rejection_reason: string | null;
     })[]
   >(
-    `SELECT r.request_id, r.rejected_at, u.full_name AS requester_name,
+    `SELECT r.request_id, r.rejected_at, u.oid AS requester_oid,
             r.program_type, r.rejection_reason
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
+     INNER JOIN users u ON u.id = r.requested_by
      WHERE r.rejected_at IS NOT NULL
      ORDER BY r.rejected_at DESC
      LIMIT 10`,
   );
+  await attachDisplayNames(rejectRows, 'requester_oid', 'requester_name');
   const recentRejections: RecentRejectionRow[] = rejectRows.map((r) => ({
     requestId: r.request_id,
     rejectedAt: formatDateTime(r.rejected_at),

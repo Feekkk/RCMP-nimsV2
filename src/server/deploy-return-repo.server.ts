@@ -174,7 +174,7 @@ export async function deployLaptopToStaff(input: DeployLaptopStaffInput) {
   try {
     await conn.beginTransaction();
     const [handoverResult] = await conn.execute(
-      `INSERT INTO handover (asset_id, staff_id, handover_date, handover_remarks)
+      `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks)
        VALUES (?, ?, ?, ?)`,
       [input.assetId, input.staffId, input.handoverDate, input.handoverRemarks ?? null],
     );
@@ -203,7 +203,7 @@ export async function deployLaptopToPlace(input: DeployLaptopPlaceInput) {
   try {
     await conn.beginTransaction();
     const [handoverResult] = await conn.execute(
-      `INSERT INTO handover (asset_id, staff_id, handover_date, handover_remarks)
+      `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks)
        VALUES (?, ?, ?, ?)`,
       [input.assetId, input.staffId, input.handoverDate, input.handoverRemarks ?? null],
     );
@@ -230,7 +230,7 @@ export async function deployToPlace(input: DeployPlaceInput) {
     await conn.beginTransaction();
     const [result] = await conn.execute(
       `INSERT INTO \`${table}\`
-        (asset_id, building, level, zone, deployment_date, deployment_remarks, staff_id)
+        (asset_id, building, level, zone, deployment_date, deployment_remarks, user_id)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         input.assetId,

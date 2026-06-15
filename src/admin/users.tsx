@@ -33,31 +33,22 @@ import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER, readAdminSession } from '@/lib/
 import { createAdminUserFn, listAdminUsersFn, updateAdminUserFn } from '@/server/admin-users.functions';
 
 type UserFormState = {
-  staffId: string;
-  fullName: string;
   email: string;
   roleId: string;
   phone: string;
-  password: string;
 };
 
 const EMPTY_FORM: UserFormState = {
-  staffId: '',
-  fullName: '',
   email: '',
   roleId: String(ROLE_USER),
   phone: '',
-  password: '',
 };
 
 function userToForm(u: AdminUserRow): UserFormState {
   return {
-    staffId: u.staffId,
-    fullName: u.fullName,
     email: u.email,
     roleId: String(u.roleId),
     phone: u.phone ?? '',
-    password: '',
   };
 }
 
@@ -113,11 +104,9 @@ export function AdminUsersPage() {
           data: {
             callerRoleId: admin.roleId,
             staffId: editing.staffId,
-            fullName: form.fullName.trim(),
             email: form.email.trim(),
             roleId,
             phone,
-            password: form.password.trim() || undefined,
           },
         });
         toast.success('User updated');
@@ -125,12 +114,9 @@ export function AdminUsersPage() {
         await createAdminUserFn({
           data: {
             callerRoleId: admin.roleId,
-            staffId: form.staffId.trim(),
-            fullName: form.fullName.trim(),
             email: form.email.trim(),
             roleId,
             phone: form.phone.trim() || undefined,
-            password: form.password.trim() || undefined,
           },
         });
         toast.success('User created');
@@ -170,7 +156,6 @@ export function AdminUsersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Auth</TableHead>
                 <TableHead>Last login</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
@@ -178,7 +163,7 @@ export function AdminUsersPage() {
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                     No users found.
                   </TableCell>
                 </TableRow>
@@ -189,7 +174,6 @@ export function AdminUsersPage() {
                     <TableCell className="font-medium">{u.fullName}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                     <TableCell>{u.roleName}</TableCell>
-                    <TableCell className="text-sm capitalize">{u.authProvider}</TableCell>
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {u.lastLoginAt ?? '—'}
                     </TableCell>
@@ -218,29 +202,12 @@ export function AdminUsersPage() {
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit user' : 'Add user'}</DialogTitle>
             <DialogDescription>
-              {editing ? 'Update account details. Leave password blank to keep unchanged.' : 'Create a new NIMS account.'}
+              {editing
+                ? 'Update role, email, and phone. Name is managed by Microsoft.'
+                : 'Pre-provision an account by email and role. The name is fetched from Microsoft after first sign-in.'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="staffId">Staff ID</Label>
-              <Input
-                id="staffId"
-                value={form.staffId}
-                onChange={(e) => setForm((f) => ({ ...f, staffId: e.target.value }))}
-                disabled={!!editing}
-                className="rounded-lg"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="fullName">Full name</Label>
-              <Input
-                id="fullName"
-                value={form.fullName}
-                onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
-                className="rounded-lg"
-              />
-            </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -271,17 +238,6 @@ export function AdminUsersPage() {
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 className="rounded-lg"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password {editing ? '(optional)' : ''}</Label>
-              <Input
-                id="password"
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                className="rounded-lg"
-                autoComplete="new-password"
               />
             </div>
           </div>

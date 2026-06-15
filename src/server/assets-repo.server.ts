@@ -18,6 +18,7 @@ import { isAllowedStatusTransition } from '@/lib/asset-status-actions';
 import { formatIsoToDdMmYy } from '@/lib/date-format';
 import { purchaseSqlParams } from '@/lib/purchase-field-utils';
 import { allocateAssetIdsFromDb } from '@/server/asset-id.server';
+import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 import { insertWarranty } from '@/server/warranty-repair-repo.server';
 
@@ -90,12 +91,12 @@ async function fillNetworkAssetIds(rows: BulkNetworkImportRow[]): Promise<BulkNe
 }
 
 async function assertUserStaffId(conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>, staffId: string) {
-  const [rows] = await conn.query<(RowDataPacket & { staff_id: string })[]>(
-    'SELECT staff_id FROM users WHERE staff_id = ? LIMIT 1',
+  const [rows] = await conn.query<(RowDataPacket & { id: number })[]>(
+    'SELECT id FROM users WHERE id = ? LIMIT 1',
     [staffId],
   );
   if (!rows[0]) {
-    throw new Error(`Unknown staff_id "${staffId}" (must exist in users)`);
+    throw new Error(`Unknown user id "${staffId}" (must exist in users)`);
   }
 }
 
@@ -123,7 +124,7 @@ async function insertLaptopHandover(
   }
 
   const [handoverResult] = await conn.execute(
-    `INSERT INTO handover (asset_id, staff_id, handover_date, handover_remarks)
+    `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks)
      VALUES (?, ?, ?, ?)`,
     [assetId, handover.handoverStaffId, handover.handoverDate, handover.handoverRemarks],
   );
@@ -146,7 +147,7 @@ async function insertPlaceDeployment(
   const table = kind === 'av' ? 'av_deployment' : 'network_deployment';
   await conn.execute(
     `INSERT INTO \`${table}\`
-      (asset_id, building, level, zone, deployment_date, deployment_remarks, staff_id)
+      (asset_id, building, level, zone, deployment_date, deployment_remarks, user_id)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       assetId,
@@ -554,24 +555,28 @@ async function listRequestTrails(assetId: number): Promise<AssetTrailEvent[]> {
       returned_at: Date | string | null;
       return_condition: string | null;
       request_id: number;
+      requester_oid: string | null;
       requester_name: string;
       asset_type: string | null;
+      booked_oid: string | null;
       booked_by: string | null;
       created_at: Date | string;
     })[]
   >(
     `SELECT ra.assignment_id, ra.assigned_at, ra.checkout_at, ra.returned_at, ra.return_condition,
-            ra.created_at, r.request_id, u.full_name AS requester_name, ri.asset_type,
-            ub.full_name AS booked_by
+            ra.created_at, r.request_id, u.oid AS requester_oid, ri.asset_type,
+            ub.oid AS booked_oid
      FROM request_assignment ra
      INNER JOIN request r ON r.request_id = ra.request_id
-     INNER JOIN users u ON u.staff_id = r.requested_by
-     LEFT JOIN users ub ON ub.staff_id = ra.assigned_by
+     INNER JOIN users u ON u.id = r.requested_by
+     LEFT JOIN users ub ON ub.id = ra.assigned_by
      LEFT JOIN request_item ri ON ri.request_item_id = ra.request_item_id
      WHERE ra.asset_id = ?
      ORDER BY ra.assignment_id`,
     [assetId],
   );
+  await attachDisplayNames(rows, 'requester_oid', 'requester_name');
+  await attachDisplayNames(rows, 'booked_oid', 'booked_by');
 
   const events: AssetTrailEvent[] = [];
   for (const row of rows) {
@@ -614,22 +619,24 @@ async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
       handover_date: Date | string;
       handover_remarks: string | null;
       created_at: Date | string;
+      technician_oid: string | null;
       technician_name: string;
       recipients: string | null;
     })[]
   >(
     `SELECT h.handover_id, h.handover_date, h.handover_remarks, h.created_at,
-            tech.full_name AS technician_name,
+            tech.oid AS technician_oid,
             GROUP_CONCAT(DISTINCT s.full_name ORDER BY s.full_name SEPARATOR ', ') AS recipients
      FROM handover h
-     INNER JOIN users tech ON tech.staff_id = h.staff_id
+     INNER JOIN users tech ON tech.id = h.user_id
      LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
      LEFT JOIN staff s ON s.employee_no = hs.employee_no
      WHERE h.asset_id = ?
-     GROUP BY h.handover_id, h.handover_date, h.handover_remarks, h.created_at, tech.full_name
+     GROUP BY h.handover_id, h.handover_date, h.handover_remarks, h.created_at, tech.oid
      ORDER BY h.handover_id`,
     [assetId],
   );
+  await attachDisplayNames(handovers, 'technician_oid', 'technician_name');
 
   for (const h of handovers) {
     const when = trailAt(h.handover_date) || trailAt(h.created_at);
@@ -652,15 +659,16 @@ async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
       condition: string | null;
       return_remarks: string | null;
       created_at: Date | string;
+      returned_oid: string | null;
       returned_by: string;
       recipient_label: string | null;
     })[]
   >(
     `SELECT hr.return_date, hr.return_time, hr.return_place, hr.\`condition\`, hr.return_remarks, hr.created_at,
-            ub.full_name AS returned_by,
+            ub.oid AS returned_oid,
             COALESCE(s.full_name, 'Place handover') AS recipient_label
      FROM handover_return hr
-     INNER JOIN users ub ON ub.staff_id = hr.returned_by
+     INNER JOIN users ub ON ub.id = hr.returned_by
      LEFT JOIN handover_staff hs ON hs.handover_staff_id = hr.handover_staff_id
      LEFT JOIN staff s ON s.employee_no = hs.employee_no
      LEFT JOIN handover h ON h.handover_id = COALESCE(hs.handover_id, hr.handover_id)
@@ -668,6 +676,7 @@ async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
      ORDER BY hr.return_id`,
     [assetId],
   );
+  await attachDisplayNames(returns, 'returned_oid', 'returned_by');
 
   for (const r of returns) {
     const at = r.return_time
@@ -711,17 +720,19 @@ async function listPlaceDeployTrails(
       deployment_date: Date | string;
       deployment_remarks: string | null;
       created_at: Date | string;
+      staff_oid: string | null;
       staff_name: string;
     })[]
   >(
     `SELECT d.deployment_id, d.building, d.level, d.zone, d.deployment_date, d.deployment_remarks,
-            d.created_at, u.full_name AS staff_name
+            d.created_at, u.oid AS staff_oid
      FROM \`${deployTable}\` d
-     INNER JOIN users u ON u.staff_id = d.staff_id
+     INNER JOIN users u ON u.id = d.user_id
      WHERE d.asset_id = ?
      ORDER BY d.deployment_id`,
     [assetId],
   );
+  await attachDisplayNames(deployments, 'staff_oid', 'staff_name');
 
   for (const d of deployments) {
     const loc = [d.building, d.level, d.zone].filter(Boolean).join(' · ');
@@ -743,6 +754,7 @@ async function listPlaceDeployTrails(
       condition: string | null;
       return_remarks: string | null;
       created_at: Date | string;
+      returned_oid: string | null;
       returned_by: string;
       building: string;
       level: string;
@@ -750,14 +762,15 @@ async function listPlaceDeployTrails(
     })[]
   >(
     `SELECT r.return_date, r.return_time, r.return_place, r.\`condition\`, r.return_remarks, r.created_at,
-            ub.full_name AS returned_by, d.building, d.level, d.zone
+            ub.oid AS returned_oid, d.building, d.level, d.zone
      FROM \`${returnTable}\` r
      INNER JOIN \`${deployTable}\` d ON d.deployment_id = r.deployment_id
-     INNER JOIN users ub ON ub.staff_id = r.returned_by
+     INNER JOIN users ub ON ub.id = r.returned_by
      WHERE d.asset_id = ?
      ORDER BY r.return_id`,
     [assetId],
   );
+  await attachDisplayNames(returns, 'returned_oid', 'returned_by');
 
   for (const r of returns) {
     const loc = [r.building, r.level, r.zone].filter(Boolean).join(' · ');
@@ -788,17 +801,19 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
       issue_summary: string;
       repair_remarks: string | null;
       created_at: Date | string;
+      staff_oid: string | null;
       staff_name: string;
     })[]
   >(
     `SELECT r.repair_date, r.completed_date, r.issue_summary, r.repair_remarks, r.created_at,
-            u.full_name AS staff_name
+            u.oid AS staff_oid
      FROM repair r
-     INNER JOIN users u ON u.staff_id = r.staff_id
+     INNER JOIN users u ON u.id = r.user_id
      WHERE r.asset_type = ? AND r.asset_id = ?
      ORDER BY r.repair_id`,
     [kind, assetId],
   );
+  await attachDisplayNames(repairs, 'staff_oid', 'staff_name');
 
   for (const row of repairs) {
     pushTrail(events, {
@@ -852,17 +867,19 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
       issue_summary: string;
       claim_remarks: string | null;
       created_at: Date | string;
+      claimed_oid: string | null;
       claimed_by: string;
     })[]
   >(
     `SELECT c.claim_date, c.claim_time, c.issue_summary, c.claim_remarks, c.created_at,
-            u.full_name AS claimed_by
+            u.oid AS claimed_oid
      FROM warranty_claim c
-     INNER JOIN users u ON u.staff_id = c.claimed_by
+     INNER JOIN users u ON u.id = c.claimed_by
      WHERE c.asset_type = ? AND c.asset_id = ?
      ORDER BY c.claim_id`,
     [kind, assetId],
   );
+  await attachDisplayNames(claims, 'claimed_oid', 'claimed_by');
 
   for (const c of claims) {
     const at = c.claim_time
@@ -885,18 +902,20 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
         disposal_remarks: string | null;
         item_remarks: string | null;
         created_at: Date | string;
+        requested_oid: string | null;
         requested_by: string;
       })[]
     >(
       `SELECT d.disposal_date, d.disposal_remarks, di.item_remarks, di.created_at,
-              u.full_name AS requested_by
+              u.oid AS requested_oid
        FROM disposal_item di
        INNER JOIN disposal d ON d.disposal_id = di.disposal_id
-       INNER JOIN users u ON u.staff_id = d.requested_by
+       INNER JOIN users u ON u.id = d.requested_by
        WHERE di.asset_id = ? AND di.asset_type = ?
        ORDER BY di.disposal_item_id`,
       [assetId, kind],
     );
+    await attachDisplayNames(disposals, 'requested_oid', 'requested_by');
 
     for (const row of disposals) {
       pushTrail(events, {

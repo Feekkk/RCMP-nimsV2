@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { ReturnEmailData } from '@/lib/return-email-types';
+import { getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 type ReturnEmailRow = RowDataPacket & {
@@ -16,7 +17,7 @@ type ReturnEmailRow = RowDataPacket & {
   model: string | null;
   category: string | null;
   serial_num: string | null;
-  returned_by_name: string | null;
+  returned_by_oid: string | null;
   returned_by_role: string | null;
 };
 
@@ -37,13 +38,13 @@ export async function getReturnEmailData(returnId: number): Promise<ReturnEmailD
     `SELECT hr.return_id, h.asset_id, hr.return_date, hr.\`condition\`, hr.return_remarks,
             hs.employee_no, s.full_name AS recipient_name, s.email AS recipient_email, s.department,
             l.brand, l.model, l.category, l.serial_num,
-            u.full_name AS returned_by_name, r.name AS returned_by_role
+            u.oid AS returned_by_oid, r.name AS returned_by_role
      FROM handover_return hr
      INNER JOIN handover_staff hs ON hs.handover_staff_id = hr.handover_staff_id
      INNER JOIN handover h ON h.handover_id = hs.handover_id
      INNER JOIN laptop l ON l.asset_id = h.asset_id
      INNER JOIN staff s ON s.employee_no = hs.employee_no
-     INNER JOIN users u ON u.staff_id = hr.returned_by
+     INNER JOIN users u ON u.id = hr.returned_by
      INNER JOIN role r ON r.id = u.role_id
      WHERE hr.return_id = ?
      LIMIT 1`,
@@ -52,6 +53,8 @@ export async function getReturnEmailData(returnId: number): Promise<ReturnEmailD
 
   const row = rows[0];
   if (!row) return null;
+
+  const returnedByName = await getDisplayNameByOid(row.returned_by_oid);
 
   const email = row.recipient_email?.trim();
   if (!email || !email.includes('@')) {
@@ -79,7 +82,7 @@ export async function getReturnEmailData(returnId: number): Promise<ReturnEmailD
     serialNumber: row.serial_num?.trim() || '—',
     conditionDisplay: displayCondition(row.condition),
     returnRemarks: row.return_remarks?.trim() || '—',
-    handoverByName: row.returned_by_name?.trim() || '—',
+    handoverByName: returnedByName || '—',
     handoverByDesignation: row.returned_by_role?.trim() || 'IT Department',
   };
 }

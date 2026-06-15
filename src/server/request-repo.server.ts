@@ -38,6 +38,7 @@ import type {
 import { STATUS_ID } from '@/lib/asset-status-actions';
 import { requestItemKindFromAssetType } from '@/lib/request-asset-types';
 import { isUserProfileComplete } from '@/lib/user-profile';
+import { attachDisplayNames, getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 const ACTIVE_STATUS = STATUS_ID.ACTIVE;
@@ -116,6 +117,7 @@ type PoolRow = RowDataPacket & {
   serial_num: string | null;
   status_id: number;
   request_id: number | null;
+  requester_oid: string | null;
   requester_name: string | null;
   assignment_id: number | null;
 };
@@ -124,16 +126,17 @@ async function queryLaptopPool(): Promise<RequestPoolAsset[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<PoolRow[]>(
     `SELECT l.asset_id, l.model, l.brand, l.category, l.serial_num, l.status_id,
-            ra.request_id, u.full_name AS requester_name, ra.assignment_id
+            ra.request_id, u.oid AS requester_oid, ra.assignment_id
      FROM laptop l
      LEFT JOIN request_assignment ra
        ON ra.asset_id = l.asset_id AND ra.returned_at IS NULL
      LEFT JOIN request r ON r.request_id = ra.request_id AND r.rejected_at IS NULL
-     LEFT JOIN users u ON u.staff_id = r.requested_by
+     LEFT JOIN users u ON u.id = r.requested_by
      WHERE l.status_id = ?
      ORDER BY l.asset_id`,
     [REQUEST_STATUS_ACTIVE],
   );
+  await attachDisplayNames(rows, 'requester_oid', 'requester_name');
   return rows.map((r) => ({
     kind: 'laptop',
     assetId: r.asset_id,
@@ -152,16 +155,17 @@ async function queryAvPool(): Promise<RequestPoolAsset[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<PoolRow[]>(
     `SELECT a.asset_id, a.model, a.brand, a.category, a.serial_num, a.status_id,
-            ra.request_id, u.full_name AS requester_name, ra.assignment_id
+            ra.request_id, u.oid AS requester_oid, ra.assignment_id
      FROM av a
      LEFT JOIN request_assignment ra
        ON ra.asset_id = a.asset_id AND ra.returned_at IS NULL
      LEFT JOIN request r ON r.request_id = ra.request_id AND r.rejected_at IS NULL
-     LEFT JOIN users u ON u.staff_id = r.requested_by
+     LEFT JOIN users u ON u.id = r.requested_by
      WHERE a.status_id = ?
      ORDER BY a.asset_id`,
     [REQUEST_STATUS_ACTIVE],
   );
+  await attachDisplayNames(rows, 'requester_oid', 'requester_name');
   return rows.map((r) => ({
     kind: 'av',
     assetId: r.asset_id,
@@ -744,6 +748,7 @@ export async function rejectUserRequest(input: RejectUserRequestInput): Promise<
 type RequestHeaderRow = RowDataPacket & {
   request_id: number;
   requested_by: string;
+  requester_oid: string | null;
   requester_name: string;
   borrow_date: Date | string;
   return_date: Date | string;
@@ -756,14 +761,15 @@ type RequestHeaderRow = RowDataPacket & {
 export async function listPendingRequests(): Promise<PendingRequest[]> {
   const pool = getDbPool();
   const [headers] = await pool.query<RequestHeaderRow[]>(
-    `SELECT r.request_id, r.requested_by, u.full_name AS requester_name,
+    `SELECT r.request_id, r.requested_by, u.oid AS requester_oid,
             r.borrow_date, r.return_date, r.program_type, r.usage_location,
             r.reason, r.created_at
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
+     INNER JOIN users u ON u.id = r.requested_by
      WHERE r.rejected_at IS NULL
      ORDER BY r.created_at DESC`,
   );
+  await attachDisplayNames(headers, 'requester_oid', 'requester_name');
 
   const results: PendingRequest[] = [];
 
@@ -1064,6 +1070,7 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
     (RowDataPacket & {
       request_id: number;
       requested_by: string;
+      requester_oid: string | null;
       requester_name: string;
       borrow_date: Date | string;
       return_date: Date | string;
@@ -1075,13 +1082,14 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
       rejection_reason: string | null;
     })[]
   >(
-    `SELECT r.request_id, r.requested_by, u.full_name AS requester_name,
+    `SELECT r.request_id, r.requested_by, u.oid AS requester_oid,
             r.borrow_date, r.return_date, r.program_type, r.usage_location,
             r.reason, r.created_at, r.rejected_at, r.rejection_reason
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
+     INNER JOIN users u ON u.id = r.requested_by
      ORDER BY r.created_at DESC`,
   );
+  await attachDisplayNames(headers, 'requester_oid', 'requester_name');
 
   const results: RequestLogEntry[] = [];
 
@@ -1202,16 +1210,17 @@ export async function submitUserRequest(
     await conn.beginTransaction();
 
     const [userRows] = await conn.query<
-      (RowDataPacket & { full_name: string; email: string; phone: string | null })[]
+      (RowDataPacket & { oid: string | null; email: string; phone: string | null })[]
     >(
-      `SELECT full_name, email, phone FROM users WHERE staff_id = ?`,
+      `SELECT oid, email, phone FROM users WHERE id = ?`,
       [input.requestedBy],
     );
     const userRow = userRows[0];
     if (!userRow) throw new Error('User account not found');
+    const fullName = await getDisplayNameByOid(userRow.oid, userRow.email);
     if (
       !isUserProfileComplete({
-        fullName: userRow.full_name,
+        fullName,
         email: userRow.email,
         phone: userRow.phone,
       })

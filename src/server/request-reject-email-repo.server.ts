@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { RequestRejectEmailData } from '@/lib/request-reject-email-types';
+import { getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 type RequestRejectEmailHeaderRow = RowDataPacket & {
@@ -14,10 +15,10 @@ type RequestRejectEmailHeaderRow = RowDataPacket & {
   rejected_at: Date | string;
   rejected_by: string;
   rejection_reason: string;
-  requester_name: string | null;
+  requester_oid: string | null;
   requester_email: string | null;
   requester_phone: string | null;
-  rejected_by_name: string | null;
+  rejected_by_oid: string | null;
 };
 
 type RequestRejectEmailItemRow = RowDataPacket & {
@@ -45,11 +46,11 @@ export async function getRequestRejectEmailData(
     `SELECT r.request_id, r.requested_by, r.borrow_date, r.return_date,
             r.program_type, r.usage_location, r.reason, r.created_at,
             r.rejected_at, r.rejected_by, r.rejection_reason,
-            u.full_name AS requester_name, u.email AS requester_email, u.phone AS requester_phone,
-            rej.full_name AS rejected_by_name
+            u.oid AS requester_oid, u.email AS requester_email, u.phone AS requester_phone,
+            rej.oid AS rejected_by_oid
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
-     LEFT JOIN users rej ON rej.staff_id = r.rejected_by
+     INNER JOIN users u ON u.id = r.requested_by
+     LEFT JOIN users rej ON rej.id = r.rejected_by
      WHERE r.request_id = ? AND r.rejected_at IS NOT NULL
      LIMIT 1`,
     [requestId],
@@ -65,6 +66,9 @@ export async function getRequestRejectEmailData(
     );
   }
 
+  const requesterName = await getDisplayNameByOid(row.requester_oid, email);
+  const rejectedByName = await getDisplayNameByOid(row.rejected_by_oid);
+
   const [items] = await pool.query<RequestRejectEmailItemRow[]>(
     `SELECT asset_type, quantity FROM request_item WHERE request_id = ? ORDER BY request_item_id`,
     [requestId],
@@ -73,7 +77,7 @@ export async function getRequestRejectEmailData(
   return {
     requestId: row.request_id,
     requestedBy: row.requested_by,
-    requesterName: row.requester_name?.trim() || row.requested_by,
+    requesterName: requesterName || row.requested_by,
     requesterEmail: email,
     requesterPhone: row.requester_phone?.trim() || null,
     borrowDate: formatDateOnly(row.borrow_date),
@@ -84,7 +88,7 @@ export async function getRequestRejectEmailData(
     submittedAt: formatDateTime(row.created_at) ?? formatDateOnly(row.borrow_date),
     rejectedAt: formatDateTime(row.rejected_at) ?? '',
     rejectedBy: row.rejected_by,
-    rejectedByName: row.rejected_by_name?.trim() || row.rejected_by,
+    rejectedByName: rejectedByName || row.rejected_by,
     rejectionReason: row.rejection_reason.trim(),
     items: items.map((i) => ({
       assetType: i.asset_type,

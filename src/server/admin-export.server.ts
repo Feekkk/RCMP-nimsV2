@@ -1,4 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
+import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 export type AdminExportKind = 'users' | 'requests' | 'laptop' | 'av' | 'network' | 'staff';
@@ -30,32 +31,32 @@ export async function exportAdminCsv(kind: AdminExportKind): Promise<AdminExport
   if (kind === 'users') {
     const [rows] = await pool.query<
       (RowDataPacket & {
-        staff_id: string;
+        id: number;
+        oid: string | null;
         full_name: string;
         email: string;
         role_name: string;
-        auth_provider: string;
         phone: string | null;
         last_login_at: Date | string | null;
         created_at: Date | string;
       })[]
     >(
-      `SELECT u.staff_id, u.full_name, u.email, r.name AS role_name,
-              u.auth_provider, u.phone, u.last_login_at, u.created_at
+      `SELECT u.id, u.oid, u.email, r.name AS role_name,
+              u.phone, u.last_login_at, u.created_at
        FROM users u INNER JOIN role r ON r.id = u.role_id
-       ORDER BY u.staff_id`,
+       ORDER BY u.id`,
     );
+    await attachDisplayNames(rows, 'oid', 'full_name');
     return {
       filename: `nims-users-${stamp}.csv`,
       contentType: 'text/csv;charset=utf-8',
       body: toCsv(
-        ['staff_id', 'full_name', 'email', 'role', 'auth_provider', 'phone', 'last_login_at', 'created_at'],
+        ['id', 'full_name', 'email', 'role', 'phone', 'last_login_at', 'created_at'],
         rows.map((r) => [
-          r.staff_id,
+          r.id,
           r.full_name,
           r.email,
           r.role_name,
-          r.auth_provider,
           r.phone,
           r.last_login_at,
           r.created_at,
@@ -68,6 +69,7 @@ export async function exportAdminCsv(kind: AdminExportKind): Promise<AdminExport
     const [rows] = await pool.query<
       (RowDataPacket & {
         request_id: number;
+        requester_oid: string | null;
         requester: string;
         borrow_date: Date | string;
         return_date: Date | string;
@@ -78,14 +80,15 @@ export async function exportAdminCsv(kind: AdminExportKind): Promise<AdminExport
         items: string | null;
       })[]
     >(
-      `SELECT r.request_id, u.full_name AS requester, r.borrow_date, r.return_date,
+      `SELECT r.request_id, u.oid AS requester_oid, r.borrow_date, r.return_date,
               r.program_type, r.usage_location, r.rejected_at, r.created_at,
               (SELECT GROUP_CONCAT(CONCAT(ri.asset_type, ' x', ri.quantity) SEPARATOR '; ')
                FROM request_item ri WHERE ri.request_id = r.request_id) AS items
        FROM request r
-       INNER JOIN users u ON u.staff_id = r.requested_by
+       INNER JOIN users u ON u.id = r.requested_by
        ORDER BY r.request_id DESC`,
     );
+    await attachDisplayNames(rows, 'requester_oid', 'requester');
     return {
       filename: `nims-requests-${stamp}.csv`,
       contentType: 'text/csv;charset=utf-8',

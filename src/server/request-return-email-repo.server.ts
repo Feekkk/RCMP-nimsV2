@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { RequestReturnEmailData } from '@/lib/request-return-email-types';
+import { getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getRequestEmailData } from '@/server/request-email-repo.server';
 import { getDbPool } from '@/server/db';
 
@@ -38,10 +39,11 @@ export async function getRequestReturnEmailData(
   const pool = getDbPool();
   const placeholders = assignmentIds.map(() => '?').join(', ');
 
-  const [techRows] = await pool.query<(RowDataPacket & { full_name: string | null })[]>(
-    `SELECT full_name FROM users WHERE staff_id = ? LIMIT 1`,
+  const [techRows] = await pool.query<(RowDataPacket & { oid: string | null })[]>(
+    `SELECT oid FROM users WHERE id = ? LIMIT 1`,
     [returnedBy],
   );
+  const returnedByName = await getDisplayNameByOid(techRows[0]?.oid ?? null);
 
   const [assetRows] = await pool.query<ReturnAssetRow[]>(
     `SELECT ra.assignment_id, ra.asset_id, ra.checkout_at, ra.returned_at, ra.return_condition,
@@ -98,7 +100,7 @@ export async function getRequestReturnEmailData(
     reason: base.reason,
     submittedAt: base.submittedAt,
     requestedItems: base.items,
-    returnedByName: techRows[0]?.full_name?.trim() || returnedBy,
+    returnedByName: returnedByName || returnedBy,
     returnedByStaffId: returnedBy,
     returnedAt: latestReturn,
     returnCondition: returnCondition.trim(),

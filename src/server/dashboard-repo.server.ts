@@ -6,6 +6,7 @@ import type {
   TechnicianDashboardStats,
 } from '@/lib/dashboard-schema';
 import type { RequestItemRow } from '@/lib/request-schema';
+import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 import { loadDashboardCharts } from '@/server/dashboard-charts.server';
 
@@ -119,6 +120,7 @@ export async function getTechnicianDashboard(
   const [headers] = await pool.query<
     (RowDataPacket & {
       request_id: number;
+      requester_oid: string | null;
       requester_name: string;
       borrow_date: Date | string;
       return_date: Date | string;
@@ -126,16 +128,17 @@ export async function getTechnicianDashboard(
       usage_location: string;
     })[]
   >(
-    `SELECT r.request_id, u.full_name AS requester_name,
+    `SELECT r.request_id, u.oid AS requester_oid,
             r.borrow_date, r.return_date, r.program_type, r.usage_location
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
+     INNER JOIN users u ON u.id = r.requested_by
      WHERE r.rejected_at IS NULL
        AND r.borrow_date <= ?
        AND r.return_date >= ?
      ORDER BY r.borrow_date ASC, r.request_id ASC`,
     [weekEnd, weekStart],
   );
+  await attachDisplayNames(headers, 'requester_oid', 'requester_name');
 
   const timetable: DashboardTimetableEntry[] = [];
 

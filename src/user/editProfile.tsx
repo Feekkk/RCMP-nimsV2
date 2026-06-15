@@ -122,16 +122,12 @@ export function UserEditProfilePage() {
                     />
                   </div>
                 </FormField>
-                <FormField label="Full name" required>
+                <FormField label="Full name">
                   <div className="relative">
                     <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                      className="rounded-[8px] pl-9"
-                    />
+                    <Input value={fullName} disabled className="rounded-[8px] bg-muted/50 pl-9" />
                   </div>
+                  <p className="text-sm text-muted-foreground">Managed by Microsoft.</p>
                 </FormField>
                 <FormField label="Email" required>
                   <div className="relative">

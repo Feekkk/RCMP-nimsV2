@@ -1,6 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AssetKind } from '@/lib/inventory-schema';
 import type { ActivityLogCategory, ActivityLogEntry } from '@/lib/activity-log-schema';
+import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 const MAX_EVENTS = 600;
@@ -55,16 +56,18 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
     (RowDataPacket & {
       request_id: number;
       created_at: Date | string;
+      requester_oid: string | null;
       requester_name: string;
       program_type: string;
     })[]
   >(
-    `SELECT r.request_id, r.created_at, u.full_name AS requester_name, r.program_type
+    `SELECT r.request_id, r.created_at, u.oid AS requester_oid, r.program_type
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
+     INNER JOIN users u ON u.id = r.requested_by
      ORDER BY r.request_id DESC
      LIMIT 200`,
   );
+  await attachDisplayNames(created, 'requester_oid', 'requester_name');
 
   for (const row of created) {
     push(events, {
@@ -85,17 +88,19 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
     (RowDataPacket & {
       request_id: number;
       rejected_at: Date | string;
+      requester_oid: string | null;
       requester_name: string;
       rejection_reason: string | null;
     })[]
   >(
-    `SELECT r.request_id, r.rejected_at, u.full_name AS requester_name, r.rejection_reason
+    `SELECT r.request_id, r.rejected_at, u.oid AS requester_oid, r.rejection_reason
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
+     INNER JOIN users u ON u.id = r.requested_by
      WHERE r.rejected_at IS NOT NULL
      ORDER BY r.rejected_at DESC
      LIMIT 200`,
   );
+  await attachDisplayNames(rejected, 'requester_oid', 'requester_name');
 
   for (const row of rejected) {
     push(events, {
@@ -122,7 +127,9 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
       returned_at: Date | string | null;
       unavailable_at: Date | string | null;
       return_condition: string | null;
+      requester_oid: string | null;
       requester_name: string;
+      booked_oid: string | null;
       booked_by: string | null;
       asset_type: string | null;
       model: string | null;
@@ -132,19 +139,21 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
   >(
     `SELECT ra.assignment_id, ra.request_id, ra.asset_id, ra.assigned_at, ra.checkout_at,
             ra.returned_at, ra.unavailable_at, ra.return_condition,
-            u.full_name AS requester_name, ub.full_name AS booked_by, ri.asset_type,
+            u.oid AS requester_oid, ub.oid AS booked_oid, ri.asset_type,
             COALESCE(l.model, av.model) AS model, COALESCE(l.brand, av.brand) AS brand,
             IF(l.asset_id IS NOT NULL, 'laptop', IF(av.asset_id IS NOT NULL, 'av', 'laptop')) AS kind
      FROM request_assignment ra
      INNER JOIN request r ON r.request_id = ra.request_id
-     INNER JOIN users u ON u.staff_id = r.requested_by
-     LEFT JOIN users ub ON ub.staff_id = ra.assigned_by
+     INNER JOIN users u ON u.id = r.requested_by
+     LEFT JOIN users ub ON ub.id = ra.assigned_by
      LEFT JOIN request_item ri ON ri.request_item_id = ra.request_item_id
      LEFT JOIN laptop l ON l.asset_id = ra.asset_id
      LEFT JOIN av av ON av.asset_id = ra.asset_id
      ORDER BY ra.assignment_id DESC
      LIMIT 400`,
   );
+  await attachDisplayNames(assignments, 'requester_oid', 'requester_name');
+  await attachDisplayNames(assignments, 'booked_oid', 'booked_by');
 
   for (const row of assignments) {
     const kind = parseKind(row.kind);
@@ -221,6 +230,7 @@ async function loadHandoverEvents(events: ActivityLogEntry[]) {
       asset_id: number;
       handover_date: Date | string;
       created_at: Date | string;
+      technician_oid: string | null;
       technician_name: string;
       recipients: string | null;
       handover_remarks: string | null;
@@ -228,18 +238,19 @@ async function loadHandoverEvents(events: ActivityLogEntry[]) {
     })[]
   >(
     `SELECT h.handover_id, h.asset_id, h.handover_date, h.created_at, h.handover_remarks,
-            tech.full_name AS technician_name,
+            tech.oid AS technician_oid,
             GROUP_CONCAT(DISTINCT s.full_name ORDER BY s.full_name SEPARATOR ', ') AS recipients,
             l.model
      FROM handover h
-     INNER JOIN users tech ON tech.staff_id = h.staff_id
+     INNER JOIN users tech ON tech.id = h.user_id
      INNER JOIN laptop l ON l.asset_id = h.asset_id
      LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
      LEFT JOIN staff s ON s.employee_no = hs.employee_no
-     GROUP BY h.handover_id, h.asset_id, h.handover_date, h.created_at, h.handover_remarks, tech.full_name, l.model
+     GROUP BY h.handover_id, h.asset_id, h.handover_date, h.created_at, h.handover_remarks, tech.oid, l.model
      ORDER BY h.handover_id DESC
      LIMIT 200`,
   );
+  await attachDisplayNames(handovers, 'technician_oid', 'technician_name');
 
   for (const h of handovers) {
     const to = h.recipients?.trim() ? `To ${h.recipients}` : 'Place / room handover';
@@ -264,6 +275,7 @@ async function loadHandoverEvents(events: ActivityLogEntry[]) {
       return_date: Date | string;
       return_time: string | null;
       created_at: Date | string;
+      returned_oid: string | null;
       returned_by: string;
       recipient_label: string | null;
       return_place: string | null;
@@ -272,11 +284,11 @@ async function loadHandoverEvents(events: ActivityLogEntry[]) {
     })[]
   >(
     `SELECT hr.return_id, h.asset_id, hr.return_date, hr.return_time, hr.created_at,
-            ub.full_name AS returned_by,
+            ub.oid AS returned_oid,
             COALESCE(s.full_name, 'Place handover') AS recipient_label,
             hr.return_place, hr.\`condition\`, l.model
      FROM handover_return hr
-     INNER JOIN users ub ON ub.staff_id = hr.returned_by
+     INNER JOIN users ub ON ub.id = hr.returned_by
      LEFT JOIN handover_staff hs ON hs.handover_staff_id = hr.handover_staff_id
      LEFT JOIN handover h ON h.handover_id = COALESCE(hs.handover_id, hr.handover_id)
      LEFT JOIN staff s ON s.employee_no = hs.employee_no
@@ -285,6 +297,7 @@ async function loadHandoverEvents(events: ActivityLogEntry[]) {
      ORDER BY hr.return_id DESC
      LIMIT 200`,
   );
+  await attachDisplayNames(returns, 'returned_oid', 'returned_by');
 
   for (const r of returns) {
     push(events, {
@@ -321,18 +334,20 @@ async function loadDeployEvents(
       zone: string;
       deployment_date: Date | string;
       created_at: Date | string;
+      staff_oid: string | null;
       staff_name: string;
       model: string | null;
     })[]
   >(
     `SELECT d.deployment_id, d.asset_id, d.building, d.level, d.zone, d.deployment_date,
-            d.created_at, u.full_name AS staff_name, a.model
+            d.created_at, u.oid AS staff_oid, a.model
      FROM \`${deployTable}\` d
-     INNER JOIN users u ON u.staff_id = d.staff_id
+     INNER JOIN users u ON u.id = d.user_id
      INNER JOIN \`${assetTable}\` a ON a.asset_id = d.asset_id
      ORDER BY d.deployment_id DESC
      LIMIT 150`,
   );
+  await attachDisplayNames(deployments, 'staff_oid', 'staff_name');
 
   for (const d of deployments) {
     push(events, {
@@ -356,6 +371,7 @@ async function loadDeployEvents(
       return_date: Date | string;
       return_time: string | null;
       created_at: Date | string;
+      returned_oid: string | null;
       returned_by: string;
       return_place: string | null;
       condition: string | null;
@@ -363,14 +379,15 @@ async function loadDeployEvents(
     })[]
   >(
     `SELECT r.return_id, d.asset_id, r.return_date, r.return_time, r.created_at,
-            u.full_name AS returned_by, r.return_place, r.\`condition\`, a.model
+            u.oid AS returned_oid, r.return_place, r.\`condition\`, a.model
      FROM \`${returnTable}\` r
      INNER JOIN \`${deployTable}\` d ON d.deployment_id = r.deployment_id
      INNER JOIN \`${assetTable}\` a ON a.asset_id = d.asset_id
-     INNER JOIN users u ON u.staff_id = r.returned_by
+     INNER JOIN users u ON u.id = r.returned_by
      ORDER BY r.return_id DESC
      LIMIT 150`,
   );
+  await attachDisplayNames(returns, 'returned_oid', 'returned_by');
 
   for (const r of returns) {
     push(events, {
@@ -401,23 +418,25 @@ async function loadDisposalEvents(events: ActivityLogEntry[]) {
       disposal_time: string | null;
       disposal_remarks: string | null;
       item_remarks: string | null;
+      requested_oid: string | null;
       requested_by: string;
       model: string | null;
     })[]
   >(
     `SELECT di.disposal_item_id, di.disposal_id, di.asset_id, di.asset_type,
             d.disposal_date, d.disposal_time, d.disposal_remarks, di.item_remarks,
-            u.full_name AS requested_by,
+            u.oid AS requested_oid,
             COALESCE(l.model, av.model, n.model) AS model
      FROM disposal_item di
      INNER JOIN disposal d ON d.disposal_id = di.disposal_id
-     INNER JOIN users u ON u.staff_id = d.requested_by
+     INNER JOIN users u ON u.id = d.requested_by
      LEFT JOIN laptop l ON di.asset_type = 'laptop' AND l.asset_id = di.asset_id
      LEFT JOIN av av ON di.asset_type = 'av' AND av.asset_id = di.asset_id
      LEFT JOIN network n ON di.asset_type = 'network' AND n.asset_id = di.asset_id
      ORDER BY di.disposal_item_id DESC
      LIMIT 200`,
   );
+  await attachDisplayNames(rows, 'requested_oid', 'requested_by');
 
   for (const row of rows) {
     const kind = parseKind(row.asset_type);
@@ -454,16 +473,18 @@ async function loadMaintenanceEvents(events: ActivityLogEntry[]) {
       repair_date: Date | string;
       completed_date: Date | string | null;
       issue_summary: string;
+      staff_oid: string | null;
       staff_name: string;
     })[]
   >(
     `SELECT r.repair_id, r.asset_id, r.asset_type, r.repair_date, r.completed_date,
-            r.issue_summary, u.full_name AS staff_name
+            r.issue_summary, u.oid AS staff_oid
      FROM repair r
-     INNER JOIN users u ON u.staff_id = r.staff_id
+     INNER JOIN users u ON u.id = r.user_id
      ORDER BY r.repair_id DESC
      LIMIT 150`,
   );
+  await attachDisplayNames(repairs, 'staff_oid', 'staff_name');
 
   for (const row of repairs) {
     const kind = parseKind(row.asset_type);
@@ -535,16 +556,18 @@ async function loadMaintenanceEvents(events: ActivityLogEntry[]) {
       claim_date: Date | string;
       claim_time: string | null;
       issue_summary: string;
+      claimed_oid: string | null;
       claimed_by: string;
     })[]
   >(
     `SELECT c.claim_id, c.asset_id, c.asset_type, c.claim_date, c.claim_time,
-            c.issue_summary, u.full_name AS claimed_by
+            c.issue_summary, u.oid AS claimed_oid
      FROM warranty_claim c
-     INNER JOIN users u ON u.staff_id = c.claimed_by
+     INNER JOIN users u ON u.id = c.claimed_by
      ORDER BY c.claim_id DESC
      LIMIT 100`,
   );
+  await attachDisplayNames(claims, 'claimed_oid', 'claimed_by');
 
   for (const c of claims) {
     const kind = parseKind(c.asset_type);

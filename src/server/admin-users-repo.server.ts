@@ -1,15 +1,29 @@
-import bcrypt from 'bcrypt';
 import type { RowDataPacket } from 'mysql2';
 import type { AdminUserRow, CreateAdminUserInput, UpdateAdminUserInput } from '@/lib/admin-users-schema';
 import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
+import { getDirectoryUserByEmail, getDisplayNamesByOids } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
-const BCRYPT_ROUNDS = 10;
+type AdminUserDbRow = RowDataPacket & {
+  id: number;
+  oid: string | null;
+  email: string;
+  role_id: number;
+  role_name: string;
+  phone: string | null;
+  last_login_at: Date | string | null;
+  created_at: Date | string;
+};
 
 function formatDateTime(val: Date | string | null | undefined): string | null {
   if (val == null) return null;
   if (val instanceof Date) return val.toISOString().slice(0, 19).replace('T', ' ');
   return String(val).slice(0, 19);
+}
+
+function emailLocalPart(email: string): string {
+  const local = email.split('@')[0]?.trim();
+  return local || email;
 }
 
 function assertValidRoleId(roleId: number): void {
@@ -18,34 +32,37 @@ function assertValidRoleId(roleId: number): void {
   }
 }
 
+function parseUserId(staffId: string): number {
+  const id = Number.parseInt(staffId.trim(), 10);
+  if (!Number.isFinite(id) || id <= 0) throw new Error('Invalid account id');
+  return id;
+}
+
 export async function listAdminUsers(): Promise<AdminUserRow[]> {
   const pool = getDbPool();
-  const [rows] = await pool.query<
-    (RowDataPacket & {
-      staff_id: string;
-      full_name: string;
-      email: string;
-      role_id: number;
-      role_name: string;
-      auth_provider: 'local' | 'microsoft';
-      phone: string | null;
-      last_login_at: Date | string | null;
-      created_at: Date | string;
-    })[]
-  >(
-    `SELECT u.staff_id, u.full_name, u.email, u.role_id, r.name AS role_name,
-            u.auth_provider, u.phone, u.last_login_at, u.created_at
+  const [rows] = await pool.query<AdminUserDbRow[]>(
+    `SELECT u.id, u.oid, u.email, u.role_id, r.name AS role_name,
+            u.phone, u.last_login_at, u.created_at
      FROM users u
      INNER JOIN role r ON r.id = u.role_id
      ORDER BY u.created_at DESC`,
   );
+
+  const fallback = new Map<string, string>();
+  for (const r of rows) {
+    if (r.oid) fallback.set(r.oid, emailLocalPart(r.email));
+  }
+  const names = await getDisplayNamesByOids(
+    rows.map((r) => r.oid),
+    fallback,
+  );
+
   return rows.map((r) => ({
-    staffId: r.staff_id,
-    fullName: r.full_name,
+    staffId: String(r.id),
+    fullName: (r.oid ? names.get(r.oid) : null) || emailLocalPart(r.email),
     email: r.email,
     roleId: r.role_id,
     roleName: r.role_name,
-    authProvider: r.auth_provider,
     phone: r.phone,
     lastLoginAt: formatDateTime(r.last_login_at),
     createdAt: formatDateTime(r.created_at) ?? '',
@@ -53,83 +70,66 @@ export async function listAdminUsers(): Promise<AdminUserRow[]> {
 }
 
 export async function createAdminUser(input: CreateAdminUserInput): Promise<AdminUserRow> {
-  const staffId = input.staffId.trim();
-  const fullName = input.fullName.trim();
   const email = input.email.trim().toLowerCase();
   const phone = input.phone?.trim() || null;
   assertValidRoleId(input.roleId);
 
-  if (!staffId || !fullName || !email) {
-    throw new Error('Staff ID, name, and email are required');
+  if (!email || !email.includes('@')) {
+    throw new Error('A valid email is required');
   }
 
   const pool = getDbPool();
   const [existing] = await pool.query<RowDataPacket[]>(
-    `SELECT staff_id FROM users WHERE staff_id = ? OR email = ? LIMIT 1`,
-    [staffId, email],
+    `SELECT id FROM users WHERE email = ? LIMIT 1`,
+    [email],
   );
   if (existing.length > 0) {
-    throw new Error('Staff ID or email already exists');
+    throw new Error('Email already exists');
   }
 
-  let passwordHash: string | null = null;
-  if (input.password && input.password.length > 0) {
-    if (input.password.length < 6) throw new Error('Password must be at least 6 characters');
-    passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
-  } else if (input.roleId === ROLE_USER) {
-    throw new Error('Password is required for local user accounts');
-  }
+  // Bind the Azure oid now if the directory user already exists; otherwise it is set on first sign-in.
+  const directoryUser = await getDirectoryUserByEmail(email);
 
-  await pool.execute(
-    `INSERT INTO users (staff_id, full_name, email, password_hash, auth_provider, role_id, phone)
-     VALUES (?, ?, ?, ?, 'local', ?, ?)`,
-    [staffId, fullName, email, passwordHash, input.roleId, phone],
+  const [result] = await pool.execute(
+    `INSERT INTO users (oid, email, role_id, phone) VALUES (?, ?, ?, ?)`,
+    [directoryUser?.oid ?? null, email, input.roleId, phone],
   );
+  const insertId = (result as { insertId: number }).insertId;
 
   const users = await listAdminUsers();
-  const created = users.find((u) => u.staffId === staffId);
+  const created = users.find((u) => u.staffId === String(insertId));
   if (!created) throw new Error('User creation failed');
   return created;
 }
 
 export async function updateAdminUser(input: UpdateAdminUserInput): Promise<AdminUserRow> {
-  const staffId = input.staffId.trim();
-  const fullName = input.fullName.trim();
+  const userId = parseUserId(input.staffId);
   const email = input.email.trim().toLowerCase();
   const phone = input.phone?.trim() || null;
   assertValidRoleId(input.roleId);
 
-  if (!fullName || !email) throw new Error('Name and email are required');
+  if (!email || !email.includes('@')) throw new Error('A valid email is required');
 
   const pool = getDbPool();
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT staff_id FROM users WHERE staff_id = ? LIMIT 1`,
-    [staffId],
+    `SELECT id FROM users WHERE id = ? LIMIT 1`,
+    [userId],
   );
   if (rows.length === 0) throw new Error('User not found');
 
   const [emailOwner] = await pool.query<RowDataPacket[]>(
-    `SELECT staff_id FROM users WHERE email = ? AND staff_id <> ? LIMIT 1`,
-    [email, staffId],
+    `SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1`,
+    [email, userId],
   );
   if (emailOwner.length > 0) throw new Error('Email already in use');
 
-  if (input.password != null && input.password.length > 0) {
-    if (input.password.length < 6) throw new Error('Password must be at least 6 characters');
-    const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
-    await pool.execute(
-      `UPDATE users SET full_name = ?, email = ?, role_id = ?, phone = ?, password_hash = ? WHERE staff_id = ?`,
-      [fullName, email, input.roleId, phone, passwordHash, staffId],
-    );
-  } else {
-    await pool.execute(
-      `UPDATE users SET full_name = ?, email = ?, role_id = ?, phone = ? WHERE staff_id = ?`,
-      [fullName, email, input.roleId, phone, staffId],
-    );
-  }
+  await pool.execute(
+    `UPDATE users SET email = ?, role_id = ?, phone = ? WHERE id = ?`,
+    [email, input.roleId, phone, userId],
+  );
 
   const users = await listAdminUsers();
-  const updated = users.find((u) => u.staffId === staffId);
+  const updated = users.find((u) => u.staffId === String(userId));
   if (!updated) throw new Error('User update failed');
   return updated;
 }

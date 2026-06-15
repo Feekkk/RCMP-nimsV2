@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { RequestEmailData } from '@/lib/request-email-types';
+import { getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 type RequestEmailHeaderRow = RowDataPacket & {
@@ -12,7 +13,7 @@ type RequestEmailHeaderRow = RowDataPacket & {
   reason: string | null;
   created_at: Date | string;
   terms_accepted_at: Date | string | null;
-  requester_name: string | null;
+  requester_oid: string | null;
   requester_email: string | null;
   requester_phone: string | null;
 };
@@ -39,9 +40,9 @@ export async function getRequestEmailData(requestId: number): Promise<RequestEma
   const [headers] = await pool.query<RequestEmailHeaderRow[]>(
     `SELECT r.request_id, r.requested_by, r.borrow_date, r.return_date,
             r.program_type, r.usage_location, r.reason, r.created_at, r.terms_accepted_at,
-            u.full_name AS requester_name, u.email AS requester_email, u.phone AS requester_phone
+            u.oid AS requester_oid, u.email AS requester_email, u.phone AS requester_phone
      FROM request r
-     INNER JOIN users u ON u.staff_id = r.requested_by
+     INNER JOIN users u ON u.id = r.requested_by
      WHERE r.request_id = ?
      LIMIT 1`,
     [requestId],
@@ -57,6 +58,8 @@ export async function getRequestEmailData(requestId: number): Promise<RequestEma
     );
   }
 
+  const requesterName = await getDisplayNameByOid(row.requester_oid, email);
+
   const [items] = await pool.query<RequestEmailItemRow[]>(
     `SELECT asset_type, quantity FROM request_item WHERE request_id = ? ORDER BY request_item_id`,
     [requestId],
@@ -65,7 +68,7 @@ export async function getRequestEmailData(requestId: number): Promise<RequestEma
   return {
     requestId: row.request_id,
     requestedBy: row.requested_by,
-    requesterName: row.requester_name?.trim() || row.requested_by,
+    requesterName: requesterName || row.requested_by,
     requesterEmail: email,
     requesterPhone: row.requester_phone?.trim() || null,
     borrowDate: formatDateOnly(row.borrow_date),

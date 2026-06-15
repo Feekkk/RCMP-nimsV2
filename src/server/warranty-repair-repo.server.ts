@@ -177,7 +177,7 @@ export async function createRepair(input: RepairInput) {
     await conn.beginTransaction();
 
     const [result] = await conn.execute(
-      `INSERT INTO repair (asset_id, asset_type, staff_id, repair_date, completed_date, issue_summary, repair_remarks)
+      `INSERT INTO repair (asset_id, asset_type, user_id, repair_date, completed_date, issue_summary, repair_remarks)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         input.assetId,

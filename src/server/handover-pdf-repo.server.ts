@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { HandoverPdfData } from '@/lib/handover-pdf-types';
+import { getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 type HandoverRow = RowDataPacket & {
@@ -15,7 +16,7 @@ type HandoverRow = RowDataPacket & {
   category: string | null;
   serial_num: string | null;
   remarks: string | null;
-  handed_by_name: string | null;
+  handed_by_oid: string | null;
   handed_by_role: string | null;
 };
 
@@ -30,10 +31,10 @@ export async function getHandoverPdfData(handoverId: number): Promise<HandoverPd
     `SELECT h.handover_id, h.asset_id, h.handover_date, h.handover_remarks,
             hs.employee_no, s.full_name AS recipient_name, s.department,
             l.brand, l.model, l.category, l.serial_num, l.remarks,
-            u.full_name AS handed_by_name, r.name AS handed_by_role
+            u.oid AS handed_by_oid, r.name AS handed_by_role
      FROM handover h
      INNER JOIN laptop l ON l.asset_id = h.asset_id
-     INNER JOIN users u ON u.staff_id = h.staff_id
+     INNER JOIN users u ON u.id = h.user_id
      INNER JOIN role r ON r.id = u.role_id
      LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
      LEFT JOIN staff s ON s.employee_no = hs.employee_no
@@ -47,6 +48,8 @@ export async function getHandoverPdfData(handoverId: number): Promise<HandoverPd
   if (!row.employee_no || !row.recipient_name) {
     throw new Error('Handover PDF requires a staff recipient (handover_staff record)');
   }
+
+  const handedByName = await getDisplayNameByOid(row.handed_by_oid);
 
   const itemName =
     row.category?.trim() ||
@@ -65,7 +68,7 @@ export async function getHandoverPdfData(handoverId: number): Promise<HandoverPd
     serialNumber: row.serial_num?.trim() || '—',
     adapter: '—',
     remark: row.handover_remarks?.trim() || row.remarks?.trim() || '—',
-    handoverByName: row.handed_by_name?.trim() || '—',
+    handoverByName: handedByName || '—',
     handoverByDesignation: row.handed_by_role?.trim() || 'IT Department',
   };
 }

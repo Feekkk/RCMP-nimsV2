@@ -107,15 +107,10 @@ export function UserProfileCompleteDialog({
         )}
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-          <FormField label="Full name" required>
+          <FormField label="Full name">
             <div className="relative">
               <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="rounded-[8px] pl-9"
-              />
+              <Input value={fullName} disabled className="rounded-[8px] bg-muted/50 pl-9" />
             </div>
           </FormField>
           <FormField label="Email" required>

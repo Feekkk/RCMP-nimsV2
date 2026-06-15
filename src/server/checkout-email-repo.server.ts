@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { CheckoutEmailData } from '@/lib/checkout-email-types';
+import { getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getRequestEmailData } from '@/server/request-email-repo.server';
 import { getDbPool } from '@/server/db';
 
@@ -35,10 +36,11 @@ export async function getCheckoutEmailData(
   const pool = getDbPool();
   const placeholders = assignmentIds.map(() => '?').join(', ');
 
-  const [techRows] = await pool.query<(RowDataPacket & { full_name: string | null })[]>(
-    `SELECT full_name FROM users WHERE staff_id = ? LIMIT 1`,
+  const [techRows] = await pool.query<(RowDataPacket & { oid: string | null })[]>(
+    `SELECT oid FROM users WHERE id = ? LIMIT 1`,
     [checkedOutBy],
   );
+  const checkedOutByName = await getDisplayNameByOid(techRows[0]?.oid ?? null);
 
   const [assetRows] = await pool.query<CheckoutAssetRow[]>(
     `SELECT ra.assignment_id, ra.asset_id, ra.checkout_at,
@@ -92,7 +94,7 @@ export async function getCheckoutEmailData(
     reason: base.reason,
     submittedAt: base.submittedAt,
     requestedItems: base.items,
-    checkedOutByName: techRows[0]?.full_name?.trim() || checkedOutBy,
+    checkedOutByName: checkedOutByName || checkedOutBy,
     checkedOutByStaffId: checkedOutBy,
     checkedOutAt: latestCheckout,
     assets,
