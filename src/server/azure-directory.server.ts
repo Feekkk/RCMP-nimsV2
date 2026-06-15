@@ -10,6 +10,7 @@ type DirectoryUser = {
   oid: string;
   displayName: string | null;
   email: string | null;
+  phone: string | null;
 };
 
 type GraphUser = {
@@ -187,6 +188,40 @@ export async function getDisplayNameByOid(
   return map.get(trimmed) ?? (fallback || trimmed);
 }
 
+function mapGraphUser(u: GraphUser & { mobilePhone?: string | null; businessPhones?: string[] }): DirectoryUser {
+  const phone =
+    (u.mobilePhone ?? '').trim() ||
+    (u.businessPhones?.find((p) => p?.trim()) ?? '').trim() ||
+    null;
+  return {
+    oid: u.id,
+    displayName: (u.displayName ?? '').trim() || null,
+    email: (u.mail ?? u.userPrincipalName ?? null)?.toLowerCase() ?? null,
+    phone: phone || null,
+  };
+}
+
+/** Look up a directory user by Azure object id (oid). */
+export async function getDirectoryUserByOid(oid: string): Promise<DirectoryUser | null> {
+  const trimmed = oid.trim();
+  if (!trimmed) return null;
+
+  const config = getMicrosoftAuthConfig();
+  if (!config) return null;
+
+  try {
+    const token = await getGraphAppToken(config);
+    const u = await graphGet<GraphUser & { mobilePhone?: string | null; businessPhones?: string[] }>(
+      `/users/${encodeURIComponent(trimmed)}?$select=id,displayName,mail,userPrincipalName,mobilePhone,businessPhones`,
+      token,
+    );
+    if (!u?.id) return null;
+    return mapGraphUser(u);
+  } catch {
+    return null;
+  }
+}
+
 /** Look up a directory user by email (mail or userPrincipalName); used for pre-provision + oid binding. */
 export async function getDirectoryUserByEmail(email: string): Promise<DirectoryUser | null> {
   const normalized = email.trim().toLowerCase();
@@ -199,17 +234,13 @@ export async function getDirectoryUserByEmail(email: string): Promise<DirectoryU
     const token = await getGraphAppToken(config);
     const literal = escapeODataLiteral(normalized);
     const filter = encodeURIComponent(`mail eq '${literal}' or userPrincipalName eq '${literal}'`);
-    const data = await graphGet<{ value: GraphUser[] }>(
-      `/users?$select=id,displayName,mail,userPrincipalName&$filter=${filter}`,
+    const data = await graphGet<{ value: (GraphUser & { mobilePhone?: string | null; businessPhones?: string[] })[] }>(
+      `/users?$select=id,displayName,mail,userPrincipalName,mobilePhone,businessPhones&$filter=${filter}`,
       token,
     );
     const u = data.value?.[0];
     if (!u?.id) return null;
-    return {
-      oid: u.id,
-      displayName: (u.displayName ?? '').trim() || null,
-      email: (u.mail ?? u.userPrincipalName ?? null)?.toLowerCase() ?? null,
-    };
+    return mapGraphUser(u);
   } catch {
     return null;
   }

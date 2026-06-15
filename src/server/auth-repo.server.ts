@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
-import { getDisplayNameByOid } from '@/server/azure-directory.server';
+import { getDisplayNameByOid, getDirectoryUserByOid } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 export type AuthUserRow = {
@@ -10,6 +10,10 @@ export type AuthUserRow = {
   roleId: number;
   roleName: string;
   phone: string | null;
+};
+
+export type StaffProfileRow = AuthUserRow & {
+  oid: string | null;
 };
 
 type UserRow = RowDataPacket & {
@@ -230,11 +234,31 @@ function assertStaffAccount(roleId: number): void {
   }
 }
 
-export async function getStaffProfile(staffId: string): Promise<AuthUserRow> {
+export async function getStaffProfile(staffId: string): Promise<StaffProfileRow> {
   const row = await findUserById(parseUserId(staffId));
   if (!row) throw new Error('Account not found');
   assertStaffAccount(row.role_id);
-  return mapUserWithAzureName(row);
+
+  const oid = row.oid?.trim() || null;
+  if (oid) {
+    const directory = await getDirectoryUserByOid(oid);
+    if (directory) {
+      return {
+        staffId: String(row.id),
+        oid: directory.oid,
+        fullName:
+          directory.displayName?.trim() ||
+          displayNameFromEmail(directory.email ?? row.email),
+        email: directory.email ?? row.email,
+        roleId: row.role_id,
+        roleName: row.role_name,
+        phone: directory.phone ?? row.phone,
+      };
+    }
+  }
+
+  const displayName = await getDisplayNameByOid(row.oid, row.email);
+  return { ...mapUser(row, displayName), oid };
 }
 
 export async function updateStaffProfile(input: UpdateUserProfileInput): Promise<AuthUserRow> {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { IdCard, Mail, Phone, User } from 'lucide-react';
+import { Fingerprint, Mail, Phone, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ export function TechnicianProfilePage() {
   const [session, setSession] = useState<SessionUser | null>(() => readTechnicianSession());
   const [loading, setLoading] = useState(true);
 
+  const [oid, setOid] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -42,6 +43,7 @@ export function TechnicianProfilePage() {
 
     void getStaffProfileFn({ data: { staffId: tech.staffId } })
       .then((profile) => {
+        setOid(profile.oid ?? '');
         setFullName(profile.fullName);
         setEmail(profile.email);
         setPhone(profile.phone ?? '');
@@ -76,16 +78,10 @@ export function TechnicianProfilePage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">My profile</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            View your technician account details.
+            Your details are loaded from Microsoft Entra ID.
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="shrink-0 rounded-[8px]"
-          onClick={handleSignOut}
-        >
+        <Button type="button" variant="outline" className="rounded-[8px]" onClick={handleSignOut}>
           Sign out
         </Button>
       </div>
@@ -105,9 +101,6 @@ export function TechnicianProfilePage() {
               <Badge variant={roleBadgeVariant(session.roleId)} className="rounded-[6px] capitalize">
                 {session.roleName}
               </Badge>
-              <Badge variant="outline" className="rounded-[6px] font-mono text-[10px]">
-                {session.staffId}
-              </Badge>
             </div>
             {phone && (
               <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -125,17 +118,24 @@ export function TechnicianProfilePage() {
                 <User className="h-4 w-4 text-muted-foreground" />
                 Personal details
               </CardTitle>
-              <CardDescription>Profile details are managed by your administrator.</CardDescription>
+              <CardDescription>
+                Name, email, and phone are read from Azure AD. Contact your administrator to update
+                directory information.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Loading profile…</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">Loading profile from Azure…</p>
               ) : (
                 <div className="space-y-4">
-                  <FormField label="Staff ID">
+                  <FormField label="Microsoft OID">
                     <div className="relative">
-                      <IdCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input value={session.staffId} disabled className="rounded-[8px] bg-muted/50 pl-9 font-mono" />
+                      <Fingerprint className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={oid || '—'}
+                        disabled
+                        className="rounded-[8px] bg-muted/50 pl-9 font-mono text-xs"
+                      />
                     </div>
                   </FormField>
                   <FormField label="Full name">
