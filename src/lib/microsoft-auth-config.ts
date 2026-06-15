@@ -44,5 +44,5 @@ export function getMicrosoftAuthConfig(): MicrosoftAuthConfig | null {
 }
 
 export function microsoftAuthority(tenantId: string): string {
-  return `https://login.microsoftonline.com/${tenantId}/v2.0`;
+  return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0`;
 }
