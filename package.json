@@ -15,7 +15,6 @@
     "overdue-emails": "npx tsx scripts/run-overdue-return-emails.ts"
   },
   "dependencies": {
-    "@cloudflare/vite-plugin": "^1.25.5",
     "@hookform/resolvers": "^5.2.2",
     "@pdfme/common": "^6.1.2",
     "@pdfme/generator": "^6.1.2",
@@ -86,6 +85,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
+    "nitro": "npm:nitro-nightly@latest",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"

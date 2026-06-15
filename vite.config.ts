@@ -2,8 +2,8 @@ import path from "path";
 import { pathToFileURL } from "url";
 import { defineConfig, loadEnv } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { nitro } from "nitro/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -181,11 +181,7 @@ function overdueReturnEmailSchedulerPlugin() {
   };
 }
 
-export default defineConfig(({ command, mode }) => {
-  // Use Cloudflare Workers plugin for builds (produces worker output)
-  // Skip for dev server (command=serve) since workerd runtime isn't available
-  const useCloudflare = command === "build";
-
+export default defineConfig(({ mode }) => {
   // Load VITE_ env vars and define them for SSR
   // Note: loadEnv strips the prefix, so we add it back
   const env = loadEnv(mode, process.cwd(), "VITE_");
@@ -222,9 +218,9 @@ export default defineConfig(({ command, mode }) => {
       devClientErrorLogger(),
       devServerFnErrorLogger(),
       overdueReturnEmailSchedulerPlugin(),
-      ...(useCloudflare ? [cloudflare({ viteEnvironment: { name: "ssr" } })] : []),
       tanstackStart(),
       viteReact(),
-    ].filter(Boolean),
+      nitro(),
+    ],
   };
 });
