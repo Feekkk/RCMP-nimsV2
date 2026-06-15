@@ -58,6 +58,7 @@ import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
 import { UserProfileCompleteDialog } from '@/user/profile-complete-dialog';
 import { getUserProfileFn } from '@/server/auth.functions';
+import { localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 
 const STEPS = [
@@ -475,6 +476,9 @@ function DetailsStep({
   onUsageLocationChange: (v: string) => void;
   onReasonChange: (v: string) => void;
 }) {
+  const todayIso = localDateToIso(new Date());
+  const minReturnDate = borrowDate && borrowDate > todayIso ? borrowDate : todayIso;
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -482,12 +486,14 @@ function DetailsStep({
           label="Borrow date"
           value={borrowDate}
           onChange={onBorrowDateChange}
+          minDate={todayIso}
           required
         />
         <DatePickerField
           label="Return date"
           value={returnDate}
           onChange={onReturnDateChange}
+          minDate={minReturnDate}
           required
         />
       </div>
