@@ -6,8 +6,7 @@ import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 import { getMicrosoftLoginUrlFn } from '@/server/auth.functions';
-
-const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
+import { MICROSOFT_OAUTH_STATE_KEY } from '@/auth/microsoft-callback-page';
 
 function MicrosoftIcon() {
   return (

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,16 +7,9 @@ import { NimsLogo } from '@/components/brand/NimsLogo';
 import { isAdminRole, isStaffRole, persistSession } from '@/lib/auth-session';
 import { completeMicrosoftLoginFn } from '@/server/auth.functions';
 
-const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
+export const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
 
-export const Route = createFileRoute('/auth/microsoft/callback')({
-  head: () => ({
-    meta: [{ title: 'Microsoft sign-in | NIMS' }],
-  }),
-  component: MicrosoftCallbackPage,
-});
-
-function MicrosoftCallbackPage() {
+export function MicrosoftCallbackPage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
@@ -46,7 +39,9 @@ function MicrosoftCallbackPage() {
       .then((user) => {
         persistSession(user);
         if (user.accountCreated) {
-          toast.success(`Welcome, ${user.fullName}! Your account is ready — you can submit equipment requests anytime.`);
+          toast.success(
+            `Welcome, ${user.fullName}! Your account is ready — you can submit equipment requests anytime.`,
+          );
         } else {
           toast.success(`Signed in as ${user.fullName}`);
         }

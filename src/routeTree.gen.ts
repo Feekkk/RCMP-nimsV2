@@ -35,9 +35,9 @@ import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminExportRouteImport } from './routes/admin/export'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
-import { Route as AuthMicrosoftCallbackRouteImport } from './routes/auth/microsoft.callback'
 import { Route as ApiCronOverdueReturnEmailsRouteImport } from './routes/api/cron/overdue-return-emails'
 import { Route as TechnicianAssetKindAssetIdRouteImport } from './routes/technician/asset.$kind.$assetId'
+import { Route as ApiAuthMicrosoftCallbackRouteImport } from './routes/api/auth/microsoft.callback'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -169,11 +169,6 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
   path: '/admin/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthMicrosoftCallbackRoute = AuthMicrosoftCallbackRouteImport.update({
-  id: '/auth/microsoft/callback',
-  path: '/auth/microsoft/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiCronOverdueReturnEmailsRoute =
   ApiCronOverdueReturnEmailsRouteImport.update({
     id: '/api/cron/overdue-return-emails',
@@ -184,6 +179,12 @@ const TechnicianAssetKindAssetIdRoute =
   TechnicianAssetKindAssetIdRouteImport.update({
     id: '/technician/asset/$kind/$assetId',
     path: '/technician/asset/$kind/$assetId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthMicrosoftCallbackRoute =
+  ApiAuthMicrosoftCallbackRouteImport.update({
+    id: '/api/auth/microsoft/callback',
+    path: '/api/auth/microsoft/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -215,7 +216,7 @@ export interface FileRoutesByFullPath {
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
-  '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
+  '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRoutesByTo {
@@ -246,7 +247,7 @@ export interface FileRoutesByTo {
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
-  '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
+  '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRoutesById {
@@ -278,7 +279,7 @@ export interface FileRoutesById {
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
-  '/auth/microsoft/callback': typeof AuthMicrosoftCallbackRoute
+  '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
 }
 export interface FileRouteTypes {
@@ -311,7 +312,7 @@ export interface FileRouteTypes {
     | '/user/history'
     | '/user/request'
     | '/api/cron/overdue-return-emails'
-    | '/auth/microsoft/callback'
+    | '/api/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -342,7 +343,7 @@ export interface FileRouteTypes {
     | '/user/history'
     | '/user/request'
     | '/api/cron/overdue-return-emails'
-    | '/auth/microsoft/callback'
+    | '/api/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   id:
     | '__root__'
@@ -373,7 +374,7 @@ export interface FileRouteTypes {
     | '/user/history'
     | '/user/request'
     | '/api/cron/overdue-return-emails'
-    | '/auth/microsoft/callback'
+    | '/api/auth/microsoft/callback'
     | '/technician/asset/$kind/$assetId'
   fileRoutesById: FileRoutesById
 }
@@ -405,7 +406,7 @@ export interface RootRouteChildren {
   UserHistoryRoute: typeof UserHistoryRoute
   UserRequestRoute: typeof UserRequestRoute
   ApiCronOverdueReturnEmailsRoute: typeof ApiCronOverdueReturnEmailsRoute
-  AuthMicrosoftCallbackRoute: typeof AuthMicrosoftCallbackRoute
+  ApiAuthMicrosoftCallbackRoute: typeof ApiAuthMicrosoftCallbackRoute
   TechnicianAssetKindAssetIdRoute: typeof TechnicianAssetKindAssetIdRoute
 }
 
@@ -593,13 +594,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/microsoft/callback': {
-      id: '/auth/microsoft/callback'
-      path: '/auth/microsoft/callback'
-      fullPath: '/auth/microsoft/callback'
-      preLoaderRoute: typeof AuthMicrosoftCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/cron/overdue-return-emails': {
       id: '/api/cron/overdue-return-emails'
       path: '/api/cron/overdue-return-emails'
@@ -612,6 +606,13 @@ declare module '@tanstack/react-router' {
       path: '/technician/asset/$kind/$assetId'
       fullPath: '/technician/asset/$kind/$assetId'
       preLoaderRoute: typeof TechnicianAssetKindAssetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/microsoft/callback': {
+      id: '/api/auth/microsoft/callback'
+      path: '/api/auth/microsoft/callback'
+      fullPath: '/api/auth/microsoft/callback'
+      preLoaderRoute: typeof ApiAuthMicrosoftCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -645,7 +646,7 @@ const rootRouteChildren: RootRouteChildren = {
   UserHistoryRoute: UserHistoryRoute,
   UserRequestRoute: UserRequestRoute,
   ApiCronOverdueReturnEmailsRoute: ApiCronOverdueReturnEmailsRoute,
-  AuthMicrosoftCallbackRoute: AuthMicrosoftCallbackRoute,
+  ApiAuthMicrosoftCallbackRoute: ApiAuthMicrosoftCallbackRoute,
   TechnicianAssetKindAssetIdRoute: TechnicianAssetKindAssetIdRoute,
 }
 export const routeTree = rootRouteImport
