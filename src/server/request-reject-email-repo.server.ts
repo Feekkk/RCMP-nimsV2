@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { RequestRejectEmailData } from '@/lib/request-reject-email-types';
-import { getDisplayNameByOid } from '@/server/azure-directory.server';
+import { resolveAccountProfile } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 type RequestRejectEmailHeaderRow = RowDataPacket & {
@@ -59,15 +59,18 @@ export async function getRequestRejectEmailData(
   const row = headers[0];
   if (!row) return null;
 
-  const email = row.requester_email?.trim();
-  if (!email || !email.includes('@')) {
+  const profile = await resolveAccountProfile(row.requester_oid, {
+    email: row.requester_email,
+    phone: row.requester_phone,
+  });
+
+  if (!profile.email.includes('@')) {
     throw new Error(
       'Cannot send rejection email: requester has no email on file. Update their profile or contact IT.',
     );
   }
 
-  const requesterName = await getDisplayNameByOid(row.requester_oid, email);
-  const rejectedByName = await getDisplayNameByOid(row.rejected_by_oid);
+  const rejectedByProfile = await resolveAccountProfile(row.rejected_by_oid);
 
   const [items] = await pool.query<RequestRejectEmailItemRow[]>(
     `SELECT asset_type, quantity FROM request_item WHERE request_id = ? ORDER BY request_item_id`,
@@ -76,10 +79,10 @@ export async function getRequestRejectEmailData(
 
   return {
     requestId: row.request_id,
-    requestedBy: row.requested_by,
-    requesterName: requesterName || row.requested_by,
-    requesterEmail: email,
-    requesterPhone: row.requester_phone?.trim() || null,
+    requestedBy: String(row.requested_by),
+    requesterName: profile.fullName || String(row.requested_by),
+    requesterEmail: profile.email,
+    requesterPhone: profile.phone,
     borrowDate: formatDateOnly(row.borrow_date),
     returnDate: formatDateOnly(row.return_date),
     programType: row.program_type,
@@ -87,8 +90,8 @@ export async function getRequestRejectEmailData(
     reason: row.reason?.trim() || null,
     submittedAt: formatDateTime(row.created_at) ?? formatDateOnly(row.borrow_date),
     rejectedAt: formatDateTime(row.rejected_at) ?? '',
-    rejectedBy: row.rejected_by,
-    rejectedByName: rejectedByName || row.rejected_by,
+    rejectedBy: String(row.rejected_by),
+    rejectedByName: rejectedByProfile.fullName || String(row.rejected_by),
     rejectionReason: row.rejection_reason.trim(),
     items: items.map((i) => ({
       assetType: i.asset_type,

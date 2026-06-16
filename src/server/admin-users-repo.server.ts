@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AdminUserRow, CreateAdminUserInput, UpdateAdminUserInput } from '@/lib/admin-users-schema';
 import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
-import { getDirectoryUserByEmail, getDisplayNamesByOids } from '@/server/azure-directory.server';
+import { getDirectoryUserByEmail, getDirectoryUsersByOids } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 type AdminUserDbRow = RowDataPacket & {
@@ -48,25 +48,22 @@ export async function listAdminUsers(): Promise<AdminUserRow[]> {
      ORDER BY u.created_at DESC`,
   );
 
-  const fallback = new Map<string, string>();
-  for (const r of rows) {
-    if (r.oid) fallback.set(r.oid, emailLocalPart(r.email));
-  }
-  const names = await getDisplayNamesByOids(
-    rows.map((r) => r.oid),
-    fallback,
-  );
+  const directory = await getDirectoryUsersByOids(rows.map((r) => r.oid));
 
-  return rows.map((r) => ({
-    staffId: String(r.id),
-    fullName: (r.oid ? names.get(r.oid) : null) || emailLocalPart(r.email),
-    email: r.email,
-    roleId: r.role_id,
-    roleName: r.role_name,
-    phone: r.phone,
-    lastLoginAt: formatDateTime(r.last_login_at),
-    createdAt: formatDateTime(r.created_at) ?? '',
-  }));
+  return rows.map((r) => {
+    const d = r.oid?.trim() ? directory.get(r.oid.trim()) : undefined;
+    const email = (d?.email ?? r.email).trim();
+    return {
+      staffId: String(r.id),
+      fullName: d?.displayName?.trim() || emailLocalPart(email),
+      email,
+      roleId: r.role_id,
+      roleName: r.role_name,
+      phone: d?.phone ?? r.phone,
+      lastLoginAt: formatDateTime(r.last_login_at),
+      createdAt: formatDateTime(r.created_at) ?? '',
+    };
+  });
 }
 
 export async function createAdminUser(input: CreateAdminUserInput): Promise<AdminUserRow> {

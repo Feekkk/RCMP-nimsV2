@@ -5,6 +5,15 @@ import { getMicrosoftEmailConfig, isEmailConfigured } from '@/lib/microsoft-emai
 
 let transporter: Transporter | null = null;
 
+/** Coerces DB/driver values (e.g. numeric ids) before HTML escaping. */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
 function getTransporter(): Transporter {
   const config = getMicrosoftEmailConfig();
   if (!config) {

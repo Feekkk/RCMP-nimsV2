@@ -4,19 +4,11 @@ import type { ReturnEmailData } from '@/lib/return-email-types';
 import { RETURN_IT_CC } from '@/lib/return-email-types';
 import type { SendReturnEmailResult } from '@/lib/return-email-types';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
-import { sendNotificationEmail } from '@/server/email.server';
+import { escapeHtml, sendNotificationEmail } from '@/server/email.server';
 
 const LOGO_CID = 'unikl-logo';
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function detailRow(label: string, value: string): string {
+function detailRow(label: string, value: unknown): string {
   return `<tr>
     <td style="padding:10px 12px;border-bottom:1px solid #e8ecf0;color:#5c6b7a;font-size:13px;width:38%;vertical-align:top;">${escapeHtml(label)}</td>
     <td style="padding:10px 12px;border-bottom:1px solid #e8ecf0;color:#1a2332;font-size:13px;font-weight:600;">${escapeHtml(value)}</td>

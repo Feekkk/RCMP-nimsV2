@@ -4,6 +4,7 @@ import type { CheckoutEmailData } from '@/lib/checkout-email-types';
 import { REQUEST_IT_EMAIL } from '@/lib/checkout-email-types';
 import type { SendCheckoutEmailInput, SendCheckoutEmailResult } from '@/lib/checkout-email-types';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
+import { escapeHtml } from '@/server/email.server';
 import { getCheckoutEmailData } from '@/server/checkout-email-repo.server';
 
 const LOGO_CID = 'unikl-logo';
@@ -13,15 +14,7 @@ function loadLogoBuffer(): Buffer {
   return readFileSync(path);
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
-}
-
-function detailRow(label: string, value: string): string {
+function detailRow(label: string, value: unknown): string {
   return `<tr>
     <td style="padding:10px 12px;border-bottom:1px solid #e8ecf0;color:#5c6b7a;font-size:13px;width:38%;vertical-align:top;">${escapeHtml(label)}</td>
     <td style="padding:10px 12px;border-bottom:1px solid #e8ecf0;color:#1a2b3c;font-size:13px;font-weight:600;">${escapeHtml(value)}</td>

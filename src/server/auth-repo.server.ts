@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
-import { getDisplayNameByOid, getDirectoryUserByOid } from '@/server/azure-directory.server';
+import { getDirectoryUserByEmail, resolveAccountProfile } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 export type AuthUserRow = {
@@ -29,26 +29,21 @@ export type LoginRole = 'user' | 'staff';
 
 const USER_SELECT = `SELECT u.id, u.oid, u.email, u.role_id, u.phone, r.name AS role_name`;
 
-function displayNameFromEmail(email: string): string {
-  const local = email.split('@')[0]?.trim();
-  return local || email;
-}
-
-function mapUser(row: UserRow, displayName?: string | null): AuthUserRow {
+function mapUser(row: UserRow, profile: { fullName: string; email: string; phone: string | null }): AuthUserRow {
   return {
     staffId: String(row.id),
-    fullName: displayName?.trim() || displayNameFromEmail(row.email),
-    email: row.email,
+    fullName: profile.fullName,
+    email: profile.email,
     roleId: row.role_id,
     roleName: row.role_name,
-    phone: row.phone,
+    phone: profile.phone,
   };
 }
 
-/** Resolve full name from Azure by oid, falling back to email local-part. */
-async function mapUserWithAzureName(row: UserRow): Promise<AuthUserRow> {
-  const displayName = await getDisplayNameByOid(row.oid, row.email);
-  return mapUser(row, displayName);
+/** Personal fields from Azure by oid; DB email/phone are login fallbacks only. */
+async function mapUserWithAzureProfile(row: UserRow): Promise<AuthUserRow> {
+  const profile = await resolveAccountProfile(row.oid, { email: row.email, phone: row.phone });
+  return mapUser(row, profile);
 }
 
 async function findUserById(id: number): Promise<UserRow | null> {
@@ -180,7 +175,7 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
 
   const updated = await findUserById(row.id);
   if (!updated) throw new Error('Account not found after sign-in');
-  return { ...(await mapUserWithAzureName(updated)), accountCreated };
+  return { ...(await mapUserWithAzureProfile(updated)), accountCreated };
 }
 
 /** Temporary dev sign-in: no password. Auto-creates user role accounts when email is not in DB. */
@@ -211,7 +206,7 @@ export async function loginDevByEmail(email: string, loginRole: LoginRole): Prom
 
   const updated = await findUserById(row.id);
   if (!updated) throw new Error('Account not found after sign-in');
-  return mapUserWithAzureName(updated);
+  return mapUserWithAzureProfile(updated);
 }
 
 export type UpdateUserProfileInput = {
@@ -239,26 +234,8 @@ export async function getStaffProfile(staffId: string): Promise<StaffProfileRow>
   if (!row) throw new Error('Account not found');
   assertStaffAccount(row.role_id);
 
-  const oid = row.oid?.trim() || null;
-  if (oid) {
-    const directory = await getDirectoryUserByOid(oid);
-    if (directory) {
-      return {
-        staffId: String(row.id),
-        oid: directory.oid,
-        fullName:
-          directory.displayName?.trim() ||
-          displayNameFromEmail(directory.email ?? row.email),
-        email: directory.email ?? row.email,
-        roleId: row.role_id,
-        roleName: row.role_name,
-        phone: directory.phone ?? row.phone,
-      };
-    }
-  }
-
-  const displayName = await getDisplayNameByOid(row.oid, row.email);
-  return { ...mapUser(row, displayName), oid };
+  const profile = await mapUserWithAzureProfile(row);
+  return { ...profile, oid: row.oid?.trim() || null };
 }
 
 export async function updateStaffProfile(input: UpdateUserProfileInput): Promise<AuthUserRow> {
@@ -291,7 +268,7 @@ export async function getUserProfile(staffId: string): Promise<AuthUserRow> {
   if (row.role_id !== ROLE_USER) {
     throw new Error('Only user accounts can access this profile');
   }
-  return mapUserWithAzureName(row);
+  return mapUserWithAzureProfile(row);
 }
 
 export async function updateUserProfile(input: UpdateUserProfileInput): Promise<AuthUserRow> {

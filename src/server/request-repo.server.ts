@@ -38,7 +38,7 @@ import type {
 import { STATUS_ID } from '@/lib/asset-status-actions';
 import { requestItemKindFromAssetType } from '@/lib/request-asset-types';
 import { isUserProfileComplete } from '@/lib/user-profile';
-import { attachDisplayNames, getDisplayNameByOid } from '@/server/azure-directory.server';
+import { attachDisplayNames, resolveAccountProfile } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 const ACTIVE_STATUS = STATUS_ID.ACTIVE;
@@ -1217,14 +1217,11 @@ export async function submitUserRequest(
     );
     const userRow = userRows[0];
     if (!userRow) throw new Error('User account not found');
-    const fullName = await getDisplayNameByOid(userRow.oid, userRow.email);
-    if (
-      !isUserProfileComplete({
-        fullName,
-        email: userRow.email,
-        phone: userRow.phone,
-      })
-    ) {
+    const profile = await resolveAccountProfile(userRow.oid, {
+      email: userRow.email,
+      phone: userRow.phone,
+    });
+    if (!isUserProfileComplete(profile)) {
       throw new Error('Complete your profile (name, email, and phone) before submitting a request');
     }
 

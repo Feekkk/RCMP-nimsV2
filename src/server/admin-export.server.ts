@@ -1,5 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
-import { attachDisplayNames } from '@/server/azure-directory.server';
+import { attachDisplayNames, getDirectoryUsersByOids } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 export type AdminExportKind = 'users' | 'requests' | 'laptop' | 'av' | 'network' | 'staff';
@@ -47,20 +47,25 @@ export async function exportAdminCsv(kind: AdminExportKind): Promise<AdminExport
        ORDER BY u.id`,
     );
     await attachDisplayNames(rows, 'oid', 'full_name');
+    const directory = await getDirectoryUsersByOids(rows.map((r) => r.oid));
     return {
       filename: `nims-users-${stamp}.csv`,
       contentType: 'text/csv;charset=utf-8',
       body: toCsv(
         ['id', 'full_name', 'email', 'role', 'phone', 'last_login_at', 'created_at'],
-        rows.map((r) => [
-          r.id,
-          r.full_name,
-          r.email,
-          r.role_name,
-          r.phone,
-          r.last_login_at,
-          r.created_at,
-        ]),
+        rows.map((r) => {
+          const d = r.oid?.trim() ? directory.get(r.oid.trim()) : undefined;
+          const email = (d?.email ?? r.email).trim();
+          return [
+            r.id,
+            r.full_name,
+            email,
+            r.role_name,
+            d?.phone ?? r.phone,
+            r.last_login_at,
+            r.created_at,
+          ];
+        }),
       ),
     };
   }
