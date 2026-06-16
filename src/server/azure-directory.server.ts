@@ -123,9 +123,9 @@ async function fetchGraphUsersByOids(oids: string[]): Promise<DirectoryUser[]> {
   const token = await getGraphAppToken(config);
   const users: DirectoryUser[] = [];
   for (const group of chunk(oids, OID_FILTER_CHUNK)) {
-    const filter = group.map((oid) => `'${escapeODataLiteral(oid)}'`).join(',');
+    const filterExpr = `id in (${group.map((oid) => `'${escapeODataLiteral(oid)}'`).join(',')})`;
     const data = await graphGet<{ value: GraphUserWithPhone[] }>(
-      `/users?$select=${GRAPH_USER_SELECT}&$filter=id in (${encodeURIComponent(filter)})`,
+      `/users?$count=true&$select=${GRAPH_USER_SELECT}&$filter=${encodeURIComponent(filterExpr)}`,
       token,
     );
     for (const u of data.value ?? []) {
@@ -188,7 +188,8 @@ export async function resolveAccountProfile(
       (await getDirectoryUserByOid(trimmedOid))
     : null;
 
-  const email = (directory?.email ?? dbEmail).trim();
+  const directoryEmail = directory?.email?.trim();
+  const email = (directoryEmail || dbEmail).trim();
   const phone = directory?.phone ?? dbFallback?.phone?.trim() ?? null;
   const fullName =
     directory?.displayName?.trim() ||
@@ -280,6 +281,14 @@ export async function getDisplayNameByOid(
   return map.get(trimmed) ?? (fallback || trimmed);
 }
 
+function pickGraphEmail(u: GraphUser): string | null {
+  const mail = u.mail?.trim();
+  if (mail) return mail.toLowerCase();
+  const upn = u.userPrincipalName?.trim();
+  if (upn) return upn.toLowerCase();
+  return null;
+}
+
 function mapGraphUser(u: GraphUserWithPhone): DirectoryUser {
   const phone =
     (u.mobilePhone ?? '').trim() ||
@@ -288,7 +297,7 @@ function mapGraphUser(u: GraphUserWithPhone): DirectoryUser {
   return {
     oid: u.id,
     displayName: (u.displayName ?? '').trim() || null,
-    email: (u.mail ?? u.userPrincipalName ?? null)?.toLowerCase() ?? null,
+    email: pickGraphEmail(u),
     phone: phone || null,
   };
 }
