@@ -55,10 +55,14 @@ export function loadServerEnv(): void {
   if (loaded) return;
   loaded = true;
 
+  let found = false;
   for (const path of envCandidates()) {
     if (!existsSync(path)) continue;
     parseEnvFile(path);
-    return;
+    found = true;
+  }
+  if (!found && process.env.NODE_ENV !== 'production') {
+    console.warn('[env] No .env file found — set AZURE_*, MYSQL_*, SMTP_* in .env or the host panel');
   }
 }
 

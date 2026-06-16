@@ -1,6 +1,8 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import '@/server/env.server';
 import {
   getMicrosoftAuthConfig,
+  listMissingMicrosoftAuthEnv,
   microsoftAuthority,
   type MicrosoftAuthConfig,
 } from '@/lib/microsoft-auth-config';
@@ -131,11 +133,21 @@ function resolveEmail(profile: GraphMe, allowedDomains: string[]): string {
   return raw;
 }
 
-export function getMicrosoftLoginRedirect(): { url: string; state: string } {
+function assertMicrosoftAuthConfig(): MicrosoftAuthConfig {
   const config = getMicrosoftAuthConfig();
   if (!config) {
-    throw new Error('Microsoft SSO is not configured on this server');
+    const missing = listMissingMicrosoftAuthEnv();
+    throw new Error(
+      missing.length > 0
+        ? `Microsoft SSO is not configured — add to .env (not .env.example): ${missing.join(', ')}`
+        : 'Microsoft SSO is not configured on this server',
+    );
   }
+  return config;
+}
+
+export function getMicrosoftLoginRedirect(): { url: string; state: string } {
+  const config = assertMicrosoftAuthConfig();
   const state = createMicrosoftOAuthState(config);
   return { url: buildMicrosoftAuthorizeUrl(config, state), state };
 }
@@ -152,10 +164,7 @@ function parseOAuthStatePayload(config: MicrosoftAuthConfig, state: string): OAu
 }
 
 export async function completeMicrosoftLogin(code: string, state: string): Promise<MicrosoftLoginResult> {
-  const config = getMicrosoftAuthConfig();
-  if (!config) {
-    throw new Error('Microsoft SSO is not configured on this server');
-  }
+  const config = assertMicrosoftAuthConfig();
   const statePayload = parseOAuthStatePayload(config, state);
   if (!statePayload) {
     throw new Error('Invalid or expired sign-in session. Please try again.');
