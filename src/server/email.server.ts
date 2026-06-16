@@ -2,7 +2,6 @@ import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type { SendNotificationEmailInput, SendNotificationEmailResult } from '@/lib/email-notification';
 import { getMicrosoftEmailConfig, isEmailConfigured } from '@/lib/microsoft-email-config';
-import '@/server/env.server';
 
 let transporter: Transporter | null = null;
 

@@ -1,12 +1,5 @@
 /** Server-only Microsoft Entra ID (Azure AD) OAuth settings. */
 
-const REQUIRED_AZURE_ENV = [
-  'AZURE_TENANT_ID',
-  'AZURE_CLIENT_ID',
-  'AZURE_CLIENT_SECRET',
-  'AZURE_REDIRECT_URI',
-] as const;
-
 export type MicrosoftAuthConfig = {
   tenantId: string;
   clientId: string;
@@ -26,20 +19,15 @@ export function isMicrosoftSsoEnabledForClient(): boolean {
   return true;
 }
 
-/** Names of required AZURE_* vars that are unset or empty (for login error messages). */
-export function listMissingMicrosoftAuthEnv(): string[] {
-  return REQUIRED_AZURE_ENV.filter((key) => !process.env[key]?.trim());
-}
-
 export function getMicrosoftAuthConfig(): MicrosoftAuthConfig | null {
-  if (listMissingMicrosoftAuthEnv().length > 0) {
+  const tenantId = process.env.AZURE_TENANT_ID?.trim();
+  const clientId = process.env.AZURE_CLIENT_ID?.trim();
+  const clientSecret = process.env.AZURE_CLIENT_SECRET?.trim();
+  const redirectUri = process.env.AZURE_REDIRECT_URI?.trim();
+
+  if (!tenantId || !clientId || !clientSecret || !redirectUri) {
     return null;
   }
-
-  const tenantId = process.env.AZURE_TENANT_ID!.trim();
-  const clientId = process.env.AZURE_CLIENT_ID!.trim();
-  const clientSecret = process.env.AZURE_CLIENT_SECRET!.trim();
-  const redirectUri = process.env.AZURE_REDIRECT_URI!.trim();
 
   const domainsRaw = process.env.AZURE_ALLOWED_EMAIL_DOMAINS?.trim() ?? '';
   const allowedEmailDomains = domainsRaw
