@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { Search, Tv } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,7 @@ export function TechnicianAvPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
-  const [showLegacyId, setShowLegacyId] = useState<Set<number>>(() => new Set());
+  const [showLegacyIdColumn, setShowLegacyIdColumn] = useState(false);
   const { items, isLoading, error, updateStatus } = useAssets('av');
 
   const filtered = useMemo(() => {
@@ -33,15 +33,6 @@ export function TechnicianAvPage() {
     );
     return filterByStatus(bySearch, statusFilter);
   }, [items, search, statusFilter]);
-
-  const toggleIdView = (assetId: number) => {
-    setShowLegacyId((prev) => {
-      const next = new Set(prev);
-      if (next.has(assetId)) next.delete(assetId);
-      else next.add(assetId);
-      return next;
-    });
-  };
 
   const pagination = usePagination(filtered, {
     resetKey: `${search}|${statusFilter ?? ''}`,
@@ -81,7 +72,16 @@ export function TechnicianAvPage() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
-                  <TableHead className="whitespace-nowrap font-semibold">ID</TableHead>
+                  <TableHead className="whitespace-nowrap font-semibold">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-[6px] px-1 -mx-1 text-left hover:text-foreground hover:underline underline-offset-2"
+                      title={showLegacyIdColumn ? 'Show current asset ID' : 'Show legacy asset ID'}
+                      onClick={() => setShowLegacyIdColumn((v) => !v)}
+                    >
+                      {showLegacyIdColumn ? 'Legacy ID' : 'ID'}
+                    </button>
+                  </TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Category</TableHead>
                   <TableHead className="min-w-[180px] font-semibold">Model</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Brand</TableHead>
@@ -105,8 +105,9 @@ export function TechnicianAvPage() {
                   </TableRow>
                 ) : (
                   pagination.paginatedItems.map((item) => {
-                    const viewingLegacy = showLegacyId.has(item.assetId) && !!item.assetIdOld;
-                    const displayId = viewingLegacy ? item.assetIdOld : String(item.assetId);
+                    const displayId = showLegacyIdColumn
+                      ? item.assetIdOld ?? '—'
+                      : String(item.assetId);
 
                     return (
                     <TableRow
@@ -119,22 +120,15 @@ export function TechnicianAvPage() {
                         })
                       }
                     >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        {item.assetIdOld ? (
-                          <button
-                            type="button"
-                            className="inline-flex flex-col items-start gap-0.5 text-left text-primary underline-offset-2 hover:underline"
-                            title={viewingLegacy ? 'Show current asset ID' : 'Show legacy asset ID'}
-                            onClick={() => toggleIdView(item.assetId)}
-                          >
-                            <code className="text-xs">{displayId}</code>
-                            <span className="text-[10px] font-normal text-muted-foreground">
-                              {viewingLegacy ? 'Legacy ID' : 'Current ID · click to switch'}
-                            </span>
-                          </button>
-                        ) : (
-                          <code className="text-xs">{item.assetId}</code>
-                        )}
+                      <TableCell>
+                        <Link
+                          to="/technician/asset/$kind/$assetId"
+                          params={{ kind: 'av', assetId: item.assetId }}
+                          className="text-primary underline-offset-2 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <code className="text-xs">{displayId}</code>
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5 text-sm">
