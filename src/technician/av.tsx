@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { Search, Tv } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,12 +24,24 @@ export function TechnicianAvPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
+  const [showLegacyId, setShowLegacyId] = useState<Set<number>>(() => new Set());
   const { items, isLoading, error, updateStatus } = useAssets('av');
 
   const filtered = useMemo(() => {
-    const bySearch = filterBySearch(items, search, (item) => item.category ?? '');
+    const bySearch = filterBySearch(items, search, (item) =>
+      [item.category ?? '', item.assetIdOld ?? ''].join(' '),
+    );
     return filterByStatus(bySearch, statusFilter);
   }, [items, search, statusFilter]);
+
+  const toggleIdView = (assetId: number) => {
+    setShowLegacyId((prev) => {
+      const next = new Set(prev);
+      if (next.has(assetId)) next.delete(assetId);
+      else next.add(assetId);
+      return next;
+    });
+  };
 
   const pagination = usePagination(filtered, {
     resetKey: `${search}|${statusFilter ?? ''}`,
@@ -48,7 +60,7 @@ export function TechnicianAvPage() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search asset ID, model, brand, serial…"
+            placeholder="Search asset ID, legacy ID, model, brand, serial…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-10 rounded-[10px] pl-9"
@@ -92,7 +104,11 @@ export function TechnicianAvPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pagination.paginatedItems.map((item) => (
+                  pagination.paginatedItems.map((item) => {
+                    const viewingLegacy = showLegacyId.has(item.assetId) && !!item.assetIdOld;
+                    const displayId = viewingLegacy ? item.assetIdOld : String(item.assetId);
+
+                    return (
                     <TableRow
                       key={item.assetId}
                       className="cursor-pointer hover:bg-muted/50"
@@ -103,15 +119,22 @@ export function TechnicianAvPage() {
                         })
                       }
                     >
-                      <TableCell>
-                        <Link
-                          to="/technician/asset/$kind/$assetId"
-                          params={{ kind: 'av', assetId: item.assetId }}
-                          className="text-primary underline-offset-2 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {item.assetIdOld ? (
+                          <button
+                            type="button"
+                            className="inline-flex flex-col items-start gap-0.5 text-left text-primary underline-offset-2 hover:underline"
+                            title={viewingLegacy ? 'Show current asset ID' : 'Show legacy asset ID'}
+                            onClick={() => toggleIdView(item.assetId)}
+                          >
+                            <code className="text-xs">{displayId}</code>
+                            <span className="text-[10px] font-normal text-muted-foreground">
+                              {viewingLegacy ? 'Legacy ID' : 'Current ID · click to switch'}
+                            </span>
+                          </button>
+                        ) : (
                           <code className="text-xs">{item.assetId}</code>
-                        </Link>
+                        )}
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5 text-sm">
@@ -135,7 +158,8 @@ export function TechnicianAvPage() {
                         />
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
