@@ -57,7 +57,7 @@ export function buildRequestEmailHtml(data: RequestEmailData): string {
     detailRow('Return date', data.returnDate),
     detailRow('Program type', data.programType),
     detailRow('Usage location', data.usageLocation),
-    detailRow('Reason / remarks', data.reason ?? '—'),
+    detailRow('Remarks', data.remarks ?? '—'),
     detailRow('Terms accepted', data.termsAcceptedAt ?? 'Yes'),
     detailRow('Status', 'Submitted — awaiting IT review'),
   ].join('');
@@ -153,7 +153,7 @@ export function buildRequestEmailText(data: RequestEmailData): string {
     `  Return date: ${data.returnDate}`,
     `  Program type: ${data.programType}`,
     `  Usage location: ${data.usageLocation}`,
-    `  Reason: ${data.reason ?? '—'}`,
+    `  Remarks: ${data.remarks ?? '—'}`,
     `  Terms accepted: ${data.termsAcceptedAt ?? 'Yes'}`,
     '',
     'Equipment requested',

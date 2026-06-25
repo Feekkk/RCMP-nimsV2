@@ -153,7 +153,7 @@ export function TechnicianRequestLogPage() {
         e.requestedBy,
         e.programType,
         e.usageLocation,
-        e.reason,
+        e.remarks,
         ...e.items.map((i) => i.assetType),
         ...e.assignments.map((a) => assetLabel(a)),
       ]
@@ -286,9 +286,9 @@ export function TechnicianRequestLogPage() {
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="border-t border-border px-4 py-4">
-                    {entry.reason && (
+                    {entry.remarks && (
                       <p className="mb-3 text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">Reason:</span> {entry.reason}
+                        <span className="font-medium text-foreground">Remarks:</span> {entry.remarks}
                       </p>
                     )}
 

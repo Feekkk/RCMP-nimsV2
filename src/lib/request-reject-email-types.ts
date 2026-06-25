@@ -17,7 +17,7 @@ export type RequestRejectEmailData = {
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string | null;
+  remarks: string | null;
   submittedAt: string;
   rejectedAt: string;
   rejectedBy: string;

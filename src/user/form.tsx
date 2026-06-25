@@ -85,7 +85,7 @@ export function UserRequestFormPage() {
   const [returnDate, setReturnDate] = useState('');
   const [programType, setProgramType] = useState('');
   const [usageLocation, setUsageLocation] = useState('');
-  const [reason, setReason] = useState('');
+  const [remarks, setRemarks] = useState('');
   const [items, setItems] = useState<UserRequestItemDraft[]>([]);
 
   useEffect(() => {
@@ -183,7 +183,7 @@ export function UserRequestFormPage() {
           returnDate,
           programType,
           usageLocation: usageLocation.trim(),
-          reason: reason.trim() || null,
+          remarks: remarks.trim() || null,
           termsAcceptedAt: new Date().toISOString(),
           items: items.map((i) => ({ assetType: i.assetType, quantity: i.quantity })),
         },
@@ -238,7 +238,7 @@ export function UserRequestFormPage() {
               setReturnDate('');
               setProgramType('');
               setUsageLocation('');
-              setReason('');
+              setRemarks('');
               setItems([]);
             }}
           >
@@ -299,12 +299,10 @@ export function UserRequestFormPage() {
                 returnDate={returnDate}
                 programType={programType}
                 usageLocation={usageLocation}
-                reason={reason}
                 onBorrowDateChange={setBorrowDate}
                 onReturnDateChange={setReturnDate}
                 onProgramTypeChange={setProgramType}
                 onUsageLocationChange={setUsageLocation}
-                onReasonChange={setReason}
               />
             )}
             {step === 2 && (
@@ -316,7 +314,8 @@ export function UserRequestFormPage() {
                 returnDate={returnDate}
                 programType={programType}
                 usageLocation={usageLocation}
-                reason={reason}
+                remarks={remarks}
+                onRemarksChange={setRemarks}
                 items={items}
                 requesterName={session.fullName}
               />
@@ -458,23 +457,19 @@ function DetailsStep({
   returnDate,
   programType,
   usageLocation,
-  reason,
   onBorrowDateChange,
   onReturnDateChange,
   onProgramTypeChange,
   onUsageLocationChange,
-  onReasonChange,
 }: {
   borrowDate: string;
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string;
   onBorrowDateChange: (v: string) => void;
   onReturnDateChange: (v: string) => void;
   onProgramTypeChange: (v: string) => void;
   onUsageLocationChange: (v: string) => void;
-  onReasonChange: (v: string) => void;
 }) {
   const todayIso = localDateToIso(new Date());
   const minReturnDate = borrowDate && borrowDate > todayIso ? borrowDate : todayIso;
@@ -517,14 +512,6 @@ function DetailsStep({
           onChange={(e) => onUsageLocationChange(e.target.value)}
           placeholder="Building, room, or venue"
           className="rounded-[8px]"
-        />
-      </FormField>
-      <FormField label="Reason (optional)">
-        <Textarea
-          value={reason}
-          onChange={(e) => onReasonChange(e.target.value)}
-          placeholder="Brief description of how the equipment will be used"
-          className="min-h-[88px] rounded-[8px]"
         />
       </FormField>
     </div>
@@ -749,7 +736,8 @@ function PreviewStep({
   returnDate,
   programType,
   usageLocation,
-  reason,
+  remarks,
+  onRemarksChange,
   items,
 }: {
   requesterName: string;
@@ -757,7 +745,8 @@ function PreviewStep({
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string;
+  remarks: string;
+  onRemarksChange: (v: string) => void;
   items: UserRequestItemDraft[];
 }) {
   return (
@@ -769,8 +758,15 @@ function PreviewStep({
         <PreviewRow label="Return date" value={returnDate || '—'} />
         <PreviewRow label="Program type" value={programType || '—'} />
         <PreviewRow label="Usage location" value={usageLocation || '—'} />
-        {reason.trim() && <PreviewRow label="Reason" value={reason.trim()} />}
       </dl>
+      <FormField label="Remarks (optional)">
+        <Textarea
+          value={remarks}
+          onChange={(e) => onRemarksChange(e.target.value)}
+          placeholder="Any additional notes for the technician reviewing your request"
+          className="min-h-[88px] rounded-[8px]"
+        />
+      </FormField>
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Equipment

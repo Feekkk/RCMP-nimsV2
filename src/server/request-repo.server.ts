@@ -754,7 +754,7 @@ type RequestHeaderRow = RowDataPacket & {
   return_date: Date | string;
   program_type: string;
   usage_location: string;
-  reason: string | null;
+  remarks: string | null;
   created_at: Date | string;
 };
 
@@ -763,7 +763,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
   const [headers] = await pool.query<RequestHeaderRow[]>(
     `SELECT r.request_id, r.requested_by, u.oid AS requester_oid,
             r.borrow_date, r.return_date, r.program_type, r.usage_location,
-            r.reason, r.created_at
+            r.remarks, r.created_at
      FROM request r
      INNER JOIN users u ON u.id = r.requested_by
      WHERE r.rejected_at IS NULL
@@ -869,7 +869,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
       returnDate: formatDate(h.return_date),
       programType: h.program_type,
       usageLocation: h.usage_location,
-      reason: h.reason,
+      remarks: h.remarks,
       createdAt: formatTs(h.created_at) ?? '',
       items: itemRows,
       assignments: assignmentRows,
@@ -999,14 +999,14 @@ export async function listUserRequestHistory(staffId: string): Promise<UserReque
       return_date: Date | string;
       program_type: string;
       usage_location: string;
-      reason: string | null;
+      remarks: string | null;
       created_at: Date | string;
       rejected_at: Date | string | null;
       rejection_reason: string | null;
     })[]
   >(
     `SELECT request_id, borrow_date, return_date, program_type, usage_location,
-            reason, created_at, rejected_at, rejection_reason
+            remarks, created_at, rejected_at, rejection_reason
      FROM request
      WHERE requested_by = ?
      ORDER BY created_at DESC`,
@@ -1053,7 +1053,7 @@ export async function listUserRequestHistory(staffId: string): Promise<UserReque
       returnDate: formatDate(h.return_date),
       programType: h.program_type,
       usageLocation: h.usage_location,
-      reason: h.reason,
+      remarks: h.remarks,
       createdAt: formatTs(h.created_at) ?? '',
       status: deriveUserRequestStatus(h.rejected_at, itemProgress),
       rejectionReason: h.rejection_reason,
@@ -1076,7 +1076,7 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
       return_date: Date | string;
       program_type: string;
       usage_location: string;
-      reason: string | null;
+      remarks: string | null;
       created_at: Date | string;
       rejected_at: Date | string | null;
       rejection_reason: string | null;
@@ -1084,7 +1084,7 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
   >(
     `SELECT r.request_id, r.requested_by, u.oid AS requester_oid,
             r.borrow_date, r.return_date, r.program_type, r.usage_location,
-            r.reason, r.created_at, r.rejected_at, r.rejection_reason
+            r.remarks, r.created_at, r.rejected_at, r.rejection_reason
      FROM request r
      INNER JOIN users u ON u.id = r.requested_by
      ORDER BY r.created_at DESC`,
@@ -1168,7 +1168,7 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
       returnDate: formatDate(h.return_date),
       programType: h.program_type,
       usageLocation: h.usage_location,
-      reason: h.reason,
+      remarks: h.remarks,
       createdAt: formatTs(h.created_at) ?? '',
       rejectedAt: formatTs(h.rejected_at),
       rejectionReason: h.rejection_reason,
@@ -1227,7 +1227,7 @@ export async function submitUserRequest(
 
     const [result] = await conn.execute(
       `INSERT INTO request
-        (requested_by, borrow_date, return_date, program_type, usage_location, reason, terms_accepted_at)
+        (requested_by, borrow_date, return_date, program_type, usage_location, remarks, terms_accepted_at)
        VALUES (?, ?, ?, ?, ?, ?, NOW())`,
       [
         input.requestedBy,
@@ -1235,7 +1235,7 @@ export async function submitUserRequest(
         input.returnDate,
         input.programType.trim(),
         input.usageLocation.trim(),
-        input.reason?.trim() || null,
+        input.remarks?.trim() || null,
       ],
     );
     const requestId = (result as { insertId: number }).insertId;

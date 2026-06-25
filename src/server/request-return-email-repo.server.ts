@@ -97,7 +97,7 @@ export async function getRequestReturnEmailData(
     returnDate: base.returnDate,
     programType: base.programType,
     usageLocation: base.usageLocation,
-    reason: base.reason,
+    remarks: base.remarks,
     submittedAt: base.submittedAt,
     requestedItems: base.items,
     returnedByName: returnedByName || returnedBy,

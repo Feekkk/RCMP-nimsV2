@@ -24,7 +24,7 @@ export type OverdueReturnEmailData = {
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string | null;
+  remarks: string | null;
   submittedAt: string;
   requestedItems: RequestEmailItem[];
   daysOverdue: number;

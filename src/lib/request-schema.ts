@@ -128,7 +128,7 @@ export type PendingRequest = {
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string | null;
+  remarks: string | null;
   createdAt: string;
   items: RequestItemRow[];
   assignments: RequestAssignmentRow[];
@@ -179,7 +179,7 @@ export type SubmitUserRequestInput = {
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string | null;
+  remarks: string | null;
   termsAcceptedAt: string;
   items: { assetType: string; quantity: number }[];
 };
@@ -214,7 +214,7 @@ export type UserRequestHistory = {
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string | null;
+  remarks: string | null;
   createdAt: string;
   status: UserRequestHistoryStatus;
   rejectionReason: string | null;
@@ -244,7 +244,7 @@ export type RequestLogEntry = {
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string | null;
+  remarks: string | null;
   createdAt: string;
   rejectedAt: string | null;
   rejectionReason: string | null;

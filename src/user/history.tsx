@@ -164,7 +164,7 @@ export function UserRequestHistoryPage() {
                     <CollapsibleContent className="border-t border-border px-4 py-3 text-sm">
                       <dl className="space-y-2">
                         <Row label="Location" value={req.usageLocation} />
-                        {req.reason && <Row label="Reason" value={req.reason} />}
+                        {req.remarks && <Row label="Remarks" value={req.remarks} />}
                         {req.status === 'rejected' && req.rejectionReason && (
                           <Row label="Rejection reason" value={req.rejectionReason} />
                         )}

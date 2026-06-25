@@ -91,7 +91,7 @@ export function buildOverdueReturnEmailHtml(data: OverdueReturnEmailData): strin
     detailRow('Outstanding assets', String(data.outstandingCount)),
     detailRow('Program type', data.programType),
     detailRow('Usage location', data.usageLocation),
-    detailRow('Reason / remarks', data.reason ?? '—'),
+    detailRow('Remarks', data.remarks ?? '—'),
   ].join('');
 
   return `<!DOCTYPE html>

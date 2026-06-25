@@ -263,7 +263,7 @@ function matchesSearch(req: PendingRequest, query: string): boolean {
     req.requestedBy,
     req.programType,
     req.usageLocation,
-    req.reason,
+    req.remarks,
     ...req.items.map((i) => i.assetType),
   ]
     .filter(Boolean)
@@ -762,9 +762,9 @@ export function TechnicianRequestPage() {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border px-4 py-4">
-          {req.reason && (
+          {req.remarks && (
             <p className="mb-3 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Reason:</span> {req.reason}
+              <span className="font-medium text-foreground">Remarks:</span> {req.remarks}
             </p>
           )}
 

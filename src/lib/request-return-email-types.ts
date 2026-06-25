@@ -26,7 +26,7 @@ export type RequestReturnEmailData = {
   returnDate: string;
   programType: string;
   usageLocation: string;
-  reason: string | null;
+  remarks: string | null;
   submittedAt: string;
   requestedItems: RequestEmailItem[];
   returnedByName: string;
