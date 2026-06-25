@@ -66,7 +66,7 @@ const VALID_STATUS_IDS = new Set(INVENTORY_STATUSES.map((s) => s.statusId));
 const MOCK_CSV: Record<AssetKind, string> = {
   laptop: `asset_id,serial_num,brand,model,category,part_number,processor,memory,os,storage,gpu,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,handover_staff_id,handover_date,handover_remarks,employee_no
 ,DL-5450-001,Dell,Latitude 5450,Notebook,PN-5450,Intel i5-1345U,16GB,Windows 11,512GB,,150124,PO-2024-001,010224,DO-9001,100224,INV-7788,1299.00,1,HQ staging (auto 12-xx-xxx),,,,
-,HP-DEPLOY-01,HP,EliteBook 840,Notebook,,Intel i7,16GB,Windows 11,512GB,,,,,,,,,3,With user,TECH001,150126,Issued for project,EMP10001`,
+,HP-DEPLOY-01,HP,EliteBook 840,Notebook,,Intel i7,16GB,Windows 11,512GB,,,,,,,,,3,With user,tech@example.com,150126,Issued for project,EMP10001`,
   av: `asset_id,asset_id_old,category,brand,model,serial_num,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
 ,AV-LEG-001,display,Samsung,QM65C,SM-QM65-100,010623,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx),,,,,,
 ,AV-DEPLOY-01,AV-DEP-88,projector,Epson,EB-L200F,EPS-L200F-99,,,,,,,,3,Training room,TECH001,Main,,,,`,
@@ -209,6 +209,11 @@ function parseRequiredDate(
   return parseOptionalDate(raw, column, rowNum, errors);
 }
 
+function looksLikeEmail(raw: string): boolean {
+  const val = raw.trim();
+  return val.includes('@') && val.indexOf('@') > 0 && val.indexOf('@') < val.length - 1;
+}
+
 function parseLaptopHandover(
   row: string[],
   col: Map<string, number>,
@@ -220,12 +225,24 @@ function parseLaptopHandover(
 
   if (statusId !== BULK_IMPORT_STATUS_DEPLOY) return undefined;
 
-  const handoverStaffId = requireCell(row, col.get('handover_staff_id')!, 'handover_staff_id', rowNum, errors);
+  const handoverStaffEmail = requireCell(
+    row,
+    col.get('handover_staff_id')!,
+    'handover_staff_id',
+    rowNum,
+    errors,
+  );
   const handoverDate = parseRequiredDate(row, col, 'handover_date', rowNum, errors);
-  if (rowHasErrors(errors, rowNum) || !handoverStaffId || !handoverDate) return undefined;
+  if (handoverStaffEmail && !looksLikeEmail(handoverStaffEmail)) {
+    errors.push({
+      row: rowNum,
+      message: 'handover_staff_id must be a user email (must exist in users)',
+    });
+  }
+  if (rowHasErrors(errors, rowNum) || !handoverStaffEmail || !handoverDate) return undefined;
 
   return {
-    handoverStaffId,
+    handoverStaffEmail: handoverStaffEmail.trim().toLowerCase(),
     handoverDate,
     handoverRemarks: optionalCell(row, col.get('handover_remarks')!),
     employeeNo: optionalCell(row, col.get('employee_no')!),

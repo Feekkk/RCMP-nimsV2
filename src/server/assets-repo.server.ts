@@ -100,6 +100,20 @@ async function assertUserStaffId(conn: Awaited<ReturnType<ReturnType<typeof getD
   }
 }
 
+async function resolveUserIdByEmail(
+  conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
+  email: string,
+): Promise<number> {
+  const [rows] = await conn.query<(RowDataPacket & { id: number })[]>(
+    'SELECT id FROM users WHERE email = ? LIMIT 1',
+    [email.trim().toLowerCase()],
+  );
+  if (!rows[0]) {
+    throw new Error(`Unknown user email "${email}" (must exist in users)`);
+  }
+  return rows[0].id;
+}
+
 async function assertEmployeeNo(
   conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
   employeeNo: string,
@@ -118,7 +132,7 @@ async function insertLaptopHandover(
   assetId: number,
   handover: BulkLaptopHandoverImport,
 ) {
-  await assertUserStaffId(conn, handover.handoverStaffId);
+  const userId = await resolveUserIdByEmail(conn, handover.handoverStaffEmail);
   if (handover.employeeNo) {
     await assertEmployeeNo(conn, handover.employeeNo);
   }
@@ -126,7 +140,7 @@ async function insertLaptopHandover(
   const [handoverResult] = await conn.execute(
     `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks)
      VALUES (?, ?, ?, ?)`,
-    [assetId, handover.handoverStaffId, handover.handoverDate, handover.handoverRemarks],
+    [assetId, userId, handover.handoverDate, handover.handoverRemarks],
   );
   const handoverId = (handoverResult as { insertId: number }).insertId;
   if (handover.employeeNo) {

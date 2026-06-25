@@ -191,6 +191,14 @@ function BulkImportWorkspace({
                 Headers with (<span className="text-destructive">*</span>) are required. Leave{' '}
                 <code className="text-[11px]">asset_id</code> blank to auto-generate from category.
               </span>
+              {kind === 'laptop' && (
+                <span className="block text-muted-foreground">
+                  When <code className="text-[11px]">status_id</code> is{' '}
+                  <code className="text-[11px]">{BULK_IMPORT_STATUS_DEPLOY}</code> (deploy),{' '}
+                  <code className="text-[11px]">handover_staff_id</code> must be the technician&apos;s
+                  user email and <code className="text-[11px]">handover_date</code> is required.
+                </span>
+              )}
               {(kind === 'av' || kind === 'network') && (
                 <span className="block text-muted-foreground">
                   When <code className="text-[11px]">status_id</code> is{' '}
@@ -397,7 +405,7 @@ function BulkImportWorkspace({
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                             {'handover' in row && row.handover
-                              ? `Handover ${row.handover.handoverDate}${row.handover.employeeNo ? ` · ${row.handover.employeeNo}` : ''}`
+                              ? `Handover ${row.handover.handoverStaffEmail} · ${row.handover.handoverDate}${row.handover.employeeNo ? ` · ${row.handover.employeeNo}` : ''}`
                               : 'deployment' in row && row.deployment
                                 ? `${row.deployment.building} / ${row.deployment.level} / ${row.deployment.zone}`
                                 : '—'}

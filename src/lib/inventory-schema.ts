@@ -203,7 +203,8 @@ export const BULK_LAPTOP_HANDOVER_REQUIRED = ['handover_staff_id', 'handover_dat
 export const BULK_PLACE_DEPLOYMENT_REQUIRED = ['deployment_staff_id', 'building'] as const;
 
 export type BulkLaptopHandoverImport = {
-  handoverStaffId: string;
+  /** User email from CSV column handover_staff_id */
+  handoverStaffEmail: string;
   handoverDate: string;
   handoverRemarks: string | null;
   employeeNo: string | null;
