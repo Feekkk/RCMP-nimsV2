@@ -1,18 +1,18 @@
 /** Compact procurement / CSV date format (e.g. 150126 = 15 Jan 2026). */
 export const DATE_FORMAT_DDMMYY = 'DDMMYY' as const;
 
-/** Separated date format (e.g. 15-01-26 = 15 Jan 2026). */
-export const DATE_FORMAT_DD_MM_YY = 'DD-MM-YY' as const;
+/** Separated date format (e.g. 15-01-26 or 1/2/3 = 15 Jan 2026 / 1 Feb 2003). */
+export const DATE_FORMAT_DD_MM_YY = 'DD/MM/YY' as const;
 
 /** Shown in bulk import and validation messages. */
 export const IMPORT_DATE_FORMAT_HINT =
-  `${DATE_FORMAT_DD_MM_YY} (e.g. 15-01-26) or ${DATE_FORMAT_DDMMYY} (e.g. 150126)` as const;
+  `${DATE_FORMAT_DD_MM_YY} (e.g. 1/2/2003, 1/2/3, 15-01-26) or ${DATE_FORMAT_DDMMYY} (e.g. 150126)` as const;
 
 export const PURCHASE_DATE_COLUMNS = ['po_date', 'do_date', 'invoice_date'] as const;
 
 const DDMMYY_RE = /^(\d{2})(\d{2})(\d{2})$/;
 const DDMMyyyy_RE = /^(\d{2})(\d{2})(\d{4})$/;
-const SEPARATED_DATE_RE = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/;
+const SEPARATED_DATE_RE = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{1,4})$/;
 const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Strip separators; keep digits only. */
