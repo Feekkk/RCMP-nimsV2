@@ -27,19 +27,19 @@ export const USER_REQUEST_ASSET_CATALOG: UserRequestAssetCatalogEntry[] = [
     assetType: 'Laptop',
     kind: 'laptop',
     description: 'General purpose laptop.',
-    includes: 'Laptop unit and charger',
+    includes: 'Power Adapter and Bag',
   },
   {
     assetType: 'Portable Speaker',
     kind: 'av',
-    description: 'Portable speaker for events, rehearsals, and etc.',
-    includes: 'Speaker unit, 2x Wireless Microphone and stand',
+    description: 'Portable speaker for events',
+    includes: '2x Wireless Microphones and Portable Speaker Stand',
   },
   {
     assetType: 'Microphone',
     kind: 'av',
     description: 'Handheld microphone for Seminar Room and Lecture Theatre only',
-    includes: 'Microphone unit and battery separated',
+    includes: 'Battery Pack',
   },
   {
     assetType: 'Pocket Mic',
@@ -50,14 +50,14 @@ export const USER_REQUEST_ASSET_CATALOG: UserRequestAssetCatalogEntry[] = [
   {
     assetType: 'Projector',
     kind: 'av',
-    description: 'Portable projector for classrooms, briefings, and events.',
+    description: 'Portable projector for Teaching & Learning and events.',
     includes: 'Projector unit, HDMI cable and power cable',
   },
   {
     assetType: 'Video Camera',
     kind: 'av',
     description: 'Handheld video camera for lectures, events, and field recording.',
-    includes: 'Camera unit, adapter cable and tripod (upon request)',
+    includes: 'Camera unit, Adapter cable and Tripod (upon request)',
   },
   {
     assetType: 'Webcam',
