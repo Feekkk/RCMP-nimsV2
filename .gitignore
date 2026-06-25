@@ -32,3 +32,8 @@ dist-ssr
 *.sw?
 assetid-flow.md
 docs
+
+# env
+.env
+.env.*
+!.env.example
