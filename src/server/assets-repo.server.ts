@@ -90,16 +90,6 @@ async function fillNetworkAssetIds(rows: BulkNetworkImportRow[]): Promise<BulkNe
   });
 }
 
-async function assertUserStaffId(conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>, staffId: string) {
-  const [rows] = await conn.query<(RowDataPacket & { id: number })[]>(
-    'SELECT id FROM users WHERE id = ? LIMIT 1',
-    [staffId],
-  );
-  if (!rows[0]) {
-    throw new Error(`Unknown user id "${staffId}" (must exist in users)`);
-  }
-}
-
 async function resolveUserIdByEmail(
   conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
   email: string,
@@ -157,7 +147,7 @@ async function insertPlaceDeployment(
   assetId: number,
   deployment: BulkPlaceDeploymentImport,
 ) {
-  await assertUserStaffId(conn, deployment.deploymentStaffId);
+  const userId = await resolveUserIdByEmail(conn, deployment.deploymentStaffEmail);
   const table = kind === 'av' ? 'av_deployment' : 'network_deployment';
   await conn.execute(
     `INSERT INTO \`${table}\`
@@ -170,7 +160,7 @@ async function insertPlaceDeployment(
       deployment.zone,
       deployment.deploymentDate,
       deployment.deploymentRemarks,
-      deployment.deploymentStaffId,
+      userId,
     ],
   );
 }

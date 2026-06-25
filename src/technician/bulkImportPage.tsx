@@ -197,15 +197,17 @@ function BulkImportWorkspace({
                   <code className="text-[11px]">{BULK_IMPORT_STATUS_DEPLOY}</code> (deploy),{' '}
                   <code className="text-[11px]">handover_staff_id</code> must be the technician&apos;s
                   user email and <code className="text-[11px]">handover_date</code> is required.
+                  Dates use {IMPORT_DATE_FORMAT_HINT}.
                 </span>
               )}
               {(kind === 'av' || kind === 'network') && (
                 <span className="block text-muted-foreground">
                   When <code className="text-[11px]">status_id</code> is{' '}
-                  <code className="text-[11px]">{BULK_IMPORT_STATUS_DEPLOY}</code> (deploy), only{' '}
-                  <code className="text-[11px]">deployment_staff_id</code> and{' '}
-                  <code className="text-[11px]">building</code> are required. level, zone, and
-                  deployment_date default to &quot;-&quot; / today if omitted.
+                  <code className="text-[11px]">{BULK_IMPORT_STATUS_DEPLOY}</code> (deploy),{' '}
+                  <code className="text-[11px]">deployment_staff_id</code> must be the
+                  technician&apos;s user email and <code className="text-[11px]">building</code> is
+                  required. level, zone, and deployment_date default to &quot;-&quot; / today if
+                  omitted. Dates use {IMPORT_DATE_FORMAT_HINT}.
                 </span>
               )}
             </CardDescription>
@@ -301,7 +303,10 @@ function BulkImportWorkspace({
           <CardTitle className="text-base">CSV data</CardTitle>
           <CardDescription>
             Paste rows below, then parse to validate. Dates: {IMPORT_DATE_FORMAT_HINT} (
-            {PURCHASE_DATE_COLUMNS.join(', ')}, handover_date, deployment_date).
+            {kind === 'laptop'
+              ? `${PURCHASE_DATE_COLUMNS.join(', ')}, handover_date, warranty_start_date, warranty_end_date`
+              : `${PURCHASE_DATE_COLUMNS.join(', ')}, deployment_date, warranty_start_date, warranty_end_date`}
+            ).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -407,7 +412,7 @@ function BulkImportWorkspace({
                             {'handover' in row && row.handover
                               ? `Handover ${row.handover.handoverStaffEmail} · ${row.handover.handoverDate}${row.handover.employeeNo ? ` · ${row.handover.employeeNo}` : ''}`
                               : 'deployment' in row && row.deployment
-                                ? `${row.deployment.building} / ${row.deployment.level} / ${row.deployment.zone}`
+                                ? `${row.deployment.deploymentStaffEmail} · ${row.deployment.building} / ${row.deployment.level} / ${row.deployment.zone}`
                                 : '—'}
                           </TableCell>
                         </TableRow>

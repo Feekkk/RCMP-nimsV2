@@ -211,7 +211,8 @@ export type BulkLaptopHandoverImport = {
 };
 
 export type BulkPlaceDeploymentImport = {
-  deploymentStaffId: string;
+  /** User email from CSV column deployment_staff_id */
+  deploymentStaffEmail: string;
   building: string;
   level: string;
   zone: string;

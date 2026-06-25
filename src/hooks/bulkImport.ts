@@ -65,14 +65,14 @@ const VALID_STATUS_IDS = new Set(INVENTORY_STATUSES.map((s) => s.statusId));
 
 const MOCK_CSV: Record<AssetKind, string> = {
   laptop: `asset_id,serial_num,brand,model,category,part_number,processor,memory,os,storage,gpu,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,handover_staff_id,handover_date,handover_remarks,employee_no
-,DL-5450-001,Dell,Latitude 5450,Notebook,PN-5450,Intel i5-1345U,16GB,Windows 11,512GB,,150124,PO-2024-001,010224,DO-9001,100224,INV-7788,1299.00,1,HQ staging (auto 12-xx-xxx),,,,
-,HP-DEPLOY-01,HP,EliteBook 840,Notebook,,Intel i7,16GB,Windows 11,512GB,,,,,,,,,3,With user,tech@example.com,150126,Issued for project,EMP10001`,
+,DL-5450-001,Dell,Latitude 5450,Notebook,PN-5450,Intel i5-1345U,16GB,Windows 11,512GB,,15/1/24,PO-2024-001,1/2/24,DO-9001,10/2/24,INV-7788,1299.00,1,HQ staging (auto 12-xx-xxx),,,,
+,HP-DEPLOY-01,HP,EliteBook 840,Notebook,,Intel i7,16GB,Windows 11,512GB,,,,,,,,,3,With user,tech@example.com,15/1/26,Issued for project,EMP10001`,
   av: `asset_id,asset_id_old,category,brand,model,serial_num,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
-,AV-LEG-001,display,Samsung,QM65C,SM-QM65-100,010623,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx),,,,,,
-,AV-DEPLOY-01,AV-DEP-88,projector,Epson,EB-L200F,EPS-L200F-99,,,,,,,,3,Training room,TECH001,Main,,,,`,
+,AV-LEG-001,display,Samsung,QM65C,SM-QM65-100,1/6/23,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx),,,,,,
+,AV-DEPLOY-01,AV-DEP-88,projector,Epson,EB-L200F,EPS-L200F-99,,,,,,,,3,Training room,tech@example.com,Main,-,-,15/1/26,Installed in room`,
   network: `asset_id,serial_num,brand,model,mac_address,ip_address,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
-,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,100323,PO-NET-55,010423,DO-N-12,,,4500.00,7,Rack 2 (auto 24-xx-xxx),,,,,,
-,SW-DEPLOY-01,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,,,,,,,,3,IDF East,TECH001,Annex,,,,`,
+,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,10/3/23,PO-NET-55,1/4/23,DO-N-12,,,4500.00,7,Rack 2 (auto 24-xx-xxx),,,,,,
+,SW-DEPLOY-01,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,,,,,,,,3,IDF East,tech@example.com,Annex,-,-,1/2/26,East wing`,
 };
 
 function normalizeHeader(h: string) {
@@ -261,7 +261,7 @@ function parsePlaceDeployment(
 
   if (statusId !== BULK_IMPORT_STATUS_DEPLOY) return undefined;
 
-  const deploymentStaffId = requireCell(
+  const deploymentStaffEmail = requireCell(
     row,
     col.get('deployment_staff_id')!,
     'deployment_staff_id',
@@ -270,7 +270,14 @@ function parsePlaceDeployment(
   );
   const building = requireCell(row, col.get('building')!, 'building', rowNum, errors);
 
-  if (rowHasErrors(errors, rowNum) || !deploymentStaffId || !building) return undefined;
+  if (deploymentStaffEmail && !looksLikeEmail(deploymentStaffEmail)) {
+    errors.push({
+      row: rowNum,
+      message: 'deployment_staff_id must be a user email (must exist in users)',
+    });
+  }
+
+  if (rowHasErrors(errors, rowNum) || !deploymentStaffEmail || !building) return undefined;
 
   const level = optionalCell(row, col.get('level')!)?.trim() || '-';
   const zone = optionalCell(row, col.get('zone')!)?.trim() || '-';
@@ -283,7 +290,7 @@ function parsePlaceDeployment(
   if (rowHasErrors(errors, rowNum)) return undefined;
 
   return {
-    deploymentStaffId,
+    deploymentStaffEmail: deploymentStaffEmail.trim().toLowerCase(),
     building,
     level,
     zone,
