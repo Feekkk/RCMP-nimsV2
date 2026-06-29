@@ -109,3 +109,8 @@ export function purchaseSqlParams(p: PurchaseFields) {
     p.purchaseCost ?? null,
   ];
 }
+
+export function formatPurchaseCost(amount: number | null | undefined): string | null {
+  if (amount == null || Number.isNaN(amount)) return null;
+  return `RM ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}

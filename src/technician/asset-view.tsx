@@ -14,9 +14,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { AssetDetail, AssetDetailResponse, AssetKind, AssetTrailEvent } from '@/lib/inventory-schema';
-import { ASSET_KIND_LABEL, ASSET_LIST_PATH, formatStatusLabel } from '@/lib/inventory-schema';
+import { ASSET_KIND_LABEL, ASSET_LIST_PATH } from '@/lib/inventory-schema';
+import { formatAssetAge, formatPurchaseDateLabel } from '@/lib/date-format';
+import { formatPurchaseCost } from '@/lib/purchase-field-utils';
 import { AssetStatusActions } from '@/technician/asset-status-actions';
-import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { getAssetDetailFn } from '@/server/assets.functions';
 
@@ -78,16 +79,13 @@ function AssetSpecs({ asset }: { asset: AssetDetail }) {
 function PurchaseBlock({ asset }: { asset: AssetDetail }) {
   return (
     <>
-      <DetailItem label="PO date" value={asset.poDate} />
+      <DetailItem label="PO date" value={formatPurchaseDateLabel(asset.poDate)} />
       <DetailItem label="PO number" value={asset.poNum} />
-      <DetailItem label="DO date" value={asset.doDate} />
+      <DetailItem label="DO date" value={formatPurchaseDateLabel(asset.doDate)} />
       <DetailItem label="DO number" value={asset.doNum} />
-      <DetailItem label="Invoice date" value={asset.invoiceDate} />
+      <DetailItem label="Invoice date" value={formatPurchaseDateLabel(asset.invoiceDate)} />
       <DetailItem label="Invoice number" value={asset.invoiceNum} />
-      <DetailItem
-        label="Purchase cost"
-        value={asset.purchaseCost != null ? String(asset.purchaseCost) : null}
-      />
+      <DetailItem label="Purchase cost" value={formatPurchaseCost(asset.purchaseCost)} />
     </>
   );
 }
@@ -161,6 +159,7 @@ export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPa
 
   const listPath = ASSET_LIST_PATH[kind];
   const asset = data?.asset;
+  const assetAge = asset ? formatAssetAge(asset.poDate, asset.createdAt) : null;
 
   const handleStatusChange = async (_assetId: number, statusId: number) => {
     const { updateAssetStatusFn } = await import('@/server/assets.functions');
@@ -202,11 +201,8 @@ export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPa
                 {asset.brand ? ` · ${asset.brand}` : ''}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <AssetStatusBadge statusId={asset.statusId} />
-              <Badge variant="secondary" className="rounded-[6px] text-[10px] capitalize">
-                {formatStatusLabel(asset.statusId)}
-              </Badge>
+            <div className="flex flex-wrap items-center gap-3">
+              {assetAge && <p className="text-sm text-muted-foreground">{assetAge}</p>}
               <AssetStatusActions
                 kind={kind}
                 assetId={asset.assetId}

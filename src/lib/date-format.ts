@@ -142,3 +142,67 @@ export function formatDateLabel(iso: string): string {
     year: 'numeric',
   });
 }
+
+/** Human-readable label for procurement dates (DDMMYY, DD/MM/YY, or ISO). */
+export function formatPurchaseDateLabel(raw: string | null | undefined): string | null {
+  if (raw == null || !raw.trim()) return null;
+  const iso = normalizeToIsoDate(raw);
+  return iso ? formatDateLabel(iso) : raw.trim();
+}
+
+function formatDurationSince(start: Date, end: Date): string {
+  let years = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  if (end.getDate() < start.getDate()) months--;
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years < 0) return '—';
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} year${years === 1 ? '' : 's'}`);
+  if (months > 0) parts.push(`${months} month${months === 1 ? '' : 's'}`);
+
+  if (parts.length === 0) {
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const diffDays = Math.max(0, Math.floor((end.getTime() - start.getTime()) / msPerDay));
+    if (diffDays === 0) return 'Less than 1 day old';
+    return diffDays === 1 ? '1 day old' : `${diffDays} days old`;
+  }
+
+  return `${parts.join(', ')} old`;
+}
+
+/** Asset age from PO date, or from registration date when PO date is missing. */
+export function formatAssetAge(
+  poDate: string | null | undefined,
+  createdAt: string | null | undefined,
+): string | null {
+  let start: Date | undefined;
+  let basisLabel: string | undefined;
+
+  if (poDate?.trim()) {
+    const iso = normalizeToIsoDate(poDate);
+    const parsed = iso ? isoToLocalDate(iso) : undefined;
+    if (parsed) {
+      start = parsed;
+      basisLabel = 'since PO date';
+    }
+  }
+
+  if (!start && createdAt) {
+    const registered = new Date(createdAt);
+    if (!Number.isNaN(registered.getTime())) {
+      start = new Date(registered.getFullYear(), registered.getMonth(), registered.getDate());
+      basisLabel = 'registered in system';
+    }
+  }
+
+  if (!start || !basisLabel) return null;
+
+  const today = new Date();
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return `${formatDurationSince(start, end)} (${basisLabel})`;
+}
