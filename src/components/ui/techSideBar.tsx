@@ -7,6 +7,7 @@ import {
   History,
   Inbox,
   ScrollText,
+  FileBarChart,
   Laptop,
   LayoutDashboard,
   Network,
@@ -30,6 +31,7 @@ const REQUESTS = '/technician/requests' as const;
 const REQUEST_LOG = '/technician/request-log' as const;
 const DISPOSAL = '/technician/disposal' as const;
 const HISTORY = '/technician/history' as const;
+const REPORT = '/technician/report' as const;
 const PROFILE = '/technician/profile' as const;
 
 const HASH = {
@@ -168,6 +170,13 @@ function TechSideBarNav() {
         active={pathname === HISTORY || pathname.startsWith(`${HISTORY}/`)}
       >
         History
+      </NavLink>
+      <NavLink
+        to={REPORT}
+        icon={FileBarChart}
+        active={pathname === REPORT || pathname.startsWith(`${REPORT}/`)}
+      >
+        Report
       </NavLink>
       <NavLink to={`${DASH}#${HASH.manual}`} icon={BookOpen} active={h === HASH.manual}>
         Manual

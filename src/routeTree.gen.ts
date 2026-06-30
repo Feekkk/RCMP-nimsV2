@@ -20,6 +20,7 @@ import { Route as TechnicianRequestsRouteImport } from './routes/technician/requ
 import { Route as TechnicianRequestViewRouteImport } from './routes/technician/request-view'
 import { Route as TechnicianRequestLogRouteImport } from './routes/technician/request-log'
 import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
+import { Route as TechnicianReportRouteImport } from './routes/technician/report'
 import { Route as TechnicianRepairRouteImport } from './routes/technician/repair'
 import { Route as TechnicianProfileRouteImport } from './routes/technician/profile'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
@@ -92,6 +93,11 @@ const TechnicianRequestLogRoute = TechnicianRequestLogRouteImport.update({
 const TechnicianRequestAssetsRoute = TechnicianRequestAssetsRouteImport.update({
   id: '/technician/request-assets',
   path: '/technician/request-assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianReportRoute = TechnicianReportRouteImport.update({
+  id: '/technician/report',
+  path: '/technician/report',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TechnicianRepairRoute = TechnicianRepairRouteImport.update({
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
   '/technician/repair': typeof TechnicianRepairRoute
+  '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
@@ -237,6 +244,7 @@ export interface FileRoutesByTo {
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
   '/technician/repair': typeof TechnicianRepairRoute
+  '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
   '/technician/repair': typeof TechnicianRepairRoute
+  '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
@@ -302,6 +311,7 @@ export interface FileRouteTypes {
     | '/technician/network'
     | '/technician/profile'
     | '/technician/repair'
+    | '/technician/report'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/technician/network'
     | '/technician/profile'
     | '/technician/repair'
+    | '/technician/report'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/technician/network'
     | '/technician/profile'
     | '/technician/repair'
+    | '/technician/report'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
@@ -396,6 +408,7 @@ export interface RootRouteChildren {
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
   TechnicianProfileRoute: typeof TechnicianProfileRoute
   TechnicianRepairRoute: typeof TechnicianRepairRoute
+  TechnicianReportRoute: typeof TechnicianReportRoute
   TechnicianRequestAssetsRoute: typeof TechnicianRequestAssetsRoute
   TechnicianRequestLogRoute: typeof TechnicianRequestLogRoute
   TechnicianRequestViewRoute: typeof TechnicianRequestViewRoute
@@ -487,6 +500,13 @@ declare module '@tanstack/react-router' {
       path: '/technician/request-assets'
       fullPath: '/technician/request-assets'
       preLoaderRoute: typeof TechnicianRequestAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/report': {
+      id: '/technician/report'
+      path: '/technician/report'
+      fullPath: '/technician/report'
+      preLoaderRoute: typeof TechnicianReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/repair': {
@@ -636,6 +656,7 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianNetworkRoute: TechnicianNetworkRoute,
   TechnicianProfileRoute: TechnicianProfileRoute,
   TechnicianRepairRoute: TechnicianRepairRoute,
+  TechnicianReportRoute: TechnicianReportRoute,
   TechnicianRequestAssetsRoute: TechnicianRequestAssetsRoute,
   TechnicianRequestLogRoute: TechnicianRequestLogRoute,
   TechnicianRequestViewRoute: TechnicianRequestViewRoute,
