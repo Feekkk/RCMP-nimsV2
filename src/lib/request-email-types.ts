@@ -1,4 +1,4 @@
-export const REQUEST_IT_EMAIL = 'itd.rcmp@unikl.edu.my';
+export const REQUEST_IT_EMAIL = 'it.rcmp@unikl.edu.my';
 
 export type RequestEmailItem = {
   assetType: string;

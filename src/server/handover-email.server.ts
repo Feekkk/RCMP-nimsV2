@@ -8,7 +8,7 @@ import { escapeHtml } from '@/server/email.server';
 import { getHandoverEmailData } from '@/server/handover-email-repo.server';
 import { generateHandoverPdfBuffer } from '@/server/handover-pdf.server';
 
-const HANDOVER_CC = 'itd.rcmp@unikl.edu.my';
+const HANDOVER_CC = 'it.rcmp@unikl.edu.my';
 const LOGO_CID = 'unikl-logo';
 
 function loadLogoBuffer(): Buffer {
