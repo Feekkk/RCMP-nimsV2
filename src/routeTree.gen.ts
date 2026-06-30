@@ -26,7 +26,6 @@ import { Route as TechnicianProfileRouteImport } from './routes/technician/profi
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
 import { Route as TechnicianHistoryRouteImport } from './routes/technician/history'
-import { Route as TechnicianFaultyRouteImport } from './routes/technician/faulty'
 import { Route as TechnicianDisposalRouteImport } from './routes/technician/disposal'
 import { Route as TechnicianDeployRouteImport } from './routes/technician/deploy'
 import { Route as TechnicianDashboardRouteImport } from './routes/technician/dashboard'
@@ -125,11 +124,6 @@ const TechnicianHistoryRoute = TechnicianHistoryRouteImport.update({
   path: '/technician/history',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianFaultyRoute = TechnicianFaultyRouteImport.update({
-  id: '/technician/faulty',
-  path: '/technician/faulty',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TechnicianDisposalRoute = TechnicianDisposalRouteImport.update({
   id: '/technician/disposal',
   path: '/technician/disposal',
@@ -206,7 +200,6 @@ export interface FileRoutesByFullPath {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
-  '/technician/faulty': typeof TechnicianFaultyRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -238,7 +231,6 @@ export interface FileRoutesByTo {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
-  '/technician/faulty': typeof TechnicianFaultyRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -271,7 +263,6 @@ export interface FileRoutesById {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
-  '/technician/faulty': typeof TechnicianFaultyRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -305,7 +296,6 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
-    | '/technician/faulty'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
@@ -337,7 +327,6 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
-    | '/technician/faulty'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
@@ -369,7 +358,6 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
-    | '/technician/faulty'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
@@ -402,7 +390,6 @@ export interface RootRouteChildren {
   TechnicianDashboardRoute: typeof TechnicianDashboardRoute
   TechnicianDeployRoute: typeof TechnicianDeployRoute
   TechnicianDisposalRoute: typeof TechnicianDisposalRoute
-  TechnicianFaultyRoute: typeof TechnicianFaultyRoute
   TechnicianHistoryRoute: typeof TechnicianHistoryRoute
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
@@ -544,13 +531,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianHistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/technician/faulty': {
-      id: '/technician/faulty'
-      path: '/technician/faulty'
-      fullPath: '/technician/faulty'
-      preLoaderRoute: typeof TechnicianFaultyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/technician/disposal': {
       id: '/technician/disposal'
       path: '/technician/disposal'
@@ -650,7 +630,6 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianDashboardRoute: TechnicianDashboardRoute,
   TechnicianDeployRoute: TechnicianDeployRoute,
   TechnicianDisposalRoute: TechnicianDisposalRoute,
-  TechnicianFaultyRoute: TechnicianFaultyRoute,
   TechnicianHistoryRoute: TechnicianHistoryRoute,
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,

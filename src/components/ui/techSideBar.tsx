@@ -3,10 +3,8 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import {
   BookOpen,
   ChevronDown,
-  ClipboardList,
   History,
   Inbox,
-  ScrollText,
   FileBarChart,
   Laptop,
   LayoutDashboard,
@@ -15,7 +13,6 @@ import {
   Trash2,
   Tv,
   UserCircle,
-  UserPlus,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -26,9 +23,13 @@ const DASH = '/technician/dashboard' as const;
 const LAPTOP = '/technician/laptop' as const;
 const AV = '/technician/av' as const;
 const NETWORK = '/technician/network' as const;
-const REQUEST_ASSETS = '/technician/request-assets' as const;
 const REQUESTS = '/technician/requests' as const;
-const REQUEST_LOG = '/technician/request-log' as const;
+const REQUEST_ROUTES = [
+  REQUESTS,
+  '/technician/request-assets',
+  '/technician/request-view',
+  '/technician/request-log',
+] as const;
 const DISPOSAL = '/technician/disposal' as const;
 const HISTORY = '/technician/history' as const;
 const REPORT = '/technician/report' as const;
@@ -123,9 +124,9 @@ function TechSideBarNav() {
   const laptopActive = pathname === '/technician/laptop';
   const avActive = pathname === '/technician/av';
   const networkActive = pathname === '/technician/network';
-  const requestAssetsActive = pathname === REQUEST_ASSETS;
-  const requestsActive = pathname === REQUESTS;
-  const requestLogActive = pathname === REQUEST_LOG;
+  const requestsActive = REQUEST_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
 
   return (
     <nav className="flex flex-col gap-1 p-3" aria-label="Technician navigation">
@@ -145,17 +146,9 @@ function TechSideBarNav() {
         </NavLink>
       </NavCollapsible>
 
-      <NavCollapsible title="Request" icon={Inbox} defaultOpen>
-        <NavLink to={REQUEST_ASSETS} icon={UserPlus} active={requestAssetsActive}>
-          Assign Assets
-        </NavLink>
-        <NavLink to={REQUESTS} icon={ClipboardList} active={requestsActive}>
-          User Request
-        </NavLink>
-        <NavLink to={REQUEST_LOG} icon={ScrollText} active={requestLogActive}>
-          Request Log
-        </NavLink>
-      </NavCollapsible>
+      <NavLink to={REQUESTS} icon={Inbox} active={requestsActive}>
+        Request
+      </NavLink>
 
       <NavLink
         to={DISPOSAL}

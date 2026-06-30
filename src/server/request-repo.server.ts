@@ -41,7 +41,8 @@ import { isUserProfileComplete } from '@/lib/user-profile';
 import { attachDisplayNames, resolveAccountProfile } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
-const ACTIVE_STATUS = STATUS_ID.ACTIVE;
+/** Source pool for marking an asset available to borrow (see status.md): freshly registered "new" assets. */
+const ACTIVE_STATUS = STATUS_ID.NEW;
 
 function formatDate(val: Date | string | null | undefined): string {
   if (val == null) return '';
@@ -195,7 +196,7 @@ export async function listAvailablePoolAssets(): Promise<RequestPoolAsset[]> {
   return all.filter((a) => a.assignmentId == null);
 }
 
-/** Status 9 assets with an open request_assignment */
+/** Active-request (6) assets with an open request_assignment */
 export async function listAssignedRequestPoolAssets(): Promise<RequestPoolAsset[]> {
   const all = await listRequestPoolAssets();
   return all.filter((a) => a.assignmentId != null);
@@ -213,7 +214,7 @@ export async function markAssetForRequest(input: MarkAssetForRequestInput): Prom
   if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
   if (row.status_id !== ACTIVE_STATUS) {
     throw new Error(
-      'This asset is not available for requests — only active assets can be added. Check its status or choose a different asset.',
+      'This asset is not available for requests — only new (unassigned) assets can be added. Check its status or choose a different asset.',
     );
   }
 

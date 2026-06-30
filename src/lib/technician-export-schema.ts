@@ -33,7 +33,7 @@ export const REPORT_PDF_COLUMNS = [
   {
     key: 'history',
     label: 'History',
-    description: 'Active / non-active: full asset lifecycle',
+    description: 'In-stock assets: full asset lifecycle',
     weight: 2.5,
   },
   {

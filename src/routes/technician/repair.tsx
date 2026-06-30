@@ -17,7 +17,7 @@ export const Route = createFileRoute('/technician/repair')({
   head: () => ({
     meta: [
       { title: 'In-house repair | NIMS' },
-      { name: 'description', content: 'Log an in-house repair for a faulty asset.' },
+      { name: 'description', content: 'Log an in-house repair for an asset.' },
     ],
   }),
   component: TechnicianRepairFormPage,

@@ -329,7 +329,7 @@ export function TechnicianReportPage() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                Deploy exports use Handled by / Handover to. Active and non-active exports use History.
+                Deploy exports use Handled by / Handover to. In-stock exports use History.
                 Request is optional for borrow-request assets only.
               </p>
             </div>

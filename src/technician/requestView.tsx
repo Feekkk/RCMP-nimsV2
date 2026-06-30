@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from '@tanstack/react-router';
-import { ArrowLeft, Laptop, Search, Tv } from 'lucide-react';
+import { Laptop, Search, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -19,6 +17,7 @@ import { REQUEST_STATUS_ACTIVE } from '@/lib/request-schema';
 import type { RequestAssignableKind, RequestPoolAsset } from '@/lib/request-schema';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 import { listRequestPoolAssetsFn } from '@/server/request.functions';
 
 type KindFilter = 'all' | RequestAssignableKind;
@@ -83,12 +82,7 @@ export function TechnicianRequestViewPage() {
             {availableCount} available · {assignedCount} assigned to a user request.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-[8px]" asChild>
-          <Link to="/technician/request-assets">
-            <ArrowLeft className="h-4 w-4" />
-            Back to add assets
-          </Link>
-        </Button>
+        <RequestToolbarActions />
       </div>
 
       <Card className="rounded-[14px] border-border shadow-sm">

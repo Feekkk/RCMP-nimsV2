@@ -72,7 +72,6 @@ export function TechnicianWarrantyFormPage() {
 
   const session = readTechnicianSession();
   const canClaim = ctx?.isActive === true;
-  const restoreLabel = kind === 'network' ? 'online' : 'active';
 
   const refreshAssets = () => {
     void laptop.refetch();
@@ -102,7 +101,7 @@ export function TechnicianWarrantyFormPage() {
 
     setSaving(true);
     try {
-      const result = await createWarrantyClaimFn({
+      await createWarrantyClaimFn({
         data: {
           kind,
           assetId,
@@ -113,11 +112,7 @@ export function TechnicianWarrantyFormPage() {
           claimedBy: session.staffId,
         },
       });
-      toast.success(
-        result.statusRestored
-          ? `Warranty claim logged — asset set to ${restoreLabel}`
-          : 'Warranty claim logged',
-      );
+      toast.success('Warranty claim logged');
       refreshAssets();
       void navigate({ to: ASSET_LIST_PATH[kind] });
     } catch (err) {
@@ -131,9 +126,9 @@ export function TechnicianWarrantyFormPage() {
     <TechnicianShell>
       <div className="mb-6">
         <Button variant="ghost" size="sm" type="button" className="-ml-2 mb-2 gap-1.5" asChild>
-          <Link to="/technician/faulty" search={{ kind, assetId }}>
+          <Link to={ASSET_LIST_PATH[kind]}>
             <ArrowLeft className="h-4 w-4" />
-            Faulty options
+            Back to {ASSET_KIND_LABEL[kind]}
           </Link>
         </Button>
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Warranty claim</h1>
@@ -147,8 +142,8 @@ export function TechnicianWarrantyFormPage() {
         <CardHeader>
           <CardTitle className="text-base">Coverage</CardTitle>
           <CardDescription>
-            Claims are only accepted when the claim date falls within the recorded warranty period. Saving
-            restores the asset to {restoreLabel} when it is faulty.
+            Claims are only accepted when the claim date falls within the recorded warranty period. The
+            asset keeps its current status.
           </CardDescription>
         </CardHeader>
         <CardContent>

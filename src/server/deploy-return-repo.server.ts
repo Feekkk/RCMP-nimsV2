@@ -288,11 +288,11 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
         input.returnPlace ?? null,
         input.condition ?? null,
         input.returnRemarks ?? null,
-        STATUS_ID.ACTIVE,
+        STATUS_ID.RETURN,
       ],
     );
     await conn.execute(`UPDATE laptop SET status_id = ? WHERE asset_id = ?`, [
-      STATUS_ID.ACTIVE,
+      STATUS_ID.RETURN,
       row.asset_id,
     ]);
     await conn.commit();
@@ -334,11 +334,11 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
         input.returnPlace ?? null,
         input.condition ?? null,
         input.returnRemarks ?? null,
-        STATUS_ID.ACTIVE,
+        STATUS_ID.RETURN,
       ],
     );
     await conn.execute(`UPDATE laptop SET status_id = ? WHERE asset_id = ?`, [
-      STATUS_ID.ACTIVE,
+      STATUS_ID.RETURN,
       row.asset_id,
     ]);
     await conn.commit();

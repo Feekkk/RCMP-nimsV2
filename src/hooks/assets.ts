@@ -3,8 +3,10 @@ import {
   ASSET_KIND_LABEL,
   ASSET_LIST_PATH,
   formatStatusLabel,
+  INSTOCK_STATUS_IDS,
   isInstockStatus,
   isOutstockStatus,
+  OUTSTOCK_STATUS_IDS,
   type AssetKind,
   type AvAsset,
   type CreateAvInput,
@@ -136,9 +138,24 @@ export function filterByStatus<T extends { statusId: number }>(items: T[], statu
   return items.filter((item) => item.statusId === statusId);
 }
 
+export type StockStatusCount = {
+  statusId: number;
+  count: number;
+};
+
 export function countStockAssets<T extends { statusId: number }>(items: T[]) {
+  const counts = new Map<number, number>();
+  for (const item of items) {
+    counts.set(item.statusId, (counts.get(item.statusId) ?? 0) + 1);
+  }
+
+  const byStatus = (statusIds: readonly number[]): StockStatusCount[] =>
+    statusIds.map((statusId) => ({ statusId, count: counts.get(statusId) ?? 0 }));
+
   return {
     instock: items.filter((i) => isInstockStatus(i.statusId)).length,
     outstock: items.filter((i) => isOutstockStatus(i.statusId)).length,
+    instockByStatus: byStatus(INSTOCK_STATUS_IDS),
+    outstockByStatus: byStatus(OUTSTOCK_STATUS_IDS),
   };
 }

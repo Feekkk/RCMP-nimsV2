@@ -22,10 +22,10 @@ const trendConfig = {
 };
 
 const inventoryConfig = {
-  active: { label: 'Active / online', color: 'hsl(262 55% 58%)' },
+  active: { label: 'In stock', color: 'hsl(262 55% 58%)' },
   deploy: { label: 'Deployed', color: 'hsl(210 70% 55%)' },
   requestFlow: { label: 'Request flow', color: 'hsl(168 45% 42%)' },
-  maintenance: { label: 'Other', color: 'hsl(220 12% 72%)' },
+  maintenance: { label: 'Disposed / other', color: 'hsl(220 12% 72%)' },
 };
 
 export function MiniSparkline({ data, color }: { data: number[]; color: string }) {

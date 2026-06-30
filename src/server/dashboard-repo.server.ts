@@ -6,6 +6,7 @@ import type {
   TechnicianDashboardStats,
 } from '@/lib/dashboard-schema';
 import type { RequestItemRow } from '@/lib/request-schema';
+import { REQUEST_STATUS_ACTIVE } from '@/lib/request-schema';
 import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 import { loadDashboardCharts } from '@/server/dashboard-charts.server';
@@ -97,8 +98,8 @@ export async function getTechnicianDashboard(
     })[]
   >(
     `SELECT
-      (SELECT COUNT(*) FROM laptop WHERE status_id = 9) AS pool_laptop,
-      (SELECT COUNT(*) FROM av WHERE status_id = 9) AS pool_av,
+      (SELECT COUNT(*) FROM laptop WHERE status_id = ${REQUEST_STATUS_ACTIVE}) AS pool_laptop,
+      (SELECT COUNT(*) FROM av WHERE status_id = ${REQUEST_STATUS_ACTIVE}) AS pool_av,
       (SELECT COUNT(*) FROM laptop) AS laptop_total,
       (SELECT COUNT(*) FROM av) AS av_total,
       (SELECT COUNT(*) FROM network) AS network_total,

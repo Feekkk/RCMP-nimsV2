@@ -1,10 +1,9 @@
 import type { AssetKind } from '@/lib/inventory-schema';
 import { STATUS_ID } from '@/lib/asset-status-actions';
 
-/** Assets eligible for disposal: non-active (2) or offline (8). */
+/** Assets eligible for disposal: returned (2). */
 export const DISPOSAL_ELIGIBLE_STATUS_IDS = [
-  STATUS_ID.NON_ACTIVE,
-  STATUS_ID.OFFLINE,
+  STATUS_ID.RETURN,
 ] as const;
 
 export type DisposalAssetType = 'laptop' | 'av' | 'network';

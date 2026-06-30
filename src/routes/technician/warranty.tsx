@@ -17,7 +17,7 @@ export const Route = createFileRoute('/technician/warranty')({
   head: () => ({
     meta: [
       { title: 'Warranty claim | NIMS' },
-      { name: 'description', content: 'Log a vendor warranty claim for a faulty asset.' },
+      { name: 'description', content: 'Log a vendor warranty claim for an asset.' },
     ],
   }),
   component: TechnicianWarrantyFormPage,

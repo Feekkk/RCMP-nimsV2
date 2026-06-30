@@ -106,6 +106,7 @@ function DashboardPanel({
 function StatCard({
   icon: Icon,
   label,
+  description,
   value,
   tint,
   sparkData,
@@ -114,6 +115,7 @@ function StatCard({
 }: {
   icon: ElementType;
   label: string;
+  description: string;
   value: number;
   tint: string;
   sparkData: number[];
@@ -121,14 +123,15 @@ function StatCard({
   href?: string;
 }) {
   const inner = (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
+      <div className="flex min-w-0 items-start gap-3">
         <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
           <p className="text-2xl font-bold tabular-nums text-foreground">{value}</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{description}</p>
         </div>
       </div>
       <MiniSparkline data={sparkData} color={sparkColor} />
@@ -514,11 +517,14 @@ function RequestTimetable({
   );
 }
 
-const INVENTORY_BUCKET_LABEL: Record<keyof Omit<DashboardInventorySlice, 'kind'>, string> = {
-  active: 'Active / online',
-  deploy: 'Deployed',
-  requestFlow: 'Request flow',
-  maintenance: 'Other / maintenance',
+const INVENTORY_BUCKET_META: Record<
+  keyof Omit<DashboardInventorySlice, 'kind'>,
+  { label: string; description: string }
+> = {
+  active: { label: 'In stock', description: 'On-site or reserved' },
+  deploy: { label: 'Deployed', description: 'With staff or at a place' },
+  requestFlow: { label: 'Request flow', description: 'In an active request' },
+  maintenance: { label: 'Disposed / other', description: 'Disposed or unavailable' },
 };
 
 function AssetDetailsPanel({
@@ -533,18 +539,21 @@ function AssetDetailsPanel({
   const kindLinks = [
     {
       label: 'Laptop',
+      description: 'All registered laptops & desktops',
       count: stats?.laptopCount ?? 0,
       href: '/technician/laptop' as const,
       icon: Laptop,
     },
     {
       label: 'AV',
+      description: 'All registered AV equipment',
       count: stats?.avCount ?? 0,
       href: '/technician/av' as const,
       icon: Tv,
     },
     {
       label: 'Network',
+      description: 'All registered network gear',
       count: stats?.networkCount ?? 0,
       href: '/technician/network' as const,
       icon: Network,
@@ -580,7 +589,7 @@ function AssetDetailsPanel({
       ) : (
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-2">
-            {kindLinks.map(({ label, count, href, icon: Icon }) => (
+            {kindLinks.map(({ label, description, count, href, icon: Icon }) => (
               <Link
                 key={href}
                 to={href}
@@ -591,6 +600,7 @@ function AssetDetailsPanel({
                   <span className="text-[10px] font-medium uppercase tracking-wide">{label}</span>
                 </div>
                 <p className="text-xl font-bold tabular-nums text-foreground">{count}</p>
+                <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{description}</p>
               </Link>
             ))}
           </div>
@@ -598,14 +608,17 @@ function AssetDetailsPanel({
           <InventoryMixChart data={inventoryMix} />
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {(Object.keys(INVENTORY_BUCKET_LABEL) as (keyof typeof INVENTORY_BUCKET_LABEL)[]).map(
+            {(Object.keys(INVENTORY_BUCKET_META) as (keyof typeof INVENTORY_BUCKET_META)[]).map(
               (key) => (
                 <div
                   key={key}
                   className="rounded-lg border border-border/70 bg-card px-3 py-2 text-center"
                 >
-                  <p className="text-[10px] text-muted-foreground">{INVENTORY_BUCKET_LABEL[key]}</p>
+                  <p className="text-[10px] text-muted-foreground">{INVENTORY_BUCKET_META[key].label}</p>
                   <p className="text-lg font-bold tabular-nums">{totals[key]}</p>
+                  <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
+                    {INVENTORY_BUCKET_META[key].description}
+                  </p>
                 </div>
               ),
             )}
@@ -694,6 +707,7 @@ export function TechnicianDashboardPage() {
         <StatCard
           icon={ClipboardList}
           label="Needs action"
+          description="Requests require attention"
           value={stats?.pendingRequests ?? 0}
           tint="bg-lavender/15 text-[oklch(0.45_0.12_290)]"
           sparkData={sparklines.pending.length ? sparklines.pending : EMPTY_SPARK}
@@ -703,6 +717,7 @@ export function TechnicianDashboardPage() {
         <StatCard
           icon={PackageCheck}
           label="Ready checkout"
+          description="Requests ready for checkout"
           value={stats?.awaitingCheckout ?? 0}
           tint="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200"
           sparkData={sparklines.checkout.length ? sparklines.checkout : EMPTY_SPARK}
@@ -712,6 +727,7 @@ export function TechnicianDashboardPage() {
         <StatCard
           icon={CalendarDays}
           label="Out on loan"
+          description="Requests currently on loan"
           value={stats?.checkedOut ?? 0}
           tint="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200"
           sparkData={sparklines.onLoan.length ? sparklines.onLoan : EMPTY_SPARK}
@@ -721,6 +737,7 @@ export function TechnicianDashboardPage() {
         <StatCard
           icon={Package}
           label="Request pool"
+          description="Assets available for requests"
           value={stats?.requestPoolCount ?? 0}
           tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
           sparkData={sparklines.pool.length ? sparklines.pool : EMPTY_SPARK}

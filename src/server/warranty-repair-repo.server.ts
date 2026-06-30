@@ -1,6 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AssetKind } from '@/lib/inventory-schema';
-import { STATUS_ID } from '@/lib/asset-status-actions';
 import type {
   RepairInput,
   WarrantyClaimInput,
@@ -9,7 +8,6 @@ import type {
   WarrantyRecord,
 } from '@/lib/warranty-repair-schema';
 import { getDbPool } from '@/server/db';
-type StatusRow = RowDataPacket & { status_id: number };
 
 type WarrantyRow = RowDataPacket & {
   warranty_id: number;
@@ -49,28 +47,6 @@ function mapWarranty(row: WarrantyRow): WarrantyRecord {
 
 export function isWarrantyActive(w: WarrantyRecord, onDate = todayIso()): boolean {
   return onDate >= w.startDate && onDate <= w.endDate;
-}
-
-function restoredStatusId(kind: AssetKind): number {
-  return kind === 'network' ? STATUS_ID.ONLINE : STATUS_ID.ACTIVE;
-}
-
-/** After warranty claim or in-house repair, move faulty assets back to active / online. */
-async function restoreFromFaulty(
-  conn: import('mysql2/promise').PoolConnection,
-  kind: AssetKind,
-  assetId: number,
-): Promise<boolean> {
-  const [rows] = await conn.query<StatusRow[]>(
-    `SELECT status_id FROM ${kind} WHERE asset_id = ?`,
-    [assetId],
-  );
-  if (rows[0]?.status_id !== STATUS_ID.FAULTY) return false;
-  await conn.execute(`UPDATE ${kind} SET status_id = ? WHERE asset_id = ?`, [
-    restoredStatusId(kind),
-    assetId,
-  ]);
-  return true;
 }
 
 export async function insertWarranty(
@@ -161,10 +137,9 @@ export async function createWarrantyClaim(input: WarrantyClaimInput) {
       ],
     );
     const claimId = (result as { insertId?: number }).insertId ?? 0;
-    const statusRestored = await restoreFromFaulty(conn, input.kind, input.assetId);
 
     await conn.commit();
-    return { claimId, statusRestored };
+    return { claimId, statusRestored: false };
   } catch (e) {
     await conn.rollback();
     throw e;
@@ -194,10 +169,9 @@ export async function createRepair(input: RepairInput) {
       ],
     );
     const repairId = (result as { insertId?: number }).insertId ?? 0;
-    const statusRestored = await restoreFromFaulty(conn, input.kind, input.assetId);
 
     await conn.commit();
-    return { repairId, statusRestored };
+    return { repairId, statusRestored: false };
   } catch (e) {
     await conn.rollback();
     throw e;

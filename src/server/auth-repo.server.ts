@@ -194,49 +194,6 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
   return { ...(await mapUserWithAzureProfile(updated)), accountCreated };
 }
 
-/** Temporary dev sign-in: no password. Auto-creates user role accounts when email is not in DB. */
-export async function loginDevByEmail(email: string, loginRole: LoginRole): Promise<AuthUserRow> {
-  const normalized = email.trim().toLowerCase();
-  if (!normalized || !normalized.includes('@')) {
-    throw new Error(
-      'The email address is missing or incomplete. Enter a full address with an @ symbol (for example, name@example.com).',
-    );
-  }
-
-  let row = await findUserByEmail(normalized);
-  if (!row) {
-    if (loginRole === 'staff') {
-      throw new Error(
-        'This email is not registered for staff access. Ask an administrator to add your account before signing in.',
-      );
-    }
-    const pool = getDbPool();
-    await pool.execute(
-      `INSERT INTO users (email, role_id, last_login_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
-      [normalized, ROLE_USER],
-    );
-    row = await findUserByEmail(normalized);
-    if (!row) {
-      throw new Error(
-        'Your account could not be set up. Try signing in again, or contact support if this keeps happening.',
-      );
-    }
-  } else {
-    assertLoginRole(row, loginRole);
-  }
-
-  const pool = getDbPool();
-  await pool.execute(`UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?`, [row.id]);
-
-  const updated = await findUserById(row.id);
-  if (!updated) {
-    throw new Error(
-      'Your account could not be loaded after sign-in. Try signing in again, or contact support if this keeps happening.',
-    );
-  }
-  return mapUserWithAzureProfile(updated);
-}
-
 export type UpdateUserProfileInput = {
   staffId: string;
   fullName: string;

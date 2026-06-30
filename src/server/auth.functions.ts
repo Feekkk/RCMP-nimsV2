@@ -12,17 +12,6 @@ export const completeMicrosoftLoginFn = createServerFn({ method: 'POST' })
     return completeMicrosoftLogin(data.code, data.state);
   });
 
-export const loginDevByEmailFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { email: string; loginRole: 'user' | 'staff' }) => data)
-  .handler(async ({ data }) => {
-    const { isEmailOnlyUserLoginEnabled } = await import('@/lib/email-login-config');
-    if (!isEmailOnlyUserLoginEnabled()) {
-      throw new Error('Dev email sign-in is not enabled on this server.');
-    }
-    const { loginDevByEmail } = await import('@/server/auth-repo.server');
-    return loginDevByEmail(data.email, data.loginRole);
-  });
-
 export const getUserProfileFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { staffId: string }) => data)
   .handler(async ({ data }) => {

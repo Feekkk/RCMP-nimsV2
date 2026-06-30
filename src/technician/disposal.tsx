@@ -206,9 +206,8 @@ export function TechnicianDisposalPage() {
       <div className="mb-5 flex flex-col gap-1 sm:mb-6">
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Asset disposal</h1>
         <p className="max-w-2xl text-xs text-muted-foreground sm:text-sm">
-          Select one or more assets in <span className="font-medium text-foreground">non-active</span> or{' '}
-          <span className="font-medium text-foreground">offline</span> status. Submitting creates a disposal
-          record and marks each asset as disposed.
+          Select one or more assets in <span className="font-medium text-foreground">return</span> status.
+          Submitting creates a disposal record and marks each asset as disposed.
         </p>
       </div>
 
@@ -222,7 +221,7 @@ export function TechnicianDisposalPage() {
         <Card className="rounded-[14px] border-border shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Disposal details</CardTitle>
-            <CardDescription>One form can include multiple assets (disposal + disposal_item).</CardDescription>
+            <CardDescription>One form can include multiple assets</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <DatePickerField
@@ -328,7 +327,7 @@ export function TechnicianDisposalPage() {
                     <TableRow>
                       <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                         {eligible.length === 0
-                          ? 'No non-active or offline assets available for disposal.'
+                          ? 'No returned assets available for disposal.'
                           : 'No assets match your filters.'}
                       </TableCell>
                     </TableRow>

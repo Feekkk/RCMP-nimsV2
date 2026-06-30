@@ -105,8 +105,8 @@ export type ReturnPlaceInput = {
   returnRemarks?: string | null;
 };
 
-export function getReturnTargetStatusId(kind: AssetKind): number {
-  return kind === 'network' ? STATUS_ID.ONLINE : STATUS_ID.ACTIVE;
+export function getReturnTargetStatusId(_kind: AssetKind): number {
+  return STATUS_ID.RETURN;
 }
 
 export function getDeployTargetStatusId(): number {

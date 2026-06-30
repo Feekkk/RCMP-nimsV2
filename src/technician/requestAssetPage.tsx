@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from '@tanstack/react-router';
-import { Eye, Laptop, PackagePlus, Search, Tv } from 'lucide-react';
+import { Laptop, PackagePlus, Search, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,8 +15,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { ActiveForRequestAsset, RequestAssignableKind } from '@/lib/request-schema';
+import { usePagination } from '@/hooks/use-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
+import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 import {
   listActiveForRequestPoolFn,
   markAssetsForRequestFn,
@@ -69,6 +71,10 @@ export function TechnicianRequestAssetPage() {
         .includes(q),
     );
   }, [assets, search, kindFilter]);
+
+  const pagination = usePagination(filtered, {
+    resetKey: `${search}|${kindFilter}`,
+  });
 
   const filteredKeys = useMemo(
     () => filtered.map((a) => assetKey(a.kind, a.assetId)),
@@ -140,14 +146,7 @@ export function TechnicianRequestAssetPage() {
             Select active laptop or AV assets and add them to the request pool.
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 rounded-[8px]" asChild>
-            <Link to="/technician/request-view">
-              <Eye className="h-4 w-4" />
-              View pool
-            </Link>
-          </Button>
-        </div>
+        <RequestToolbarActions />
       </div>
 
       <Card className="rounded-[14px] border-border shadow-sm">
@@ -240,7 +239,7 @@ export function TechnicianRequestAssetPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((a) => {
+                  pagination.paginatedItems.map((a) => {
                     const key = assetKey(a.kind, a.assetId);
                     return (
                       <TableRow
@@ -272,6 +271,17 @@ export function TechnicianRequestAssetPage() {
               </TableBody>
             </Table>
           </div>
+          <AssetTablePagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            pageSize={pagination.pageSize}
+            rangeStart={pagination.rangeStart}
+            rangeEnd={pagination.rangeEnd}
+            totalItems={pagination.totalItems}
+            totalLoaded={assets.length}
+            onPageChange={pagination.setPage}
+            onPageSizeChange={pagination.setPageSize}
+          />
         </CardContent>
       </Card>
     </TechnicianShell>

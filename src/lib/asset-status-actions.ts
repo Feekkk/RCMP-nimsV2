@@ -1,29 +1,17 @@
 import type { LucideIcon } from 'lucide-react';
-import {
-  AlertCircle,
-  Archive,
-  PackageCheck,
-  PackageX,
-  Power,
-  Reply,
-  ShieldCheck,
-  Signal,
-  SignalZero,
-  Truck,
-  Wrench,
-} from 'lucide-react';
+import { ClipboardCheck, Reply, Trash2, Truck } from 'lucide-react';
 import type { AssetKind, StatusId } from '@/lib/inventory-schema';
 
 /** status_id values from database/schema.sql */
 export const STATUS_ID = {
-  ACTIVE: 1,
-  NON_ACTIVE: 2,
+  NEW: 1,
+  RETURN: 2,
   DEPLOY: 3,
-  FAULTY: 4,
+  ASSIGN: 4,
   DISPOSED: 5,
-  LOST: 6,
-  ONLINE: 7,
-  OFFLINE: 8,
+  REQUEST_ACTIVE: 6,
+  REQUEST_BOOKED: 7,
+  REQUEST_CHECKOUT: 8,
 } as const;
 
 export type AssetStatusAction = {
@@ -32,7 +20,7 @@ export type AssetStatusAction = {
   icon: LucideIcon;
   /** Tailwind classes for icon button (outline-style, semantic color). */
   buttonClassName: string;
-  /** Direct status update (faulty, lost, etc.) */
+  /** Direct status update (assign). */
   mode: 'status';
   targetStatusId: StatusId;
 } | {
@@ -40,174 +28,63 @@ export type AssetStatusAction = {
   label: string;
   icon: LucideIcon;
   buttonClassName: string;
-  /** Open deploy / return / warranty / repair form */
+  /** Open deploy / return / disposal form */
   mode: 'navigate';
   href:
     | '/technician/deploy'
     | '/technician/return'
-    | '/technician/warranty'
-    | '/technician/repair'
-    | '/technician/faulty';
+    | '/technician/disposal';
 };
 
 const actionBtn =
   'border shadow-sm hover:opacity-90 disabled:opacity-50';
 
-/** Laptop & AV — assetid-flow.md */
-const LAPTOP_AV_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
-  [STATUS_ID.ACTIVE]: [
-    {
-      key: 'deploy',
-      label: 'Deploy',
-      mode: 'navigate',
-      href: '/technician/deploy',
-      icon: Truck,
-      buttonClassName: `${actionBtn} border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200 dark:hover:bg-sky-900`,
-    },
-    {
-      key: 'faulty',
-      label: 'Mark faulty',
-      mode: 'status',
-      targetStatusId: STATUS_ID.FAULTY,
-      icon: AlertCircle,
-      buttonClassName: `${actionBtn} border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900`,
-    },
-    {
-      key: 'lost',
-      label: 'Mark lost',
-      mode: 'status',
-      targetStatusId: STATUS_ID.LOST,
-      icon: PackageX,
-      buttonClassName: `${actionBtn} border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900`,
-    },
-    {
-      key: 'non-active',
-      label: 'Set non-active',
-      mode: 'status',
-      targetStatusId: STATUS_ID.NON_ACTIVE,
-      icon: Archive,
-      buttonClassName: `${actionBtn} border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800`,
-    },
-  ],
-  [STATUS_ID.NON_ACTIVE]: [
-    {
-      key: 'active',
-      label: 'Activate',
-      mode: 'status',
-      targetStatusId: STATUS_ID.ACTIVE,
-      icon: Power,
-      buttonClassName: `${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900`,
-    },
-  ],
-  [STATUS_ID.DEPLOY]: [
-    {
-      key: 'return',
-      label: 'Return',
-      mode: 'navigate',
-      href: '/technician/return',
-      icon: Reply,
-      buttonClassName: `${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900`,
-    },
-  ],
-  [STATUS_ID.FAULTY]: [
-    {
-      key: 'warranty-claim',
-      label: 'Warranty claim',
-      mode: 'navigate',
-      href: '/technician/warranty',
-      icon: ShieldCheck,
-      buttonClassName: `${actionBtn} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900`,
-    },
-    {
-      key: 'in-house-repair',
-      label: 'In-house repair',
-      mode: 'navigate',
-      href: '/technician/repair',
-      icon: Wrench,
-      buttonClassName: `${actionBtn} border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200 dark:hover:bg-violet-900`,
-    },
-  ],
+const ASSIGN_ACTION: AssetStatusAction = {
+  key: 'assign',
+  label: 'Assign',
+  mode: 'status',
+  targetStatusId: STATUS_ID.ASSIGN,
+  icon: ClipboardCheck,
+  buttonClassName: `${actionBtn} border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 dark:hover:bg-indigo-900`,
 };
 
-/** Network — assetid-flow.md */
-const NETWORK_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
-  [STATUS_ID.ONLINE]: [
-    {
-      key: 'deploy',
-      label: 'Deploy',
-      mode: 'navigate',
-      href: '/technician/deploy',
-      icon: Truck,
-      buttonClassName: `${actionBtn} border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200 dark:hover:bg-sky-900`,
-    },
-    {
-      key: 'faulty',
-      label: 'Mark faulty',
-      mode: 'status',
-      targetStatusId: STATUS_ID.FAULTY,
-      icon: AlertCircle,
-      buttonClassName: `${actionBtn} border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900`,
-    },
-    {
-      key: 'lost',
-      label: 'Mark lost',
-      mode: 'status',
-      targetStatusId: STATUS_ID.LOST,
-      icon: PackageX,
-      buttonClassName: `${actionBtn} border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900`,
-    },
-    {
-      key: 'offline',
-      label: 'Set offline',
-      mode: 'status',
-      targetStatusId: STATUS_ID.OFFLINE,
-      icon: SignalZero,
-      buttonClassName: `${actionBtn} border-yellow-200 bg-yellow-50 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200 dark:hover:bg-yellow-900`,
-    },
-  ],
-  [STATUS_ID.OFFLINE]: [
-    {
-      key: 'online',
-      label: 'Set online',
-      mode: 'status',
-      targetStatusId: STATUS_ID.ONLINE,
-      icon: Signal,
-      buttonClassName: `${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900`,
-    },
-  ],
-  [STATUS_ID.DEPLOY]: [
-    {
-      key: 'return',
-      label: 'Return',
-      mode: 'navigate',
-      href: '/technician/return',
-      icon: PackageCheck,
-      buttonClassName: `${actionBtn} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900`,
-    },
-  ],
-  [STATUS_ID.FAULTY]: [
-    {
-      key: 'warranty-claim',
-      label: 'Warranty claim',
-      mode: 'navigate',
-      href: '/technician/warranty',
-      icon: ShieldCheck,
-      buttonClassName: `${actionBtn} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900`,
-    },
-    {
-      key: 'in-house-repair',
-      label: 'In-house repair',
-      mode: 'navigate',
-      href: '/technician/repair',
-      icon: Wrench,
-      buttonClassName: `${actionBtn} border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200 dark:hover:bg-violet-900`,
-    },
-  ],
+const DEPLOY_ACTION: AssetStatusAction = {
+  key: 'deploy',
+  label: 'Deploy',
+  mode: 'navigate',
+  href: '/technician/deploy',
+  icon: Truck,
+  buttonClassName: `${actionBtn} border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200 dark:hover:bg-sky-900`,
 };
 
-export function getAssetStatusActions(kind: AssetKind, statusId: number): AssetStatusAction[] {
-  const map = kind === 'network' ? NETWORK_ACTIONS : LAPTOP_AV_ACTIONS;
-  return map[statusId as StatusId] ?? [];
+const RETURN_ACTION: AssetStatusAction = {
+  key: 'return',
+  label: 'Return',
+  mode: 'navigate',
+  href: '/technician/return',
+  icon: Reply,
+  buttonClassName: `${actionBtn} border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900`,
+};
+
+const DISPOSE_ACTION: AssetStatusAction = {
+  key: 'dispose',
+  label: 'Dispose',
+  mode: 'navigate',
+  href: '/technician/disposal',
+  icon: Trash2,
+  buttonClassName: `${actionBtn} border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900`,
+};
+
+/** Unified asset lifecycle — see status.md (applies to laptop, av, network) */
+const LIFECYCLE_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
+  [STATUS_ID.NEW]: [ASSIGN_ACTION, DEPLOY_ACTION],
+  [STATUS_ID.ASSIGN]: [DEPLOY_ACTION],
+  [STATUS_ID.DEPLOY]: [RETURN_ACTION],
+  [STATUS_ID.RETURN]: [ASSIGN_ACTION, DISPOSE_ACTION],
+};
+
+export function getAssetStatusActions(_kind: AssetKind, statusId: number): AssetStatusAction[] {
+  return LIFECYCLE_ACTIONS[statusId as StatusId] ?? [];
 }
 
 export function isAllowedStatusTransition(

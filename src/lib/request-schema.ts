@@ -1,9 +1,9 @@
-/** status_id 9 — active (request) */
-export const REQUEST_STATUS_ACTIVE = 9;
-/** status_id 10 — booked (request) */
-export const REQUEST_STATUS_BOOKED = 10;
-/** status_id 11 — checkout (request) */
-export const REQUEST_STATUS_CHECKOUT = 11;
+/** status_id 6 — active (request) */
+export const REQUEST_STATUS_ACTIVE = 6;
+/** status_id 7 — booked (request) */
+export const REQUEST_STATUS_BOOKED = 7;
+/** status_id 8 — checkout (request) */
+export const REQUEST_STATUS_CHECKOUT = 8;
 
 export type RequestAssignableKind = 'laptop' | 'av';
 

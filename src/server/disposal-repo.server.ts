@@ -56,7 +56,7 @@ export async function createDisposal(input: CreateDisposalInput): Promise<Create
     }
     if (!new Set<number>(DISPOSAL_ELIGIBLE_STATUS_IDS).has(statusId)) {
       throw new Error(
-        `Asset ${pick.assetId} (${pick.kind}) must be marked non-active or offline before it can be disposed. Update its status first.`,
+        `Asset ${pick.assetId} (${pick.kind}) must be returned before it can be disposed. Update its status first.`,
       );
     }
   }
@@ -89,8 +89,8 @@ export async function createDisposal(input: CreateDisposalInput): Promise<Create
 
       const table = TABLE_BY_KIND[pick.kind];
       const [updateResult] = await conn.execute(
-        `UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ? AND status_id IN (?, ?)`,
-        [DISPOSED_STATUS, pick.assetId, STATUS_ID.NON_ACTIVE, STATUS_ID.OFFLINE],
+        `UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ? AND status_id = ?`,
+        [DISPOSED_STATUS, pick.assetId, STATUS_ID.RETURN],
       );
       const affected = (updateResult as { affectedRows?: number }).affectedRows ?? 0;
       if (affected === 0) {

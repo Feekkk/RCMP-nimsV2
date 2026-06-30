@@ -49,17 +49,14 @@ export const BULK_IMPORT_REQUIRED: Record<AssetKind, readonly string[]> = {
 };
 
 export const INVENTORY_STATUSES = [
-  { statusId: 1, name: 'active' },
-  { statusId: 2, name: 'non-active' },
+  { statusId: 1, name: 'new' },
+  { statusId: 2, name: 'return' },
   { statusId: 3, name: 'deploy' },
-  { statusId: 4, name: 'faulty' },
+  { statusId: 4, name: 'assign' },
   { statusId: 5, name: 'disposed' },
-  { statusId: 6, name: 'lost' },
-  { statusId: 7, name: 'online' },
-  { statusId: 8, name: 'offline' },
-  { statusId: 9, name: 'active (request)' },
-  { statusId: 10, name: 'booked (request)' },
-  { statusId: 11, name: 'checkout (request)' },
+  { statusId: 6, name: 'active (request)' },
+  { statusId: 7, name: 'booked (request)' },
+  { statusId: 8, name: 'checkout (request)' },
 ] as const;
 
 export type StatusId = (typeof INVENTORY_STATUSES)[number]['statusId'];
@@ -89,6 +86,12 @@ export type LaptopAsset = {
   remarks: string | null;
 } & PurchaseFields;
 
+export type PlaceFields = {
+  building: string | null;
+  level: string | null;
+  zone: string | null;
+};
+
 export type AvAsset = {
   kind: 'av';
   assetId: number;
@@ -99,7 +102,8 @@ export type AvAsset = {
   serialNum: string | null;
   statusId: number;
   remarks: string | null;
-} & PurchaseFields;
+} & PlaceFields &
+  PurchaseFields;
 
 export type NetworkAsset = {
   kind: 'network';
@@ -111,7 +115,8 @@ export type NetworkAsset = {
   ipAddress: string | null;
   statusId: number;
   remarks: string | null;
-} & PurchaseFields;
+} & PlaceFields &
+  PurchaseFields;
 
 export type CreateLaptopInput = {
   assetId: number;
@@ -281,11 +286,11 @@ export function bulkImportDeployRequiredColumns(kind: AssetKind): readonly strin
   return kind === 'laptop' ? BULK_LAPTOP_HANDOVER_REQUIRED : BULK_PLACE_DEPLOYMENT_REQUIRED;
 }
 
-/** In stock — available in inventory / request pool (not deployed, lost, or disposed). */
-export const INSTOCK_STATUS_IDS = [1, 2, 4, 7, 8, 9, 10] as const;
+/** In stock — on-site / available (new, return, assign, or reserved for a request). */
+export const INSTOCK_STATUS_IDS = [1, 2, 4, 6, 7] as const;
 
-/** Out of stock — deployed, disposed, lost, or checked out to a user. */
-export const OUTSTOCK_STATUS_IDS = [3, 5, 6, 11] as const;
+/** Out of stock — deployed, disposed, or checked out to a user. */
+export const OUTSTOCK_STATUS_IDS = [3, 5, 8] as const;
 
 const INSTOCK_SET = new Set<number>(INSTOCK_STATUS_IDS);
 const OUTSTOCK_SET = new Set<number>(OUTSTOCK_STATUS_IDS);
@@ -296,11 +301,6 @@ export function isInstockStatus(statusId: number): boolean {
 
 export function isOutstockStatus(statusId: number): boolean {
   return OUTSTOCK_SET.has(statusId);
-}
-
-/** @deprecated Use isInstockStatus — kept for callers that meant status_id 1 only */
-export function isActiveStatus(statusId: number): boolean {
-  return statusId === 1;
 }
 
 export function assetViewPath(kind: AssetKind, assetId: number): string {

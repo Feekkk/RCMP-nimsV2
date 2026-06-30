@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState, type ElementType, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
-  AlertTriangle,
   ClipboardList,
   Download,
   Laptop,
   Loader2,
   MoreVertical,
   Package,
+  Truck,
   Users,
   Wrench,
 } from 'lucide-react';
@@ -46,10 +46,10 @@ const SPARK_COLORS = {
 };
 
 const INVENTORY_BUCKET_LABEL = {
-  active: 'Active / online',
+  active: 'In stock',
   deploy: 'Deployed',
   requestFlow: 'Request flow',
-  maintenance: 'Other',
+  maintenance: 'Disposed / other',
 } as const;
 
 function DashboardPanel({
@@ -340,10 +340,10 @@ export function AdminDashboardPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-border/80 bg-muted/30 p-3">
               <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-medium uppercase tracking-wide">Faulty</span>
+                <Truck className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-medium uppercase tracking-wide">Deployed</span>
               </div>
-              <p className="text-xl font-bold tabular-nums">{lifecycle?.faultyAssets ?? 0}</p>
+              <p className="text-xl font-bold tabular-nums">{lifecycle?.deployedAssets ?? 0}</p>
             </div>
             <div className="rounded-xl border border-border/80 bg-muted/30 p-3">
               <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">

@@ -24,6 +24,7 @@ import type { RequestLogAssignment, RequestLogEntry } from '@/lib/request-schema
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 import { listRequestLogFn } from '@/server/request.functions';
 
 type LogEvent = {
@@ -166,12 +167,15 @@ export function TechnicianRequestLogPage() {
 
   return (
     <TechnicianShell>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Request log</h1>
-        <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-          Full audit trail of user requests — booking, checkout, and return events with asset
-          details.
-        </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Request log</h1>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+            Full audit trail of user requests — booking, checkout, and return events with asset
+            details.
+          </p>
+        </div>
+        <RequestToolbarActions />
       </div>
 
       <Card className="mb-4 rounded-[14px] border-border shadow-sm">

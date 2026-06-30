@@ -19,12 +19,18 @@ import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStockSummary } from '@/technician/asset-stock-summary';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
+import {
+  formatPlaceCell,
+  PlaceTableHead,
+  type PlaceColumnView,
+} from '@/technician/asset-place-column';
 
 export function TechnicianAvPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
   const [showLegacyIdColumn, setShowLegacyIdColumn] = useState(false);
+  const [placeColumnView, setPlaceColumnView] = useState<PlaceColumnView>('place');
   const { items, isLoading, error, updateStatus } = useAssets('av');
 
   const filtered = useMemo(() => {
@@ -86,6 +92,7 @@ export function TechnicianAvPage() {
                   <TableHead className="min-w-[180px] font-semibold">Model</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Brand</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Serial</TableHead>
+                  <PlaceTableHead view={placeColumnView} onViewChange={setPlaceColumnView} />
                   <TableHead className="whitespace-nowrap font-semibold">Status</TableHead>
                   <TableHead className="min-w-[140px] font-semibold">Action</TableHead>
                 </TableRow>
@@ -93,13 +100,13 @@ export function TechnicianAvPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
                       No assets match your search or status filter.
                     </TableCell>
                   </TableRow>
@@ -139,6 +146,9 @@ export function TechnicianAvPage() {
                       <TableCell className="font-medium text-foreground">{item.model}</TableCell>
                       <TableCell className="text-muted-foreground">{item.brand ?? '—'}</TableCell>
                       <TableCell className="text-muted-foreground">{item.serialNum ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatPlaceCell(placeColumnView, item)}
+                      </TableCell>
                       <TableCell>
                         <AssetStatusBadge statusId={item.statusId} />
                       </TableCell>

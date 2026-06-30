@@ -30,7 +30,7 @@ export type RepairInput = {
   issueSummary: string;
   repairRemarks?: string | null;
   staffId: string;
-  /** When set, marks repair done and restores asset to active / online. */
+  /** When set, marks the repair as completed on this date. */
   completedDate?: string | null;
 };
 
@@ -39,7 +39,7 @@ export type FaultyRepairSearch = {
   assetId: number;
 };
 
-/** Parsed from /technician/faulty | /warranty | /repair search params. */
+/** Parsed from /technician/warranty | /repair search params. */
 export function parseFaultyAssetRouteSearch(
   search: Record<string, unknown>,
 ): FaultyRepairSearch | null {

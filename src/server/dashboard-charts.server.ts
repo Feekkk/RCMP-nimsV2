@@ -121,10 +121,12 @@ export async function loadDashboardCharts(
     for (const r of rows) {
       const id = Number(r.status_id);
       const c = Number(r.cnt);
-      if (id === 1 || id === 7) active += c;
+      // In stock: new (1), return (2), assign (4)
+      if (id === 1 || id === 2 || id === 4) active += c;
       else if (id === 3) deploy += c;
-      else if (id === 9 || id === 10 || id === 11) requestFlow += c;
-      else if (id === 4 || id === 2 || id === 8) maintenance += c;
+      // Request flow: active / booked / checkout (request)
+      else if (id === 6 || id === 7 || id === 8) requestFlow += c;
+      // Disposed (5) and anything else
       else maintenance += c;
     }
     const kind = table === 'laptop' ? 'Laptop' : table === 'av' ? 'AV' : 'Network';

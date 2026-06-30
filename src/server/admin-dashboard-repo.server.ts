@@ -135,16 +135,16 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
 
   const [lifecycleRows] = await pool.query<
     (RowDataPacket & {
-      faulty: number;
+      deployed: number;
       open_repairs: number;
       disposals: number;
       warranties_expiring: number;
     })[]
   >(
     `SELECT
-      (SELECT COUNT(*) FROM laptop WHERE status_id = 4) +
-      (SELECT COUNT(*) FROM av WHERE status_id = 4) +
-      (SELECT COUNT(*) FROM network WHERE status_id = 4) AS faulty,
+      (SELECT COUNT(*) FROM laptop WHERE status_id = 3) +
+      (SELECT COUNT(*) FROM av WHERE status_id = 3) +
+      (SELECT COUNT(*) FROM network WHERE status_id = 3) AS deployed,
       (SELECT COUNT(*) FROM repair WHERE completed_date IS NULL) AS open_repairs,
       (SELECT COUNT(*) FROM disposal WHERE disposal_date >= ?) AS disposals,
       (SELECT COUNT(*) FROM warranty
@@ -153,7 +153,7 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
   );
   const lc = lifecycleRows[0];
   const lifecycle: LifecycleSnapshot = {
-    faultyAssets: Number(lc?.faulty ?? 0),
+    deployedAssets: Number(lc?.deployed ?? 0),
     openRepairs: Number(lc?.open_repairs ?? 0),
     disposalsInPeriod: Number(lc?.disposals ?? 0),
     warrantiesExpiringSoon: Number(lc?.warranties_expiring ?? 0),

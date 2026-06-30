@@ -29,7 +29,12 @@ const REQUEST_STATUS_IDS = [
   REQUEST_STATUS_CHECKOUT,
 ] as const;
 
-const HISTORY_STATUS_IDS = new Set<number>([STATUS_ID.ACTIVE, STATUS_ID.NON_ACTIVE]);
+const HISTORY_STATUS_IDS = new Set<number>([
+  STATUS_ID.NEW,
+  STATUS_ID.RETURN,
+  STATUS_ID.ASSIGN,
+  STATUS_ID.DISPOSED,
+]);
 
 function escapeCsvCell(val: unknown): string {
   const s = val == null ? '' : String(val);

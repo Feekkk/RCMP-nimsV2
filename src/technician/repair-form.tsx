@@ -54,7 +54,6 @@ export function TechnicianRepairFormPage() {
   }
 
   const session = readTechnicianSession();
-  const restoreLabel = kind === 'network' ? 'online' : 'active';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +73,7 @@ export function TechnicianRepairFormPage() {
 
     setSaving(true);
     try {
-      const result = await createRepairFn({
+      await createRepairFn({
         data: {
           kind,
           assetId,
@@ -84,11 +83,7 @@ export function TechnicianRepairFormPage() {
           staffId: session.staffId,
         },
       });
-      toast.success(
-        result.statusRestored
-          ? `Repair logged — asset set to ${restoreLabel}`
-          : 'Repair logged',
-      );
+      toast.success('Repair logged');
       refreshAssets();
       void navigate({ to: ASSET_LIST_PATH[kind] });
     } catch (err) {
@@ -102,9 +97,9 @@ export function TechnicianRepairFormPage() {
     <TechnicianShell>
       <div className="mb-6">
         <Button variant="ghost" size="sm" type="button" className="-ml-2 mb-2 gap-1.5" asChild>
-          <Link to="/technician/faulty" search={{ kind, assetId }}>
+          <Link to={ASSET_LIST_PATH[kind]}>
             <ArrowLeft className="h-4 w-4" />
-            Faulty options
+            Back to {ASSET_KIND_LABEL[kind]}
           </Link>
         </Button>
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">In-house repair</h1>
@@ -118,7 +113,7 @@ export function TechnicianRepairFormPage() {
         <CardHeader>
           <CardTitle className="text-base">Log repair</CardTitle>
           <CardDescription>
-            Saving completes the repair and restores the asset to {restoreLabel} when it is faulty.
+            Log an in-house repair for this asset. The asset keeps its current status.
           </CardDescription>
         </CardHeader>
         <CardContent>

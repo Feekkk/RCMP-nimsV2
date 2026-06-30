@@ -265,6 +265,8 @@ function mapLaptop(row: LaptopRow): LaptopAsset {
   };
 }
 
+const EMPTY_PLACE = { building: null, level: null, zone: null } as const;
+
 function mapAv(row: AvRow): AvAsset {
   return {
     kind: 'av',
@@ -276,6 +278,7 @@ function mapAv(row: AvRow): AvAsset {
     serialNum: row.serial_num,
     statusId: row.status_id,
     remarks: row.remarks,
+    ...EMPTY_PLACE,
     ...mapPurchase(row),
   };
 }
@@ -291,8 +294,59 @@ function mapNetwork(row: NetworkRow): NetworkAsset {
     ipAddress: row.ip_address,
     statusId: row.status_id,
     remarks: row.remarks,
+    ...EMPTY_PLACE,
     ...mapPurchase(row),
   };
+}
+
+async function fetchOpenPlaceDeployments(
+  kind: 'av' | 'network',
+): Promise<Map<number, { building: string; level: string; zone: string }>> {
+  const pool = getDbPool();
+  const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
+  const returnTable = kind === 'av' ? 'av_return' : 'network_return';
+  const map = new Map<number, { building: string; level: string; zone: string }>();
+
+  const [rows] = await pool.query<
+    (RowDataPacket & { asset_id: number; building: string; level: string; zone: string })[]
+  >(
+    `SELECT d.asset_id, d.building, d.level, d.zone
+     FROM \`${deployTable}\` d
+     INNER JOIN (
+       SELECT d2.asset_id, MAX(d2.deployment_id) AS deployment_id
+       FROM \`${deployTable}\` d2
+       WHERE NOT EXISTS (
+         SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d2.deployment_id
+       )
+       GROUP BY d2.asset_id
+     ) open_d ON open_d.deployment_id = d.deployment_id`,
+  );
+
+  for (const row of rows) {
+    map.set(row.asset_id, {
+      building: row.building,
+      level: row.level,
+      zone: row.zone,
+    });
+  }
+
+  return map;
+}
+
+function attachOpenPlace<T extends AvAsset | NetworkAsset>(
+  assets: T[],
+  placeMap: Map<number, { building: string; level: string; zone: string }>,
+): T[] {
+  return assets.map((asset) => {
+    const place = placeMap.get(asset.assetId);
+    if (!place) return asset;
+    return {
+      ...asset,
+      building: place.building,
+      level: place.level,
+      zone: place.zone,
+    };
+  });
 }
 
 const LAPTOP_INSERT = `INSERT INTO laptop (
@@ -369,10 +423,14 @@ export async function listAssets(kind: AssetKind) {
   }
   if (kind === 'av') {
     const [rows] = await pool.query<AvRow[]>('SELECT * FROM av ORDER BY asset_id');
-    return rows.map(mapAv);
+    const assets = rows.map(mapAv);
+    const placeMap = await fetchOpenPlaceDeployments('av');
+    return attachOpenPlace(assets, placeMap);
   }
   const [rows] = await pool.query<NetworkRow[]>('SELECT * FROM network ORDER BY asset_id');
-  return rows.map(mapNetwork);
+  const assets = rows.map(mapNetwork);
+  const placeMap = await fetchOpenPlaceDeployments('network');
+  return attachOpenPlace(assets, placeMap);
 }
 
 async function maybeInsertWarranty(

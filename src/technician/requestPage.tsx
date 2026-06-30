@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { Link } from '@tanstack/react-router';
 import {
   AlertTriangle,
-  ArrowRight,
   Ban,
   ChevronDown,
   ClipboardList,
@@ -87,6 +86,7 @@ import {
   returnUserRequestFn,
 } from '@/server/request.functions';
 import { RequestReturnFields } from '@/technician/request-return-fields';
+import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 
 function poolAssetLabel(a: RequestPoolAsset): string {
   const kind = a.kind === 'laptop' ? 'Laptop' : 'AV';
@@ -1146,12 +1146,7 @@ export function TechnicianRequestPage() {
             Work pending bookings, checkouts, returns, and overdue loans from one queue.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-[8px]" asChild>
-          <Link to="/technician/request-assets">
-            Request pool
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
+        <RequestToolbarActions />
       </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
