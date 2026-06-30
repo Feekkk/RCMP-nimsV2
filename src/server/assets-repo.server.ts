@@ -955,7 +955,7 @@ export async function getAssetDetail(kind: AssetKind, assetId: number): Promise<
       createdAt: trailAt(row.created_at),
       updatedAt: trailAt(row.updated_at),
     };
-    const trails = await buildAssetTrails(kind, assetId, asset);
+    const trails = await buildAssetTrails(kind, assetId, asset.createdAt);
     return { asset, trails };
   }
 
@@ -975,7 +975,7 @@ export async function getAssetDetail(kind: AssetKind, assetId: number): Promise<
       createdAt: trailAt(row.created_at),
       updatedAt: trailAt(row.updated_at),
     };
-    const trails = await buildAssetTrails(kind, assetId, asset);
+    const trails = await buildAssetTrails(kind, assetId, asset.createdAt);
     return { asset, trails };
   }
 
@@ -994,20 +994,29 @@ export async function getAssetDetail(kind: AssetKind, assetId: number): Promise<
     createdAt: trailAt(row.created_at),
     updatedAt: trailAt(row.updated_at),
   };
-  const trails = await buildAssetTrails(kind, assetId, asset);
+  const trails = await buildAssetTrails(kind, assetId, asset.createdAt);
   return { asset, trails };
+}
+
+/** Full lifecycle trail for export / reporting (newest first). */
+export async function getAssetTrailEvents(
+  kind: AssetKind,
+  assetId: number,
+  createdAt: string | null = null,
+): Promise<AssetTrailEvent[]> {
+  return buildAssetTrails(kind, assetId, createdAt);
 }
 
 async function buildAssetTrails(
   kind: AssetKind,
   assetId: number,
-  asset: AssetDetail,
+  createdAt: string | null,
 ): Promise<AssetTrailEvent[]> {
   const events: AssetTrailEvent[] = [];
 
-  if (asset.createdAt) {
+  if (createdAt) {
     pushTrail(events, {
-      at: asset.createdAt,
+      at: createdAt,
       category: 'Inventory',
       title: 'Registered',
       detail: `${ASSET_KIND_LABEL_FOR_TRAIL[kind]} #${assetId} added to inventory`,

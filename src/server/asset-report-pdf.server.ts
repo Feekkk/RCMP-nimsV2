@@ -23,10 +23,8 @@ import {
   type AssetReportRow,
 } from '@/server/technician-export.server';
 
-const ROWS_PER_PAGE = 24;
 const TABLE_X = 14;
 const TABLE_W = 182;
-const ROW_H = 6.5;
 const HDR_H = 7;
 const TABLE_HDR_BG = '#E8E8E8';
 const BODY_FONT = 7.5;
@@ -38,6 +36,19 @@ type ColumnLayout = {
   x: number;
   w: number;
 };
+
+type TableLayout = {
+  rowHeight: number;
+  rowsPerPage: number;
+  bodyFont: number;
+};
+
+function tableLayout(filters: TechnicianReportPdfFilters): TableLayout {
+  if (filters.columns.includes('history')) {
+    return { rowHeight: 10, rowsPerPage: 14, bodyFont: 7 };
+  }
+  return { rowHeight: 6.5, rowsPerPage: 24, bodyFont: BODY_FONT };
+}
 
 function cellValue(row: AssetReportRow, key: ReportPdfColumn): string {
   switch (key) {
@@ -55,10 +66,16 @@ function cellValue(row: AssetReportRow, key: ReportPdfColumn): string {
       return row.serialNum?.trim() || '—';
     case 'status':
       return formatStatusLabel(row.statusId);
-    case 'requestId':
-      return row.requestId ? String(row.requestId) : '—';
-    case 'requester':
-      return row.requesterName?.trim() || '—';
+    case 'handledBy':
+      return row.handledBy?.trim() || '—';
+    case 'handoverTo':
+      return row.handoverTo?.trim() || '—';
+    case 'location':
+      return row.location?.trim() || '—';
+    case 'history':
+      return row.history?.trim() || '—';
+    case 'request':
+      return row.request?.trim() || '—';
     default:
       return '—';
   }
@@ -89,6 +106,7 @@ function buildPageSchemas(
   showMeta: boolean,
   columns: ColumnLayout[],
   rowsOnPage: number,
+  layout: TableLayout,
 ) {
   const prefix = `p${pageIndex}`;
   const { headerY, bodyY } = tableTopY(showMeta);
@@ -111,12 +129,12 @@ function buildPageSchemas(
   }
 
   for (let row = 0; row < rowsOnPage; row++) {
-    const y = bodyY + row * ROW_H;
+    const y = bodyY + row * layout.rowHeight;
     for (const col of columns) {
       fields.push(
-        T(`${prefix}_r${row}_${col.key}`, col.x, y, col.w, ROW_H, BODY_FONT, {
+        T(`${prefix}_r${row}_${col.key}`, col.x, y, col.w, layout.rowHeight, layout.bodyFont, {
           align: 'left',
-          lineHeight: 1.15,
+          lineHeight: col.key === 'history' ? 1.2 : 1.15,
           overflow: 'visible',
         }),
       );
@@ -129,16 +147,17 @@ function buildPageSchemas(
 function buildTemplate(
   rowCount: number,
   columns: ColumnLayout[],
+  layout: TableLayout,
 ): Template {
-  const totalPages = Math.max(1, Math.ceil(rowCount / ROWS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(rowCount / layout.rowsPerPage));
   const schemas = Array.from({ length: totalPages }, (_, index) => {
     const rowsOnPage =
       rowCount === 0 && index === 0
         ? 1
         : index < totalPages - 1
-          ? ROWS_PER_PAGE
-          : ((rowCount - 1) % ROWS_PER_PAGE) + 1;
-    return buildPageSchemas(index + 1, index === 0, columns, rowsOnPage);
+          ? layout.rowsPerPage
+          : ((rowCount - 1) % layout.rowsPerPage) + 1;
+    return buildPageSchemas(index + 1, index === 0, columns, rowsOnPage, layout);
   });
   return { basePdf: BASE_PDF, schemas };
 }
@@ -147,15 +166,16 @@ function buildInputs(
   rows: AssetReportRow[],
   filters: TechnicianReportPdfFilters,
   columns: ColumnLayout[],
+  layout: TableLayout,
   logo: string,
 ): Record<string, string>[] {
   const generatedAt = new Date().toLocaleString('en-MY', { hour12: false });
-  const totalPages = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(rows.length / layout.rowsPerPage));
   const input: Record<string, string> = {};
 
   for (let page = 0; page < totalPages; page++) {
     const prefix = `p${page + 1}`;
-    const chunk = rows.slice(page * ROWS_PER_PAGE, (page + 1) * ROWS_PER_PAGE);
+    const chunk = rows.slice(page * layout.rowsPerPage, (page + 1) * layout.rowsPerPage);
 
     input[`${prefix}_logo`] = logo;
     input[`${prefix}_genFooter`] = COMPUTER_GENERATED_FOOTER;
@@ -191,13 +211,14 @@ export async function generateAssetReportPdfBase64(
     throw new Error('Select at least one report column');
   }
 
+  const layout = tableLayout(filters);
   const rows = await fetchFilteredAssetReportRows(filters);
   const stamp = new Date().toISOString().slice(0, 10);
   const logo = loadLogoBase64();
-  const template = buildTemplate(rows.length, columns);
+  const template = buildTemplate(rows.length, columns, layout);
   const pdf = await generate({
     template,
-    inputs: buildInputs(rows, filters, columns, logo),
+    inputs: buildInputs(rows, filters, columns, layout, logo),
     plugins: { text, image },
   });
 

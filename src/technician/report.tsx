@@ -314,18 +314,23 @@ export function TechnicianReportPage() {
                 {REPORT_PDF_COLUMNS.map((column) => (
                   <label
                     key={column.key}
-                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+                    className="flex items-start gap-2 rounded-lg border border-border px-3 py-2 text-sm"
                   >
                     <Checkbox
+                      className="mt-0.5"
                       checked={selectedColumns.includes(column.key)}
                       onCheckedChange={(checked) => toggleColumn(column.key, checked === true)}
                     />
-                    {column.label}
+                    <span>
+                      <span className="font-medium">{column.label}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{column.description}</span>
+                    </span>
                   </label>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                Column widths adjust automatically in the PDF based on your selection.
+                Deploy exports use Handled by / Handover to. Active and non-active exports use History.
+                Request is optional for borrow-request assets only.
               </p>
             </div>
 
