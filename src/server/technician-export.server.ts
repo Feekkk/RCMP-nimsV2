@@ -10,6 +10,7 @@ import type {
   TechnicianAssetExportKind,
   TechnicianReportPdfFilters,
 } from '@/lib/technician-export-schema';
+import { REPORT_PDF_COLUMNS } from '@/lib/technician-export-schema';
 import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
@@ -285,5 +286,8 @@ export function describeReportFilters(filters: TechnicianReportPdfFilters): stri
       : filters.requestFilter === 'request-only'
         ? 'Request-related only'
         : 'Non-request only';
-  return `Types: ${kinds} | Status: ${statuses} | Request: ${requestLabel}`;
+  const columnLabels = filters.columns
+    .map((key) => REPORT_PDF_COLUMNS.find((c) => c.key === key)?.label ?? key)
+    .join(', ');
+  return `Types: ${kinds} | Status: ${statuses} | Request: ${requestLabel} | Columns: ${columnLabels}`;
 }

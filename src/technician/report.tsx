@@ -19,6 +19,11 @@ import type {
   TechnicianAssetExportKind,
   TechnicianReportPdfFilters,
   TechnicianReportRequestFilter,
+  ReportPdfColumn,
+} from '@/lib/technician-export-schema';
+import {
+  DEFAULT_REPORT_PDF_COLUMNS,
+  REPORT_PDF_COLUMNS,
 } from '@/lib/technician-export-schema';
 import { downloadCsvFile } from '@/hooks/bulkImport';
 import {
@@ -55,6 +60,7 @@ const CSV_EXPORTS: {
 
 const ALL_KINDS: AssetKind[] = ['laptop', 'av', 'network'];
 const ALL_STATUS_IDS = INVENTORY_STATUSES.map((s) => s.statusId);
+const ALL_COLUMN_KEYS = REPORT_PDF_COLUMNS.map((c) => c.key);
 
 function downloadPdfFromBase64(base64: string, filename: string) {
   const binary = atob(base64);
@@ -74,18 +80,21 @@ export function TechnicianReportPage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [selectedKinds, setSelectedKinds] = useState<AssetKind[]>(ALL_KINDS);
   const [selectedStatusIds, setSelectedStatusIds] = useState<number[]>(ALL_STATUS_IDS);
+  const [selectedColumns, setSelectedColumns] = useState<ReportPdfColumn[]>(DEFAULT_REPORT_PDF_COLUMNS);
   const [requestFilter, setRequestFilter] = useState<TechnicianReportRequestFilter>('all');
 
   const allKindsSelected = selectedKinds.length === ALL_KINDS.length;
   const allStatusesSelected = selectedStatusIds.length === ALL_STATUS_IDS.length;
+  const allColumnsSelected = selectedColumns.length === ALL_COLUMN_KEYS.length;
 
   const pdfFilters = useMemo<TechnicianReportPdfFilters>(
     () => ({
       kinds: selectedKinds,
       statusIds: allStatusesSelected ? [] : selectedStatusIds,
       requestFilter,
+      columns: selectedColumns,
     }),
-    [selectedKinds, selectedStatusIds, allStatusesSelected, requestFilter],
+    [selectedKinds, selectedStatusIds, allStatusesSelected, requestFilter, selectedColumns],
   );
 
   const toggleKind = (kind: AssetKind, checked: boolean) => {
@@ -100,6 +109,14 @@ export function TechnicianReportPage() {
     setSelectedStatusIds((prev) => {
       if (checked) return prev.includes(statusId) ? prev : [...prev, statusId];
       const next = prev.filter((id) => id !== statusId);
+      return next.length ? next : prev;
+    });
+  };
+
+  const toggleColumn = (column: ReportPdfColumn, checked: boolean) => {
+    setSelectedColumns((prev) => {
+      if (checked) return prev.includes(column) ? prev : [...prev, column];
+      const next = prev.filter((key) => key !== column);
       return next.length ? next : prev;
     });
   };
@@ -124,6 +141,10 @@ export function TechnicianReportPage() {
     if (!tech) return;
     if (!selectedKinds.length) {
       toast.error('Select at least one asset type');
+      return;
+    }
+    if (!selectedColumns.length) {
+      toast.error('Select at least one report column');
       return;
     }
     setPdfLoading(true);
@@ -208,7 +229,7 @@ export function TechnicianReportPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Report filters</CardTitle>
             <CardDescription>
-              Narrow the PDF by asset type, status, and whether assets are tied to user requests.
+              Narrow the PDF by asset type, status, request scope, and which columns to include.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -272,6 +293,42 @@ export function TechnicianReportPage() {
               </div>
             </div>
 
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-sm font-medium">Report columns</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() =>
+                    setSelectedColumns(
+                      allColumnsSelected ? [DEFAULT_REPORT_PDF_COLUMNS[0]] : ALL_COLUMN_KEYS,
+                    )
+                  }
+                >
+                  {allColumnsSelected ? 'Clear to one' : 'Select all'}
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {REPORT_PDF_COLUMNS.map((column) => (
+                  <label
+                    key={column.key}
+                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+                  >
+                    <Checkbox
+                      checked={selectedColumns.includes(column.key)}
+                      onCheckedChange={(checked) => toggleColumn(column.key, checked === true)}
+                    />
+                    {column.label}
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Column widths adjust automatically in the PDF based on your selection.
+              </p>
+            </div>
+
             <div className="space-y-2 max-w-sm">
               <Label htmlFor="request-filter">Request filter</Label>
               <Select
@@ -295,7 +352,7 @@ export function TechnicianReportPage() {
             <Button
               type="button"
               className="rounded-lg"
-              disabled={pdfLoading || !selectedKinds.length}
+              disabled={pdfLoading || !selectedKinds.length || !selectedColumns.length}
               onClick={() => void handlePdfExport()}
             >
               {pdfLoading ? (

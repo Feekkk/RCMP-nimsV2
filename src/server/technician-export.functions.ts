@@ -22,6 +22,9 @@ export const generateAssetReportPdfFn = createServerFn({ method: 'POST' })
     if (!data.filters.kinds.length) {
       throw new Error('Select at least one asset type');
     }
+    if (!data.filters.columns.length) {
+      throw new Error('Select at least one report column');
+    }
     const { generateAssetReportPdfBase64 } = await import('@/server/asset-report-pdf.server');
     return generateAssetReportPdfBase64(data.filters);
   });
