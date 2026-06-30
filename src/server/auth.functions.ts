@@ -17,7 +17,7 @@ export const loginDevByEmailFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { isEmailOnlyUserLoginEnabled } = await import('@/lib/email-login-config');
     if (!isEmailOnlyUserLoginEnabled()) {
-      throw new Error('Dev email sign-in is not enabled');
+      throw new Error('Dev email sign-in is not enabled on this server.');
     }
     const { loginDevByEmail } = await import('@/server/auth-repo.server');
     return loginDevByEmail(data.email, data.loginRole);

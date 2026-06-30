@@ -162,7 +162,7 @@ export function TechnicianDisposalPage() {
     e.preventDefault();
     const session = readTechnicianSession();
     if (!session?.staffId) {
-      toast.error('Technician session required');
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
       return;
     }
     const isoDate = normalizeToIsoDate(disposalDate);

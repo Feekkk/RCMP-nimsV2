@@ -13,7 +13,7 @@ export const Route = createFileRoute('/technician/asset/$kind/$assetId')({
       const kind = parseKind(params.kind);
       const assetId = Number(params.assetId);
       if (!kind || Number.isNaN(assetId) || assetId <= 0) {
-        throw new Error('Invalid asset link');
+        throw new Error('This asset link is not valid. Open the asset from the inventory list.');
       }
       return { kind, assetId };
     },

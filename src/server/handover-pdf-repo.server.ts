@@ -46,7 +46,9 @@ export async function getHandoverPdfData(handoverId: number): Promise<HandoverPd
   const row = rows[0];
   if (!row) return null;
   if (!row.employee_no || !row.recipient_name) {
-    throw new Error('Handover PDF requires a staff recipient (handover_staff record)');
+    throw new Error(
+      'A staff recipient is required to generate the handover PDF. Select a staff member who received the equipment.',
+    );
   }
 
   const handedByName = await getDisplayNameByOid(row.handed_by_oid);

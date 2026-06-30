@@ -9,7 +9,9 @@ export const exportTechnicianAssetCsvFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     assertStaffRole(data.callerRoleId);
     if (!ASSET_KINDS.includes(data.kind as TechnicianAssetExportKind)) {
-      throw new Error('Invalid asset type');
+      throw new Error(
+        'The asset type is not recognized. Choose Laptop, AV, or Network and try again.',
+      );
     }
     const { exportTechnicianAssetCsv } = await import('@/server/technician-export.server');
     return exportTechnicianAssetCsv(data.kind as TechnicianAssetExportKind);
@@ -20,10 +22,10 @@ export const generateAssetReportPdfFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     assertStaffRole(data.callerRoleId);
     if (!data.filters.kinds.length) {
-      throw new Error('Select at least one asset type');
+      throw new Error('Select at least one asset type to include in the report.');
     }
     if (!data.filters.columns.length) {
-      throw new Error('Select at least one report column');
+      throw new Error('Select at least one column to include in the report.');
     }
     const { generateAssetReportPdfBase64 } = await import('@/server/asset-report-pdf.server');
     return generateAssetReportPdfBase64(data.filters);

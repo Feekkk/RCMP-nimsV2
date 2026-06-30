@@ -154,9 +154,9 @@ export function UserRequestFormPage() {
 
   const handleNext = () => {
     if (!canContinue) {
-      if (step === 0) toast.error('Please accept the terms to continue');
-      else if (step === 1) toast.error('Complete all required request details');
-      else if (step === 2) toast.error('Select at least one equipment item');
+      if (step === 0) toast.error('Accept the terms and conditions to continue to the next step.');
+      else if (step === 1) toast.error('Fill in all required request details before continuing.');
+      else if (step === 2) toast.error('Add at least one equipment item to your request.');
       return;
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -166,12 +166,12 @@ export function UserRequestFormPage() {
 
   const handleSubmit = async () => {
     if (!session?.staffId) {
-      toast.error('Session expired. Please sign in again.');
+      toast.error('Your session has expired. Sign in again to continue.');
       void navigate({ to: '/login' });
       return;
     }
     if (!isUserProfileComplete(session)) {
-      toast.error('Complete your profile before submitting a request');
+      toast.error('Complete your profile (name, email, and phone) before submitting a request.');
       return;
     }
     setSubmitting(true);
@@ -197,11 +197,11 @@ export function UserRequestFormPage() {
         toast.warning(
           emailErr instanceof Error
             ? emailErr.message
-            : 'Request saved but notification email could not be sent',
+            : 'Your request was saved, but the confirmation email could not be sent.',
         );
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not submit request');
+      toast.error(e instanceof Error ? e.message : 'The request could not be submitted. Try again.');
     } finally {
       setSubmitting(false);
     }

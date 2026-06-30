@@ -239,7 +239,9 @@ function buildInputs(data: HandoverPdfData, logo: string): Record<string, string
 export async function generateHandoverPdfBuffer(handoverId: number): Promise<Uint8Array> {
   const { getHandoverPdfData } = await import('@/server/handover-pdf-repo.server');
   const data = await getHandoverPdfData(handoverId);
-  if (!data) throw new Error('Handover record not found');
+  if (!data) {
+    throw new Error('This handover record could not be found. Refresh the page and try again.');
+  }
 
   const logo = loadLogoBase64();
   return generate({

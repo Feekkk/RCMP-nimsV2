@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { RequestEmailData } from '@/lib/request-email-types';
 import { REQUEST_IT_EMAIL } from '@/lib/request-email-types';
 import type { SendRequestEmailResult } from '@/lib/request-email-types';
+import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml } from '@/server/email.server';
 import { getRequestEmailData } from '@/server/request-email-repo.server';
@@ -167,14 +168,14 @@ export function buildRequestEmailText(data: RequestEmailData): string {
 
 export async function sendRequestEmail(requestId: number): Promise<SendRequestEmailResult> {
   if (!isEmailConfigured()) {
-    throw new Error(
-      'Email is not configured. Set SMTP_USER/SMTP_PASSWORD or SMTP_MAILPIT=true for local testing.',
-    );
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   const data = await getRequestEmailData(requestId);
   if (!data) {
-    throw new Error('Cannot send request email: request not found.');
+    throw new Error(
+      'The confirmation email could not be sent because this request could not be found. Refresh the page and try again.',
+    );
   }
 
   const recipients = [...new Set([data.requesterEmail, REQUEST_IT_EMAIL])];

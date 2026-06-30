@@ -130,10 +130,14 @@ export async function getWarrantyContext(kind: AssetKind, assetId: number): Prom
 export async function createWarrantyClaim(input: WarrantyClaimInput) {
   const ctx = await getWarrantyContext(input.kind, input.assetId);
   if (!ctx.warranty) {
-    throw new Error('No warranty record on file for this asset');
+    throw new Error(
+      'There is no warranty on file for this asset. Add warranty details before submitting a claim.',
+    );
   }
   if (!isWarrantyActive(ctx.warranty, input.claimDate.slice(0, 10))) {
-    throw new Error('Warranty claim date must fall within the warranty period');
+    throw new Error(
+      'The repair date falls outside the warranty period. Choose a date within the warranty start and end dates.',
+    );
   }
 
   const pool = getDbPool();

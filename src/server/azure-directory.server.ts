@@ -72,7 +72,9 @@ async function getGraphAppToken(config: MicrosoftAuthConfig): Promise<string> {
   };
 
   if (!res.ok || json.error || !json.access_token) {
-    throw new Error(json.error_description ?? json.error ?? 'Microsoft Graph token request failed');
+    throw new Error(
+      'Staff directory lookup is temporarily unavailable. Try again later or contact IT.',
+    );
   }
 
   cachedToken = {
@@ -95,7 +97,9 @@ async function graphGet<T>(path: string, token: string): Promise<T> {
     },
   });
   if (!res.ok) {
-    throw new Error(`Microsoft Graph request failed (${res.status})`);
+    throw new Error(
+      'Staff directory lookup is temporarily unavailable. Try again later or contact IT.',
+    );
   }
   return (await res.json()) as T;
 }

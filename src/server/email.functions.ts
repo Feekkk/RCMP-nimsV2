@@ -15,15 +15,15 @@ export const verifyEmailConfigFn = createServerFn({ method: 'GET' }).handler(asy
       configured: false as const,
       ok: false,
       message:
-        'SMTP is not configured. Set SMTP_USER/SMTP_PASSWORD (M365) or SMTP_MAILPIT=true',
+        'Email is not set up on this server. Contact IT to configure email notifications.',
     };
   }
   try {
     const { verifyEmailTransport } = await import('@/server/email.server');
     await verifyEmailTransport();
-    return { configured: true as const, ok: true, message: 'SMTP connection verified' };
+    return { configured: true as const, ok: true, message: 'Email connection verified successfully.' };
   } catch (e) {
-    const message = e instanceof Error ? e.message : 'SMTP verification failed';
+    const message = e instanceof Error ? e.message : 'Email connection could not be verified. Contact IT if this keeps happening.';
     return { configured: true as const, ok: false, message };
   }
 });

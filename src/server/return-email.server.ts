@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { ReturnEmailData } from '@/lib/return-email-types';
 import { RETURN_IT_CC } from '@/lib/return-email-types';
 import type { SendReturnEmailResult } from '@/lib/return-email-types';
+import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml, sendNotificationEmail } from '@/server/email.server';
 
@@ -135,9 +136,7 @@ function loadLogoAttachment() {
 
 export async function sendReturnEmail(returnId: number): Promise<SendReturnEmailResult> {
   if (!isEmailConfigured()) {
-    throw new Error(
-      'Email is not configured. Add SMTP_MAILPIT=true (and SMTP_HOST=127.0.0.1, SMTP_PORT=1025) to .env, run npm run mailpit, then restart npm run dev.',
-    );
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   const { getReturnEmailData } = await import('@/server/return-email-repo.server');
@@ -146,7 +145,7 @@ export async function sendReturnEmail(returnId: number): Promise<SendReturnEmail
   const data = await getReturnEmailData(returnId);
   if (!data) {
     throw new Error(
-      'Return email requires a staff handover recipient. Place-only returns cannot send notification email.',
+      'The return notification requires a staff handover recipient. Returns without a staff recipient cannot send an email.',
     );
   }
 

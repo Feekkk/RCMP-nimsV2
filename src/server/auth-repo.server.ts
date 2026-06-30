@@ -95,10 +95,14 @@ async function touchMicrosoftLogin(userId: number, oid: string): Promise<void> {
 
 function assertLoginRole(row: UserRow, loginRole: LoginRole): void {
   if (loginRole === 'staff' && row.role_id === ROLE_USER) {
-    throw new Error('This email is registered as a user account. Select User to sign in.');
+    throw new Error(
+      'This email is registered as a user account. Choose "User" on the sign-in page and try again.',
+    );
   }
   if (loginRole === 'user' && row.role_id !== ROLE_USER) {
-    throw new Error('This email is registered as staff. Select Staff to sign in.');
+    throw new Error(
+      'This email is registered as a staff account. Choose "Staff" on the sign-in page and try again.',
+    );
   }
 }
 
@@ -110,7 +114,9 @@ export type PrepareLoginResult = {
 export async function prepareLogin(email: string, loginRole: LoginRole): Promise<PrepareLoginResult> {
   const normalized = email.trim().toLowerCase();
   if (!normalized || !normalized.includes('@')) {
-    throw new Error('Enter a valid email address');
+    throw new Error(
+      'The email address is missing or incomplete. Enter a full address with an @ symbol (for example, name@example.com).',
+    );
   }
 
   const row = await findUserByEmail(normalized);
@@ -120,7 +126,9 @@ export async function prepareLogin(email: string, loginRole: LoginRole): Promise
   }
 
   if (loginRole === 'staff') {
-    throw new Error('Your email is not registered. Contact an administrator to be added as staff.');
+    throw new Error(
+      'This email is not registered for staff access. Ask an administrator to add your account, then try signing in again.',
+    );
   }
 
   return { emailRegistered: false };
@@ -143,7 +151,11 @@ async function createMicrosoftUserAccount(oid: string, email: string): Promise<U
     [oid, email, ROLE_USER],
   );
   const created = (await findUserByEmail(email)) ?? (await findUserByOid(oid));
-  if (!created) throw new Error('Could not create your account');
+  if (!created) {
+    throw new Error(
+      'Your account could not be set up. Try signing in again, or contact support if this keeps happening.',
+    );
+  }
   return created;
 }
 
@@ -167,14 +179,18 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
   } else {
     if (row.email !== email) {
       throw new Error(
-        'Microsoft email does not match your NIMS account. Contact an administrator to update your email.',
+        'Your Microsoft sign-in email does not match the email on your account. Ask an administrator to update your registered email.',
       );
     }
     await touchMicrosoftLogin(row.id, oid);
   }
 
   const updated = await findUserById(row.id);
-  if (!updated) throw new Error('Account not found after sign-in');
+  if (!updated) {
+    throw new Error(
+      'Your account could not be loaded after sign-in. Try signing in again, or contact support if this keeps happening.',
+    );
+  }
   return { ...(await mapUserWithAzureProfile(updated)), accountCreated };
 }
 
@@ -182,13 +198,17 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
 export async function loginDevByEmail(email: string, loginRole: LoginRole): Promise<AuthUserRow> {
   const normalized = email.trim().toLowerCase();
   if (!normalized || !normalized.includes('@')) {
-    throw new Error('Enter a valid email address');
+    throw new Error(
+      'The email address is missing or incomplete. Enter a full address with an @ symbol (for example, name@example.com).',
+    );
   }
 
   let row = await findUserByEmail(normalized);
   if (!row) {
     if (loginRole === 'staff') {
-      throw new Error('Email not found. Staff accounts must be registered by an administrator.');
+      throw new Error(
+        'This email is not registered for staff access. Ask an administrator to add your account before signing in.',
+      );
     }
     const pool = getDbPool();
     await pool.execute(
@@ -196,7 +216,11 @@ export async function loginDevByEmail(email: string, loginRole: LoginRole): Prom
       [normalized, ROLE_USER],
     );
     row = await findUserByEmail(normalized);
-    if (!row) throw new Error('Could not create your account');
+    if (!row) {
+      throw new Error(
+        'Your account could not be set up. Try signing in again, or contact support if this keeps happening.',
+      );
+    }
   } else {
     assertLoginRole(row, loginRole);
   }
@@ -205,7 +229,11 @@ export async function loginDevByEmail(email: string, loginRole: LoginRole): Prom
   await pool.execute(`UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?`, [row.id]);
 
   const updated = await findUserById(row.id);
-  if (!updated) throw new Error('Account not found after sign-in');
+  if (!updated) {
+    throw new Error(
+      'Your account could not be loaded after sign-in. Try signing in again, or contact support if this keeps happening.',
+    );
+  }
   return mapUserWithAzureProfile(updated);
 }
 
@@ -219,19 +247,21 @@ export type UpdateUserProfileInput = {
 
 function parseUserId(staffId: string): number {
   const id = Number.parseInt(staffId.trim(), 10);
-  if (!Number.isFinite(id) || id <= 0) throw new Error('Invalid account id');
+  if (!Number.isFinite(id) || id <= 0) {
+    throw new Error('Your account could not be identified. Sign out and sign in again.');
+  }
   return id;
 }
 
 function assertStaffAccount(roleId: number): void {
   if (roleId !== ROLE_TECHNICIAN && roleId !== ROLE_ADMIN) {
-    throw new Error('Only technician accounts can access this profile');
+    throw new Error('This profile page is for technician accounts only. Sign in with a technician account to continue.');
   }
 }
 
 export async function getStaffProfile(staffId: string): Promise<StaffProfileRow> {
   const row = await findUserById(parseUserId(staffId));
-  if (!row) throw new Error('Account not found');
+  if (!row) throw new Error('No account was found with those details. Sign in again or contact support.');
   assertStaffAccount(row.role_id);
 
   const profile = await mapUserWithAzureProfile(row);
@@ -244,16 +274,16 @@ export async function updateStaffProfile(input: UpdateUserProfileInput): Promise
   const phone = input.phone?.trim() || null;
 
   if (!email) {
-    throw new Error('Email is required');
+    throw new Error('An email address is required. Enter your email to continue.');
   }
 
   const row = await findUserById(userId);
-  if (!row) throw new Error('Account not found');
+  if (!row) throw new Error('No account was found with those details. Sign in again or contact support.');
   assertStaffAccount(row.role_id);
 
   const emailOwner = await findUserByEmail(email);
   if (emailOwner && emailOwner.id !== userId) {
-    throw new Error('This email is already in use');
+    throw new Error('Another account already uses this email. Enter a different email address.');
   }
 
   const pool = getDbPool();
@@ -264,9 +294,9 @@ export async function updateStaffProfile(input: UpdateUserProfileInput): Promise
 
 export async function getUserProfile(staffId: string): Promise<AuthUserRow> {
   const row = await findUserById(parseUserId(staffId));
-  if (!row) throw new Error('User not found');
+  if (!row) throw new Error('No user account was found. Sign in again or contact support.');
   if (row.role_id !== ROLE_USER) {
-    throw new Error('Only user accounts can access this profile');
+    throw new Error('This profile page is for user accounts only. Sign in with a user account to continue.');
   }
   return mapUserWithAzureProfile(row);
 }
@@ -277,21 +307,21 @@ export async function updateUserProfile(input: UpdateUserProfileInput): Promise<
   const phone = input.phone?.trim() || null;
 
   if (!email) {
-    throw new Error('Email is required');
+    throw new Error('An email address is required. Enter your email to continue.');
   }
   if (!phone) {
-    throw new Error('Phone number is required');
+    throw new Error('A phone number is required. Enter your phone number to complete your profile.');
   }
 
   const row = await findUserById(userId);
-  if (!row) throw new Error('User not found');
+  if (!row) throw new Error('No user account was found. Sign in again or contact support.');
   if (row.role_id !== ROLE_USER) {
-    throw new Error('Only user accounts can update this profile');
+    throw new Error('Only user accounts can update this profile. Sign in with a user account to continue.');
   }
 
   const emailOwner = await findUserByEmail(email);
   if (emailOwner && emailOwner.id !== userId) {
-    throw new Error('This email is already registered');
+    throw new Error('This email is already registered to another account. Enter a different email address.');
   }
 
   const pool = getDbPool();

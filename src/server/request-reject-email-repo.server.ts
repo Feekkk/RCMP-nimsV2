@@ -66,7 +66,7 @@ export async function getRequestRejectEmailData(
 
   if (!profile.email.includes('@')) {
     throw new Error(
-      'Cannot send rejection email: requester has no email on file. Update their profile or contact IT.',
+      'The rejection notice could not be sent because the requester has no email on file. Update their profile or contact IT.',
     );
   }
 

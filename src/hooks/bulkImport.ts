@@ -120,7 +120,10 @@ function parseCsv(text: string): { headers: string[]; rows: string[][] } {
 function parseStatusId(raw: string, row: number, errors: BulkImportRowError[]): number | null {
   const n = Number(raw.trim());
   if (!raw.trim() || Number.isNaN(n) || !VALID_STATUS_IDS.has(n as (typeof INVENTORY_STATUSES)[number]['statusId'])) {
-    errors.push({ row, message: `Invalid status_id "${raw}" (use 1–11 per status table)` });
+    errors.push({
+      row,
+      message: `The status value "${raw}" is not recognized. Use a valid status from the import template.`,
+    });
     return null;
   }
   return n;
@@ -128,7 +131,7 @@ function parseStatusId(raw: string, row: number, errors: BulkImportRowError[]): 
 
 function requireCell(row: string[], index: number, name: string, rowNum: number, errors: BulkImportRowError[]) {
   const val = row[index]?.trim() ?? '';
-  if (!val) errors.push({ row: rowNum, message: `Missing required column: ${name}` });
+  if (!val) errors.push({ row: rowNum, message: `Required field "${name}" is empty. Fill in this column to continue.` });
   return val;
 }
 
@@ -142,7 +145,7 @@ function parseOptionalAssetId(
   if (!val) return undefined;
   const n = Number(val);
   if (Number.isNaN(n) || n <= 0) {
-    errors.push({ row: rowNum, message: 'Invalid asset_id' });
+    errors.push({ row: rowNum, message: 'The asset ID must be a positive number, or leave blank to auto-generate one.' });
     return undefined;
   }
   return n;
@@ -159,7 +162,7 @@ function buildColumnIndex(headers: string[], expected: readonly string[], errors
 
   for (const col of expected) {
     if (!index.has(col)) {
-      errors.push({ row: 0, message: `Missing column: ${col}` });
+      errors.push({ row: 0, message: `The CSV is missing a required column: "${col}". Use the template as a guide.` });
     }
   }
   return index;
@@ -188,7 +191,7 @@ function rejectDeployDataWhenNotDeployed(
     if (cellTrim(row, col, name)) {
       errors.push({
         row: rowNum,
-        message: `${name} is only used when status_id is ${BULK_IMPORT_STATUS_DEPLOY} (deploy)`,
+        message: `"${name}" is only used when the asset status is set to deployed. Remove it or change the status.`,
       });
     }
   }
@@ -203,7 +206,7 @@ function parseRequiredDate(
 ): string | null {
   const raw = cellTrim(row, col, column);
   if (!raw) {
-    errors.push({ row: rowNum, message: `Missing required column: ${column}` });
+    errors.push({ row: rowNum, message: `Required field "${column}" is empty. Fill in this column to continue.` });
     return null;
   }
   return parseOptionalDate(raw, column, rowNum, errors);
@@ -236,7 +239,7 @@ function parseLaptopHandover(
   if (handoverStaffEmail && !looksLikeEmail(handoverStaffEmail)) {
     errors.push({
       row: rowNum,
-      message: 'handover_staff_id must be a user email (must exist in users)',
+      message: 'handover_staff_id must be a registered user email address.',
     });
   }
   if (rowHasErrors(errors, rowNum) || !handoverStaffEmail || !handoverDate) return undefined;
@@ -273,7 +276,7 @@ function parsePlaceDeployment(
   if (deploymentStaffEmail && !looksLikeEmail(deploymentStaffEmail)) {
     errors.push({
       row: rowNum,
-      message: 'deployment_staff_id must be a user email (must exist in users)',
+      message: 'deployment_staff_id must be a registered user email address.',
     });
   }
 
@@ -322,7 +325,7 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
       } catch (e) {
         errors.push({
           row: rowNum,
-          message: e instanceof Error ? e.message : 'Invalid laptop category for asset ID',
+          message: e instanceof Error ? e.message : 'The laptop category is not valid for asset ID generation.',
         });
       }
     }
@@ -442,7 +445,7 @@ export function parseBulkImportCsv(kind: AssetKind, csvText: string): BulkImport
   const base = { kind, headers };
 
   if (headers.length === 0) {
-    return { ...base, validCount: 0, errorCount: 1, errors: [{ row: 0, message: 'CSV is empty' }] };
+    return { ...base, validCount: 0, errorCount: 1, errors: [{ row: 0, message: 'The CSV file is empty. Paste content or load the sample file.' }] };
   }
 
   if (kind === 'laptop') {

@@ -9,7 +9,7 @@ export const exportAdminCsvFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     assertAdminRole(data.callerRoleId);
     if (!KINDS.includes(data.kind as AdminExportKind)) {
-      throw new Error('Invalid export type');
+      throw new Error('The export type is not recognized. Choose a valid export option and try again.');
     }
     const { exportAdminCsv } = await import('@/server/admin-export.server');
     return exportAdminCsv(data.kind as AdminExportKind);

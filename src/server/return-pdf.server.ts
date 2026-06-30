@@ -138,7 +138,9 @@ function buildInputs(data: ReturnPdfData, logo: string): Record<string, string>[
 export async function generateReturnPdfBuffer(returnId: number): Promise<Uint8Array> {
   const { getReturnPdfData } = await import('@/server/return-pdf-repo.server');
   const data = await getReturnPdfData(returnId);
-  if (!data) throw new Error('Return record not found');
+  if (!data) {
+    throw new Error('This return record could not be found. Refresh the page and try again.');
+  }
 
   const logo = loadLogoBase64();
   return generate({

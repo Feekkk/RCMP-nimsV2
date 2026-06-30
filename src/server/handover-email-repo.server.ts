@@ -52,7 +52,7 @@ export async function getHandoverEmailData(handoverId: number): Promise<Handover
   const email = row.recipient_email?.trim();
   if (!email || !email.includes('@')) {
     throw new Error(
-      `Staff recipient "${row.recipient_name ?? row.employee_no}" has no email in the directory. Add an email in staff records before sending.`,
+      `Staff recipient "${row.recipient_name ?? row.employee_no}" has no email in the directory. Add an email address in staff records before sending.`,
     );
   }
 

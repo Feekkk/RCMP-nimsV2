@@ -272,7 +272,9 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
       [input.handoverStaffId],
     );
     const row = hsRows[0];
-    if (!row) throw new Error('Handover record not found');
+    if (!row) {
+      throw new Error('This handover record could not be found. Refresh the page and try again.');
+    }
 
     const [insertResult] = await conn.execute(
       `INSERT INTO handover_return
@@ -316,7 +318,9 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
       [input.handoverId],
     );
     const row = hRows[0];
-    if (!row) throw new Error('Handover record not found');
+    if (!row) {
+      throw new Error('This handover record could not be found. Refresh the page and try again.');
+    }
 
     const [insertResult] = await conn.execute(
       `INSERT INTO handover_return
@@ -362,7 +366,9 @@ export async function returnPlaceAsset(input: ReturnPlaceInput) {
       [input.deploymentId],
     );
     const row = dRows[0];
-    if (!row) throw new Error('Deployment record not found');
+    if (!row) {
+      throw new Error('This deployment record could not be found. Refresh the page and try again.');
+    }
 
     await conn.execute(
       `INSERT INTO \`${returnTable}\`

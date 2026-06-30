@@ -50,7 +50,9 @@ async function fillLaptopAssetIds(rows: BulkLaptopImportRow[]): Promise<BulkLapt
     }
     const assetId = generated[genIdx++];
     if (assetId == null) {
-      throw new Error('Failed to generate asset_id for laptop row');
+      throw new Error(
+        'A new asset ID could not be generated for this laptop. Try again, or contact support if this keeps happening.',
+      );
     }
     return { ...row, assetId };
   });
@@ -67,7 +69,9 @@ async function fillAvAssetIds(rows: BulkAvImportRow[]): Promise<BulkAvImportRow[
     }
     const assetId = generated[genIdx++];
     if (assetId == null) {
-      throw new Error('Failed to generate asset_id for AV row');
+      throw new Error(
+        'A new asset ID could not be generated for this AV item. Try again, or contact support if this keeps happening.',
+      );
     }
     return { ...row, assetId };
   });
@@ -84,7 +88,9 @@ async function fillNetworkAssetIds(rows: BulkNetworkImportRow[]): Promise<BulkNe
     }
     const assetId = generated[genIdx++];
     if (assetId == null) {
-      throw new Error('Failed to generate asset_id for network row');
+      throw new Error(
+        'A new asset ID could not be generated for this network item. Try again, or contact support if this keeps happening.',
+      );
     }
     return { ...row, assetId };
   });
@@ -99,7 +105,9 @@ async function resolveUserIdByEmail(
     [email.trim().toLowerCase()],
   );
   if (!rows[0]) {
-    throw new Error(`Unknown user email "${email}" (must exist in users)`);
+    throw new Error(
+      `No user account matches the email "${email}". Use an email that is registered in the system.`,
+    );
   }
   return rows[0].id;
 }
@@ -113,7 +121,9 @@ async function assertEmployeeNo(
     [employeeNo],
   );
   if (!rows[0]) {
-    throw new Error(`Unknown employee_no "${employeeNo}" (must exist in staff directory)`);
+    throw new Error(
+      `No staff member matches employee number "${employeeNo}". Check the number or add the person to the staff directory first.`,
+    );
   }
 }
 
@@ -382,7 +392,9 @@ export async function createLaptop(input: CreateLaptopInput) {
   await pool.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId: input.assetId }));
   await maybeInsertWarranty('laptop', input.assetId, warranty);
   const [rows] = await pool.query<LaptopRow[]>('SELECT * FROM laptop WHERE asset_id = ?', [input.assetId]);
-  if (!rows[0]) throw new Error('Failed to load created laptop');
+  if (!rows[0]) {
+    throw new Error('The laptop was saved but could not be loaded. Refresh the page to see it.');
+  }
   return mapLaptop(rows[0]);
 }
 
@@ -392,7 +404,9 @@ export async function createAv(input: CreateAvInput) {
   await pool.execute(AV_INSERT, avParams({ ...av, assetId: input.assetId }));
   await maybeInsertWarranty('av', input.assetId, warranty);
   const [rows] = await pool.query<AvRow[]>('SELECT * FROM av WHERE asset_id = ?', [input.assetId]);
-  if (!rows[0]) throw new Error('Failed to load created AV asset');
+  if (!rows[0]) {
+    throw new Error('The AV asset was saved but could not be loaded. Refresh the page to see it.');
+  }
   return mapAv(rows[0]);
 }
 
@@ -402,7 +416,9 @@ export async function createNetwork(input: CreateNetworkInput) {
   await pool.execute(NETWORK_INSERT, networkParams({ ...network, assetId: input.assetId }));
   await maybeInsertWarranty('network', input.assetId, warranty);
   const [rows] = await pool.query<NetworkRow[]>('SELECT * FROM network WHERE asset_id = ?', [input.assetId]);
-  if (!rows[0]) throw new Error('Failed to load created network asset');
+  if (!rows[0]) {
+    throw new Error('The network asset was saved but could not be loaded. Refresh the page to see it.');
+  }
   return mapNetwork(rows[0]);
 }
 
@@ -414,7 +430,9 @@ export async function bulkCreateLaptops(rows: BulkLaptopImportRow[]) {
     for (const row of rows) {
       const { handover, assetId, warranty, ...laptop } = row;
       if (assetId == null || assetId <= 0) {
-        throw new Error('asset_id is required after ID generation');
+        throw new Error(
+          'An asset ID could not be assigned after generation. Try saving again, or contact support if this keeps happening.',
+        );
       }
       await conn.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId }));
       await maybeInsertWarranty('laptop', assetId, warranty, conn);
@@ -440,7 +458,9 @@ export async function bulkCreateAv(rows: BulkAvImportRow[]) {
     for (const row of rows) {
       const { deployment, assetId, warranty, ...av } = row;
       if (assetId == null || assetId <= 0) {
-        throw new Error('asset_id is required after ID generation');
+        throw new Error(
+          'An asset ID could not be assigned after generation. Try saving again, or contact support if this keeps happening.',
+        );
       }
       await conn.execute(AV_INSERT, avParams({ ...av, assetId }));
       await maybeInsertWarranty('av', assetId, warranty, conn);
@@ -466,7 +486,9 @@ export async function bulkCreateNetwork(rows: BulkNetworkImportRow[]) {
     for (const row of rows) {
       const { deployment, assetId, warranty, ...network } = row;
       if (assetId == null || assetId <= 0) {
-        throw new Error('asset_id is required after ID generation');
+        throw new Error(
+          'An asset ID could not be assigned after generation. Try saving again, or contact support if this keeps happening.',
+        );
       }
       await conn.execute(NETWORK_INSERT, networkParams({ ...network, assetId }));
       await maybeInsertWarranty('network', assetId, warranty, conn);
@@ -506,10 +528,12 @@ export async function updateAssetStatus(kind: AssetKind, assetId: number, status
   const items = await listAssets(kind);
   const asset = items.find((a) => a.assetId === assetId);
   if (!asset) {
-    throw new Error('Asset not found');
+    throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
   }
   if (!isAllowedStatusTransition(kind, asset.statusId, statusId)) {
-    throw new Error('Status change is not allowed from the current state');
+    throw new Error(
+      'This status change is not allowed from the asset\'s current state. Choose a valid next status.',
+    );
   }
 
   const pool = getDbPool();
@@ -520,12 +544,12 @@ export async function updateAssetStatus(kind: AssetKind, assetId: number, status
   );
   const affected = (result as { affectedRows?: number }).affectedRows ?? 0;
   if (affected === 0) {
-    throw new Error('Asset not found');
+    throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
   }
 
   const updated = (await listAssets(kind)).find((a) => a.assetId === assetId);
   if (!updated) {
-    throw new Error('Failed to load updated asset');
+    throw new Error('The asset was updated but could not be loaded. Refresh the page to see the latest details.');
   }
   return updated;
 }

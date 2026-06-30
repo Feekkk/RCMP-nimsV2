@@ -1,7 +1,11 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type { SendNotificationEmailInput, SendNotificationEmailResult } from '@/lib/email-notification';
+import { EMAIL_NOT_CONFIGURED_MESSAGE_MESSAGE } from '@/lib/email-notification';
 import { getMicrosoftEmailConfig, isEmailConfigured } from '@/lib/microsoft-email-config';
+
+const EMAIL_RECIPIENT_MISSING =
+  'No valid recipient email address was found. Check that the recipient has an email on file.';
 
 let transporter: Transporter | null = null;
 
@@ -17,9 +21,7 @@ export function escapeHtml(value: unknown): string {
 function getTransporter(): Transporter {
   const config = getMicrosoftEmailConfig();
   if (!config) {
-    throw new Error(
-      'Email is not configured. Set SMTP_USER/SMTP_PASSWORD or SMTP_MAILPIT=true',
-    );
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   if (!transporter) {
@@ -39,7 +41,7 @@ function getTransporter(): Transporter {
 function normalizeRecipients(to: string | string[], required = true): string[] {
   const list = Array.isArray(to) ? to : [to];
   const out = list.map((e) => e.trim().toLowerCase()).filter((e) => e.includes('@'));
-  if (required && out.length === 0) throw new Error('No valid recipient email address');
+  if (required && out.length === 0) throw new Error(EMAIL_RECIPIENT_MISSING);
   return out;
 }
 
@@ -59,7 +61,7 @@ export async function sendNotificationEmail(
   input: SendNotificationEmailInput,
 ): Promise<SendNotificationEmailResult> {
   if (!isEmailConfigured()) {
-    throw new Error('Email notifications are disabled (missing SMTP configuration)');
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   const config = getMicrosoftEmailConfig()!;
@@ -67,8 +69,8 @@ export async function sendNotificationEmail(
   const subject = input.subject.trim();
   const text = input.text.trim();
 
-  if (!subject) throw new Error('Email subject is required');
-  if (!text && !input.html?.trim()) throw new Error('Email body is required');
+  if (!subject) throw new Error('An email subject is required before sending.');
+  if (!text && !input.html?.trim()) throw new Error('An email message is required before sending.');
 
   const cc = input.cc ? normalizeRecipients(input.cc, false) : [];
   const attachments = toNodemailerAttachments(input.attachments);

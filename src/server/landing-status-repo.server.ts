@@ -129,9 +129,9 @@ function buildStatusRows(
       label: 'Email notifications',
       value: emailConfigured
         ? isMailpitMode()
-          ? 'Configured · Mailpit (dev)'
-          : 'Configured · SMTP ready'
-        : 'Not configured',
+          ? 'Configured · local test mail'
+          : 'Configured · ready to send'
+        : 'Not configured — contact IT to enable',
       level: emailConfigured ? 'ok' : 'warn',
     },
     {

@@ -125,12 +125,12 @@ function BulkImportWorkspace({
 
   const handleParse = () => {
     if (!csvText.trim()) {
-      toast.error('Paste CSV content or load the sample file');
+      toast.error('The CSV is empty. Paste content or load the sample file first.');
       return;
     }
     const result = parseText(kind, csvText);
     if (result.errorCount > 0 && result.validCount === 0) {
-      toast.error('No valid rows — fix errors below');
+      toast.error('No valid rows found. Review and fix the errors listed below.');
     } else if (result.errorCount > 0) {
       toast.warning(`${result.validCount} valid, ${result.errorCount} row(s) with errors`);
     } else {
@@ -140,7 +140,7 @@ function BulkImportWorkspace({
 
   const handleImport = async () => {
     if (!preview || preview.validCount === 0) {
-      toast.error('Parse a valid CSV first');
+      toast.error('Parse the CSV and resolve any errors before importing.');
       return;
     }
     setImporting(true);
@@ -148,7 +148,7 @@ function BulkImportWorkspace({
       const count = await commit();
       onImported(kind, count);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Import failed';
+      const message = err instanceof Error ? err.message : 'The import could not be completed. Try again.';
       toast.error(message);
     } finally {
       setImporting(false);

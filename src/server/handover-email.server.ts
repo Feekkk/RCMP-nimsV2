@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HandoverEmailData } from '@/lib/handover-email-types';
 import type { SendHandoverEmailResult } from '@/lib/handover-email-types';
+import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml } from '@/server/email.server';
 import { getHandoverEmailData } from '@/server/handover-email-repo.server';
@@ -123,15 +124,13 @@ export function buildHandoverEmailText(data: HandoverEmailData): string {
 
 export async function sendHandoverEmail(handoverId: number): Promise<SendHandoverEmailResult> {
   if (!isEmailConfigured()) {
-    throw new Error(
-      'Email is not configured. Set SMTP_USER/SMTP_PASSWORD or SMTP_MAILPIT=true for local testing.',
-    );
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   const data = await getHandoverEmailData(handoverId);
   if (!data) {
     throw new Error(
-      'Cannot send handover email: handover not found, staff recipient missing, or recipient has no email in the staff directory.',
+      'The handover email could not be sent. Check that the handover record exists, a staff recipient is selected, and the recipient has an email in the directory.',
     );
   }
 

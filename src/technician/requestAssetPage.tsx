@@ -115,7 +115,7 @@ export function TechnicianRequestAssetPage() {
       });
       if (result.updated > 0) {
         toast.success(
-          `Added ${result.updated} asset${result.updated === 1 ? '' : 's'} to request pool (status 9)`,
+          `Added ${result.updated} asset${result.updated === 1 ? '' : 's'} to the request pool`,
         );
       }
       if (result.errors.length > 0) {

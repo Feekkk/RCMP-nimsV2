@@ -117,7 +117,7 @@ export function TechnicianDeployPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.staffId) {
-      toast.error('Technician session required');
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
       return;
     }
 

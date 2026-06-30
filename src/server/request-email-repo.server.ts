@@ -58,7 +58,7 @@ export async function getRequestEmailData(requestId: number): Promise<RequestEma
 
   if (!profile.email.includes('@')) {
     throw new Error(
-      'Cannot send request email: your account has no email on file. Update your profile or contact IT.',
+      'The confirmation email could not be sent because your account has no email on file. Update your profile or contact IT.',
     );
   }
 

@@ -210,9 +210,11 @@ export async function markAssetForRequest(input: MarkAssetForRequestInput): Prom
     [input.assetId],
   );
   const row = rows[0] as { status_id: number } | undefined;
-  if (!row) throw new Error('Asset not found');
+  if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
   if (row.status_id !== ACTIVE_STATUS) {
-    throw new Error('Only active (status 1) assets can be added to the request pool');
+    throw new Error(
+      'This asset is not available for requests — only active assets can be added. Check its status or choose a different asset.',
+    );
   }
 
   const [openAssign] = await pool.query<RowDataPacket[]>(
@@ -221,7 +223,9 @@ export async function markAssetForRequest(input: MarkAssetForRequestInput): Prom
     [input.assetId],
   );
   if (openAssign[0]) {
-    throw new Error('Asset is already assigned to an open request');
+    throw new Error(
+      'This asset is already booked on another open request. Choose a different asset or wait until that request is closed.',
+    );
   }
 
   await pool.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
@@ -240,7 +244,7 @@ export async function markAssetsForRequest(
       await markAssetForRequest(asset);
       updated += 1;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed';
+      const msg = e instanceof Error ? e.message : 'This asset could not be added to the request pool.';
       errors.push(`${asset.kind} #${asset.assetId}: ${msg}`);
     }
   }
@@ -255,9 +259,11 @@ async function assertAssetInPool(kind: RequestAssignableKind, assetId: number) {
     [assetId],
   );
   const row = rows[0] as { status_id: number } | undefined;
-  if (!row) throw new Error('Asset not found');
+  if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
   if (row.status_id !== REQUEST_STATUS_ACTIVE) {
-    throw new Error('Asset must be in the request pool (status 9) before assigning to a user request');
+    throw new Error(
+      'This asset has not been added to the request pool yet. Add it to the pool first, then assign it to a request.',
+    );
   }
 }
 
@@ -280,7 +286,11 @@ export async function bookPoolAssetToRequest(input: AssignAssetToRequestInput): 
     `SELECT request_id FROM request WHERE request_id = ? AND rejected_at IS NULL`,
     [input.requestId],
   );
-  if (!reqRows[0]) throw new Error('Request not found or was rejected');
+  if (!reqRows[0]) {
+    throw new Error(
+      'This request no longer exists or was rejected. Refresh the page and check the request list.',
+    );
+  }
 
   await assertAssetInPool(input.kind, input.assetId);
 
@@ -289,7 +299,11 @@ export async function bookPoolAssetToRequest(input: AssignAssetToRequestInput): 
      WHERE asset_id = ? AND returned_at IS NULL`,
     [input.assetId],
   );
-  if (existing[0]) throw new Error('Asset is already assigned to another open request');
+  if (existing[0]) {
+    throw new Error(
+      'This asset is already booked on another open request. Choose a different asset or wait until that request is closed.',
+    );
+  }
 
   const conn = await pool.getConnection();
   try {
@@ -349,11 +363,21 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
     [input.assignmentId],
   );
   const row = rows[0];
-  if (!row) throw new Error('Assignment not found');
-  if (row.rejected_at) throw new Error('Request was rejected');
-  if (row.checkout_at) throw new Error('Cannot change asset after checkout');
+  if (!row) throw new Error('This booking could not be found. Refresh the page and try again.');
+  if (row.rejected_at) {
+    throw new Error(
+      'This request was rejected, so this action cannot be completed. Open a different request instead.',
+    );
+  }
+  if (row.checkout_at) {
+    throw new Error(
+      'This asset has already been checked out and cannot be swapped. Process a return first if you need to make changes.',
+    );
+  }
   if (row.old_status_id !== REQUEST_STATUS_BOOKED) {
-    throw new Error('Only booked (status 10) assets can be changed');
+    throw new Error(
+      'Only assets that are booked but not yet checked out can be changed. Check the asset status first.',
+    );
   }
 
   const oldKind: RequestAssignableKind = row.old_kind === 'laptop' ? 'laptop' : 'av';
@@ -368,7 +392,11 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
      WHERE asset_id = ? AND returned_at IS NULL AND assignment_id != ?`,
     [input.assetId, input.assignmentId],
   );
-  if (existing[0]) throw new Error('Asset is already assigned to another open request');
+  if (existing[0]) {
+    throw new Error(
+      'This asset is already booked on another open request. Choose a different asset or wait until that request is closed.',
+    );
+  }
 
   const conn = await pool.getConnection();
   try {
@@ -412,13 +440,21 @@ async function insertClosedRequestSlot(
     `SELECT request_id FROM request WHERE request_id = ? AND rejected_at IS NULL`,
     [input.requestId],
   );
-  if (!reqRows[0]) throw new Error('Request not found or was rejected');
+  if (!reqRows[0]) {
+    throw new Error(
+      'This request no longer exists or was rejected. Refresh the page and check the request list.',
+    );
+  }
 
   const [itemRows] = await pool.query<RowDataPacket[]>(
     `SELECT request_item_id FROM request_item WHERE request_item_id = ? AND request_id = ?`,
     [input.requestItemId, input.requestId],
   );
-  if (!itemRows[0]) throw new Error('Request line item not found');
+  if (!itemRows[0]) {
+    throw new Error(
+      'That equipment line could not be found on this request. Refresh the page and try again.',
+    );
+  }
 
   const [result] = await pool.execute(
     `INSERT INTO request_assignment
@@ -466,11 +502,19 @@ export async function cancelBookedAssignmentNotTaken(
     [input.assignmentId],
   );
   const row = rows[0];
-  if (!row) throw new Error('Assignment not found');
-  if (row.rejected_at) throw new Error('Request was rejected');
-  if (row.checkout_at) throw new Error('Asset is already checked out');
+  if (!row) throw new Error('This booking could not be found. Refresh the page and try again.');
+  if (row.rejected_at) {
+    throw new Error(
+      'This request was rejected, so this action cannot be completed. Open a different request instead.',
+    );
+  }
+  if (row.checkout_at) {
+    throw new Error('This asset has already been checked out.');
+  }
   if (row.status_id !== REQUEST_STATUS_BOOKED) {
-    throw new Error('Only booked assets can be marked not taken');
+    throw new Error(
+      'Only booked assets that have not been collected can be marked as not taken.',
+    );
   }
 
   const kind: RequestAssignableKind = row.kind === 'laptop' ? 'laptop' : 'av';
@@ -522,7 +566,9 @@ export async function checkoutUserRequest(
     assignmentIds.push(row.assignment_id);
   }
   if (assignmentIds.length === 0) {
-    throw new Error('No booked assets to check out for this request');
+    throw new Error(
+      'There are no booked assets ready for checkout on this request. Book assets first, then try checkout again.',
+    );
   }
   return { checkedOut: assignmentIds.length, assignmentIds };
 }
@@ -552,11 +598,19 @@ export async function checkoutRequestAssignment(
     [input.assignmentId],
   );
   const row = rows[0];
-  if (!row) throw new Error('Assignment not found');
-  if (row.rejected_at) throw new Error('Request was rejected');
-  if (row.checkout_at) throw new Error('Asset is already checked out');
+  if (!row) throw new Error('This booking could not be found. Refresh the page and try again.');
+  if (row.rejected_at) {
+    throw new Error(
+      'This request was rejected, so this action cannot be completed. Open a different request instead.',
+    );
+  }
+  if (row.checkout_at) {
+    throw new Error('This asset has already been checked out.');
+  }
   if (row.status_id !== REQUEST_STATUS_BOOKED) {
-    throw new Error('Asset must be booked (status 10) before checkout');
+    throw new Error(
+      'This asset must be booked before checkout. Complete the booking step first.',
+    );
   }
 
   const kind: RequestAssignableKind = row.kind === 'laptop' ? 'laptop' : 'av';
@@ -603,12 +657,20 @@ async function returnOneAssignment(
     [assignmentId],
   );
   const row = rows[0];
-  if (!row) throw new Error('Assignment not found');
-  if (row.rejected_at) throw new Error('Request was rejected');
-  if (row.returned_at) throw new Error('Asset is already returned');
-  if (!row.checkout_at) throw new Error('Asset must be checked out before return');
+  if (!row) throw new Error('This booking could not be found. Refresh the page and try again.');
+  if (row.rejected_at) {
+    throw new Error(
+      'This request was rejected, so this action cannot be completed. Open a different request instead.',
+    );
+  }
+  if (row.returned_at) throw new Error('This asset has already been returned.');
+  if (!row.checkout_at) {
+    throw new Error('This asset has not been checked out yet. Complete checkout before processing a return.');
+  }
   if (row.status_id !== REQUEST_STATUS_CHECKOUT) {
-    throw new Error('Asset must be in checkout (status 11) to return');
+    throw new Error(
+      'This asset is not in checked-out status. Verify that checkout was completed before processing a return.',
+    );
   }
 
   const kind: RequestAssignableKind = row.kind === 'laptop' ? 'laptop' : 'av';
@@ -628,7 +690,11 @@ export async function returnRequestAssignment(
   input: ReturnRequestAssignmentInput,
 ): Promise<void> {
   const condition = input.returnCondition.trim();
-  if (!condition) throw new Error('Return condition is required');
+  if (!condition) {
+    throw new Error(
+      'A return condition is required. Select or describe the condition of the returned equipment.',
+    );
+  }
 
   const pool = getDbPool();
   const conn = await pool.getConnection();
@@ -652,7 +718,11 @@ export async function returnUserRequest(
   input: ReturnUserRequestInput,
 ): Promise<ReturnUserRequestResult> {
   const condition = input.returnCondition.trim();
-  if (!condition) throw new Error('Return condition is required');
+  if (!condition) {
+    throw new Error(
+      'A return condition is required. Select or describe the condition of the returned equipment.',
+    );
+  }
 
   const pool = getDbPool();
   const [pending] = await pool.query<RowDataPacket[]>(
@@ -663,7 +733,9 @@ export async function returnUserRequest(
     [input.requestId],
   );
   if (pending.length === 0) {
-    throw new Error('No checked-out assets to return for this request');
+    throw new Error(
+      'There are no checked-out assets on this request to return. Verify that checkout was completed.',
+    );
   }
 
   const assignmentIds = pending.map((row) => Number(row.assignment_id));
@@ -702,7 +774,11 @@ function requestNeedsTechnicianWork(
 
 export async function rejectUserRequest(input: RejectUserRequestInput): Promise<void> {
   const reason = input.rejectionReason.trim();
-  if (!reason) throw new Error('Rejection remarks are required');
+  if (!reason) {
+    throw new Error(
+      'Rejection notes are required. Enter a brief reason so the requester knows why the request was declined.',
+    );
+  }
 
   const pool = getDbPool();
   const conn = await pool.getConnection();
@@ -713,7 +789,11 @@ export async function rejectUserRequest(input: RejectUserRequestInput): Promise<
       `SELECT request_id FROM request WHERE request_id = ? AND rejected_at IS NULL`,
       [input.requestId],
     );
-    if (!reqRows[0]) throw new Error('Request not found or already rejected');
+    if (!reqRows[0]) {
+      throw new Error(
+        'This request could not be found or was already rejected. Refresh the page and check the request list.',
+      );
+    }
 
     await conn.execute(
       `UPDATE request SET rejected_at = NOW(), rejected_by = ?, rejection_reason = ?
@@ -1189,19 +1269,25 @@ export async function submitUserRequest(
   input: SubmitUserRequestInput,
 ): Promise<SubmitUserRequestResult> {
   if (!input.termsAcceptedAt) {
-    throw new Error('You must accept the terms before submitting');
+    throw new Error('The terms have not been accepted yet. Review and accept the terms, then submit again.');
   }
   if (!input.borrowDate || !input.returnDate) {
-    throw new Error('Borrow and return dates are required');
+    throw new Error(
+      'Borrow and return dates are both required. Select when you need the equipment and when you will return it.',
+    );
   }
   if (input.returnDate < input.borrowDate) {
-    throw new Error('Return date must be on or after borrow date');
+    throw new Error(
+      'The return date is before the borrow date. Choose a return date on or after the borrow date.',
+    );
   }
   if (!input.programType.trim() || !input.usageLocation.trim()) {
-    throw new Error('Program type and usage location are required');
+    throw new Error(
+      'Program type and usage location are both required. Fill in both fields before submitting.',
+    );
   }
   if (input.items.length === 0) {
-    throw new Error('Add at least one equipment category');
+    throw new Error('At least one equipment type is required. Add an item to your request before submitting.');
   }
 
   const pool = getDbPool();
@@ -1216,13 +1302,17 @@ export async function submitUserRequest(
       [input.requestedBy],
     );
     const userRow = userRows[0];
-    if (!userRow) throw new Error('User account not found');
+    if (!userRow) {
+      throw new Error('Your account could not be found. Sign out and sign in again.');
+    }
     const profile = await resolveAccountProfile(userRow.oid, {
       email: userRow.email,
       phone: userRow.phone,
     });
     if (!isUserProfileComplete(profile)) {
-      throw new Error('Complete your profile (name, email, and phone) before submitting a request');
+      throw new Error(
+        'Your profile is incomplete. Add your name, email, and phone number in your profile, then submit the request.',
+      );
     }
 
     const [result] = await conn.execute(

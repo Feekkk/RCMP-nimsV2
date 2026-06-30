@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { RequestRejectEmailData } from '@/lib/request-reject-email-types';
 import { REQUEST_IT_EMAIL } from '@/lib/request-reject-email-types';
 import type { SendRequestRejectEmailResult } from '@/lib/request-reject-email-types';
+import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml } from '@/server/email.server';
 import { getRequestRejectEmailData } from '@/server/request-reject-email-repo.server';
@@ -170,14 +171,14 @@ export async function sendRequestRejectEmail(
   requestId: number,
 ): Promise<SendRequestRejectEmailResult> {
   if (!isEmailConfigured()) {
-    throw new Error(
-      'Email is not configured. Set SMTP_USER/SMTP_PASSWORD or SMTP_MAILPIT=true for local testing.',
-    );
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   const data = await getRequestRejectEmailData(requestId);
   if (!data) {
-    throw new Error('Cannot send rejection email: request not found or not rejected.');
+    throw new Error(
+      'The rejection notice could not be sent because this request could not be found or was not rejected. Refresh the page and try again.',
+    );
   }
 
   const logo = loadLogoBuffer();

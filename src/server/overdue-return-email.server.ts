@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { OverdueReturnEmailData } from '@/lib/overdue-return-email-types';
 import { REQUEST_IT_EMAIL } from '@/lib/overdue-return-email-types';
 import type { SendOverdueReturnEmailResult } from '@/lib/overdue-return-email-types';
+import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml } from '@/server/email.server';
 import {
@@ -210,15 +211,15 @@ export async function sendOverdueReturnEmail(
   runDateIso?: string,
 ): Promise<SendOverdueReturnEmailResult> {
   if (!isEmailConfigured()) {
-    throw new Error(
-      'Email is not configured. Set SMTP_USER/SMTP_PASSWORD or SMTP_MAILPIT=true for local testing.',
-    );
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   const runDate = resolveOverdueEmailRunDate(runDateIso);
   const data = await getOverdueReturnEmailData(requestId, runDate);
   if (!data) {
-    throw new Error('Cannot send overdue email: request not overdue or no outstanding checkouts.');
+    throw new Error(
+      'The overdue reminder could not be sent because this request is not overdue or has no outstanding checkouts. Verify the return date and checkout status.',
+    );
   }
 
   const logo = loadLogoBuffer();

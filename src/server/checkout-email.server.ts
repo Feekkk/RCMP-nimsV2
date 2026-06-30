@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { CheckoutEmailData } from '@/lib/checkout-email-types';
 import { REQUEST_IT_EMAIL } from '@/lib/checkout-email-types';
 import type { SendCheckoutEmailInput, SendCheckoutEmailResult } from '@/lib/checkout-email-types';
+import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml } from '@/server/email.server';
 import { getCheckoutEmailData } from '@/server/checkout-email-repo.server';
@@ -199,14 +200,14 @@ export function buildCheckoutEmailText(data: CheckoutEmailData): string {
 
 export async function sendCheckoutEmail(input: SendCheckoutEmailInput): Promise<SendCheckoutEmailResult> {
   if (!isEmailConfigured()) {
-    throw new Error(
-      'Email is not configured. Set SMTP_USER/SMTP_PASSWORD or SMTP_MAILPIT=true for local testing.',
-    );
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   const data = await getCheckoutEmailData(input.requestId, input.checkedOutBy, input.assignmentIds);
   if (!data) {
-    throw new Error('Cannot send checkout email: request or checked-out assets not found.');
+    throw new Error(
+      'The checkout confirmation could not be sent because the request or checked-out equipment could not be found. Refresh the page and try again.',
+    );
   }
 
   const logo = loadLogoBuffer();

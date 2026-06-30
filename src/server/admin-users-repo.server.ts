@@ -28,13 +28,15 @@ function emailLocalPart(email: string): string {
 
 function assertValidRoleId(roleId: number): void {
   if (roleId !== ROLE_TECHNICIAN && roleId !== ROLE_ADMIN && roleId !== ROLE_USER) {
-    throw new Error('Invalid role');
+    throw new Error('The selected role is not valid. Choose User, Technician, or Administrator.');
   }
 }
 
 function parseUserId(staffId: string): number {
   const id = Number.parseInt(staffId.trim(), 10);
-  if (!Number.isFinite(id) || id <= 0) throw new Error('Invalid account id');
+  if (!Number.isFinite(id) || id <= 0) {
+    throw new Error('The account could not be identified. Refresh the page and try again.');
+  }
   return id;
 }
 
@@ -72,7 +74,9 @@ export async function createAdminUser(input: CreateAdminUserInput): Promise<Admi
   assertValidRoleId(input.roleId);
 
   if (!email || !email.includes('@')) {
-    throw new Error('A valid email is required');
+    throw new Error(
+      'A valid email address is required. Enter a full address with an @ symbol (for example, name@unikl.edu.my).',
+    );
   }
 
   const pool = getDbPool();
@@ -81,7 +85,7 @@ export async function createAdminUser(input: CreateAdminUserInput): Promise<Admi
     [email],
   );
   if (existing.length > 0) {
-    throw new Error('Email already exists');
+    throw new Error('An account with this email already exists. Use a different email address.');
   }
 
   // Bind the Azure oid now if the directory user already exists; otherwise it is set on first sign-in.
@@ -95,7 +99,9 @@ export async function createAdminUser(input: CreateAdminUserInput): Promise<Admi
 
   const users = await listAdminUsers();
   const created = users.find((u) => u.staffId === String(insertId));
-  if (!created) throw new Error('User creation failed');
+  if (!created) {
+    throw new Error('The account could not be created. Try again, or contact support if this keeps happening.');
+  }
   return created;
 }
 
@@ -105,20 +111,26 @@ export async function updateAdminUser(input: UpdateAdminUserInput): Promise<Admi
   const phone = input.phone?.trim() || null;
   assertValidRoleId(input.roleId);
 
-  if (!email || !email.includes('@')) throw new Error('A valid email is required');
+  if (!email || !email.includes('@')) {
+    throw new Error(
+      'A valid email address is required. Enter a full address with an @ symbol (for example, name@unikl.edu.my).',
+    );
+  }
 
   const pool = getDbPool();
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT id FROM users WHERE id = ? LIMIT 1`,
     [userId],
   );
-  if (rows.length === 0) throw new Error('User not found');
+  if (rows.length === 0) throw new Error('This account could not be found. Refresh the page and try again.');
 
   const [emailOwner] = await pool.query<RowDataPacket[]>(
     `SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1`,
     [email, userId],
   );
-  if (emailOwner.length > 0) throw new Error('Email already in use');
+  if (emailOwner.length > 0) {
+    throw new Error('Another account already uses this email. Enter a different email address.');
+  }
 
   await pool.execute(
     `UPDATE users SET email = ?, role_id = ?, phone = ? WHERE id = ?`,
@@ -127,6 +139,8 @@ export async function updateAdminUser(input: UpdateAdminUserInput): Promise<Admi
 
   const users = await listAdminUsers();
   const updated = users.find((u) => u.staffId === String(userId));
-  if (!updated) throw new Error('User update failed');
+  if (!updated) {
+    throw new Error('The account could not be updated. Try again, or contact support if this keeps happening.');
+  }
   return updated;
 }

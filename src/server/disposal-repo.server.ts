@@ -29,30 +29,34 @@ async function getAssetStatus(kind: AssetKind, assetId: number): Promise<number 
 
 export async function createDisposal(input: CreateDisposalInput): Promise<CreateDisposalResult> {
   if (!input.requestedBy.trim()) {
-    throw new Error('Technician staff ID is required');
+    throw new Error('Your technician session could not be verified. Sign out and sign in again.');
   }
   if (!input.disposalDate.trim()) {
-    throw new Error('Disposal date is required');
+    throw new Error('A disposal date is required. Select the date the assets were disposed.');
   }
   if (input.assets.length === 0) {
-    throw new Error('Select at least one asset');
+    throw new Error('At least one asset is required. Select the assets to dispose before submitting.');
   }
 
   const seen = new Set<string>();
   for (const pick of input.assets) {
     const key = `${pick.kind}:${pick.assetId}`;
     if (seen.has(key)) {
-      throw new Error(`Duplicate asset in selection: ${pick.kind} ${pick.assetId}`);
+      throw new Error(
+        `Asset ${pick.assetId} (${pick.kind}) was selected more than once. Remove the duplicate entry.`,
+      );
     }
     seen.add(key);
 
     const statusId = await getAssetStatus(pick.kind, pick.assetId);
     if (statusId == null) {
-      throw new Error(`Asset not found: ${pick.kind} ${pick.assetId}`);
+      throw new Error(
+        `Asset ${pick.assetId} (${pick.kind}) could not be found. Refresh the page and check your selection.`,
+      );
     }
     if (!new Set<number>(DISPOSAL_ELIGIBLE_STATUS_IDS).has(statusId)) {
       throw new Error(
-        `Asset ${pick.assetId} (${pick.kind}) must be non-active or offline before disposal`,
+        `Asset ${pick.assetId} (${pick.kind}) must be marked non-active or offline before it can be disposed. Update its status first.`,
       );
     }
   }
@@ -90,7 +94,9 @@ export async function createDisposal(input: CreateDisposalInput): Promise<Create
       );
       const affected = (updateResult as { affectedRows?: number }).affectedRows ?? 0;
       if (affected === 0) {
-        throw new Error(`Could not mark asset ${pick.assetId} (${pick.kind}) as disposed`);
+        throw new Error(
+          `Asset ${pick.assetId} (${pick.kind}) could not be marked as disposed. Refresh the page and try again.`,
+        );
       }
     }
 

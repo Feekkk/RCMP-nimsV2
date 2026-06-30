@@ -96,10 +96,14 @@ async function exchangeCodeForTokens(
 
   const json = (await res.json()) as TokenResponse;
   if (!res.ok || json.error) {
-    throw new Error(json.error_description ?? json.error ?? 'Microsoft token exchange failed');
+    throw new Error(
+      'Sign-in with Microsoft did not complete. Return to the sign-in page and try again.',
+    );
   }
   if (!json.access_token) {
-    throw new Error('Microsoft did not return an access token');
+    throw new Error(
+      'Sign-in with Microsoft did not complete. Return to the sign-in page and try again.',
+    );
   }
   return json;
 }
@@ -112,7 +116,9 @@ async function fetchGraphProfile(accessToken: string): Promise<GraphMe> {
     },
   );
   if (!res.ok) {
-    throw new Error('Could not read your Microsoft profile');
+    throw new Error(
+      'We could not load your Microsoft profile. Try signing in again, or contact IT if this keeps happening.',
+    );
   }
   return (await res.json()) as GraphMe;
 }
@@ -120,12 +126,16 @@ async function fetchGraphProfile(accessToken: string): Promise<GraphMe> {
 function resolveEmail(profile: GraphMe, allowedDomains: string[]): string {
   const raw = (profile.mail ?? profile.userPrincipalName ?? '').trim().toLowerCase();
   if (!raw || !raw.includes('@')) {
-    throw new Error('Microsoft account has no email address');
+    throw new Error(
+      'Your Microsoft account does not include an email address. Use an account that has one, or contact IT for help.',
+    );
   }
   if (allowedDomains.length > 0) {
     const domain = raw.split('@')[1] ?? '';
     if (!allowedDomains.includes(domain)) {
-      throw new Error('Your organization email is not allowed for this application');
+      throw new Error(
+        'This email domain is not authorized for this application. Sign in with your organization email, or contact IT.',
+      );
     }
   }
   return raw;
@@ -134,7 +144,9 @@ function resolveEmail(profile: GraphMe, allowedDomains: string[]): string {
 export function getMicrosoftLoginRedirect(): { url: string; state: string } {
   const config = getMicrosoftAuthConfig();
   if (!config) {
-    throw new Error('Microsoft SSO is not configured on this server');
+    throw new Error(
+      'Microsoft sign-in is not set up on this server. Contact your administrator or use another sign-in option.',
+    );
   }
   const state = createMicrosoftOAuthState(config);
   return { url: buildMicrosoftAuthorizeUrl(config, state), state };
@@ -154,11 +166,13 @@ function parseOAuthStatePayload(config: MicrosoftAuthConfig, state: string): OAu
 export async function completeMicrosoftLogin(code: string, state: string): Promise<MicrosoftLoginResult> {
   const config = getMicrosoftAuthConfig();
   if (!config) {
-    throw new Error('Microsoft SSO is not configured on this server');
+    throw new Error(
+      'Microsoft sign-in is not set up on this server. Contact your administrator or use another sign-in option.',
+    );
   }
   const statePayload = parseOAuthStatePayload(config, state);
   if (!statePayload) {
-    throw new Error('Invalid or expired sign-in session. Please try again.');
+    throw new Error('Your sign-in session expired. Go back to the sign-in page and start again.');
   }
 
   const tokens = await exchangeCodeForTokens(config, code);

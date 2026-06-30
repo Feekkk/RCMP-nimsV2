@@ -208,7 +208,7 @@ export async function generateAssetReportPdfBase64(
 ): Promise<{ base64: string; filename: string; count: number }> {
   const columns = resolveColumnLayouts(filters.columns);
   if (!columns.length) {
-    throw new Error('Select at least one report column');
+    throw new Error('Select at least one column to include in the report.');
   }
 
   const layout = tableLayout(filters);

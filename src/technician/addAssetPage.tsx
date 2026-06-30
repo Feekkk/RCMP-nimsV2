@@ -168,13 +168,13 @@ function AssetForm({
     e.preventDefault();
     const id = await refetchAssetId();
     if (id == null || id <= 0) {
-      toast.error(assetIdError ?? 'Could not generate asset ID');
+      toast.error(assetIdError ?? 'A new asset ID could not be generated. Try again or refresh the page.');
       return;
     }
 
     const parsedStatusId = Number(statusId);
     if (Number.isNaN(parsedStatusId)) {
-      toast.error('Select a valid status');
+      toast.error('Select a status for this asset before saving.');
       return;
     }
 
@@ -185,7 +185,7 @@ function AssetForm({
       Boolean(warranty.remarks.trim());
     const warrantyInput = warrantyFormToInput(warranty);
     if (hasWarrantyPartial && !warrantyInput) {
-      toast.error('Warranty requires both start and end dates');
+      toast.error('Warranty requires both a start date and an end date. Fill in both or leave warranty blank.');
       return;
     }
 
@@ -193,12 +193,12 @@ function AssetForm({
     try {
       if (kind === 'laptop') {
         if (!serialNum.trim()) {
-          toast.error('Serial number (serial_num) is required');
+          toast.error('Serial number is required for laptops. Enter the device serial number.');
           setSaving(false);
           return;
         }
         if (!category.trim()) {
-          toast.error('Category is required');
+          toast.error('Category is required for laptops. Select or enter a category.');
           setSaving(false);
           return;
         }
@@ -221,7 +221,7 @@ function AssetForm({
         });
       } else if (kind === 'av') {
         if (!assetIdOld.trim()) {
-          toast.error('Legacy ID (asset_id_old) is required');
+          toast.error('Legacy asset ID is required for AV equipment. Enter the previous asset identifier.');
           setSaving(false);
           return;
         }
@@ -253,7 +253,7 @@ function AssetForm({
       }
       onCreated(kind);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not save asset';
+      const message = err instanceof Error ? err.message : 'The asset could not be saved. Try again.';
       toast.error(message);
     } finally {
       setSaving(false);

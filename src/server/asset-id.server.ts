@@ -85,7 +85,9 @@ export async function allocateAssetIdsFromDb(request: AllocateAssetIdsRequest): 
       const queue = prefixQueues.get(prefix)!;
       const id = queue.shift();
       if (id === undefined) {
-        throw new Error('Asset ID allocation mismatch');
+        throw new Error(
+          'Asset ID allocation did not complete correctly. Try again, or contact support if this keeps happening.',
+        );
       }
       return id;
     });

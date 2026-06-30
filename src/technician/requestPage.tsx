@@ -300,7 +300,7 @@ export function TechnicianRequestPage() {
       setRequests(reqs);
       setPool(available);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load requests');
+      toast.error(e instanceof Error ? e.message : 'Requests could not be loaded. Refresh the page and try again.');
     } finally {
       setLoading(false);
     }
@@ -338,7 +338,7 @@ export function TechnicianRequestPage() {
     }
     const session = readTechnicianSession();
     if (!session?.staffId) {
-      toast.error('Technician session required');
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
       return null;
     }
     return { item, staffId: session.staffId };
@@ -426,7 +426,7 @@ export function TechnicianRequestPage() {
   const handleBookedNotTaken = async (assignment: RequestAssignmentRow) => {
     const session = readTechnicianSession();
     if (!session?.staffId) {
-      toast.error('Technician session required');
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
       return;
     }
 
@@ -459,7 +459,7 @@ export function TechnicianRequestPage() {
 
     const session = readTechnicianSession();
     if (!session?.staffId) {
-      toast.error('Technician session required');
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
       return;
     }
 
@@ -485,12 +485,12 @@ export function TechnicianRequestPage() {
   const handleCheckoutRequest = async (req: PendingRequest) => {
     const session = readTechnicianSession();
     if (!session?.staffId) {
-      toast.error('Technician session required');
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
       return;
     }
     const toCheckout = bookedAwaitingCheckout(req);
     if (toCheckout.length === 0) {
-      toast.error('No booked assets to check out');
+      toast.error('There are no booked assets ready for checkout. Book assets first, then try again.');
       return;
     }
     setCheckoutRequestId(req.requestId);
@@ -531,12 +531,12 @@ export function TechnicianRequestPage() {
     if (rejectRequestId == null) return;
     const reason = rejectReason.trim();
     if (!reason) {
-      toast.error('Rejection remarks are required');
+      toast.error('Rejection notes are required. Enter a brief reason for declining this request.');
       return;
     }
     const session = readTechnicianSession();
     if (!session?.staffId) {
-      toast.error('Technician session required');
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
       return;
     }
     setRejecting(true);
@@ -582,17 +582,17 @@ export function TechnicianRequestPage() {
     if (!returnRequest) return;
     const condition = returnCondition.trim();
     if (!condition) {
-      toast.error('Return condition is required');
+      toast.error('A return condition is required. Select or describe the condition of the returned equipment.');
       return;
     }
     const session = readTechnicianSession();
     if (!session?.staffId) {
-      toast.error('Technician session required');
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
       return;
     }
     const toReturn = checkedOutAwaitingReturn(returnRequest);
     if (toReturn.length === 0) {
-      toast.error('No checked-out assets to return');
+      toast.error('There are no checked-out assets to return on this request.');
       return;
     }
     setReturning(true);

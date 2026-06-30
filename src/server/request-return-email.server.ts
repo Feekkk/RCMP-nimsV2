@@ -6,6 +6,7 @@ import type {
   SendRequestReturnEmailInput,
   SendRequestReturnEmailResult,
 } from '@/lib/request-return-email-types';
+import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml } from '@/server/email.server';
 import { getRequestReturnEmailData } from '@/server/request-return-email-repo.server';
@@ -206,9 +207,7 @@ export async function sendRequestReturnEmail(
   input: SendRequestReturnEmailInput,
 ): Promise<SendRequestReturnEmailResult> {
   if (!isEmailConfigured()) {
-    throw new Error(
-      'Email is not configured. Set SMTP_USER/SMTP_PASSWORD or SMTP_MAILPIT=true for local testing.',
-    );
+    throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
   const data = await getRequestReturnEmailData(
@@ -219,7 +218,9 @@ export async function sendRequestReturnEmail(
     input.remarks ?? null,
   );
   if (!data) {
-    throw new Error('Cannot send return email: request or returned assets not found.');
+    throw new Error(
+      'The return confirmation could not be sent because the request or returned equipment could not be found. Refresh the page and try again.',
+    );
   }
 
   const logo = loadLogoBuffer();

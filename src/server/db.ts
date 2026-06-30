@@ -81,27 +81,26 @@ export function getDbPool(): Pool {
 export type { PoolConnection };
 
 export function formatDatabaseError(error: unknown): string {
-  if (!(error instanceof Error)) return 'Connection failed';
-
-  const details = error as Error & { code?: string; syscall?: string };
-  const parts = [details.message];
-
-  if (details.code) parts.push(`code=${details.code}`);
-  if (details.syscall) parts.push(`syscall=${details.syscall}`);
-
-  if (details.message.includes('EEXIST')) {
-    parts.push(
-      'hint=set DATABASE_URL or MYSQL_HOST=127.0.0.1; remove invalid MYSQL_SOCKET; run npm install on server',
-    );
-  } else if (details.code === 'ECONNREFUSED' || details.message.includes('ECONNREFUSED')) {
-    parts.push('hint=use DATABASE_URL=mysql://user:pass@127.0.0.1:3306/dbname');
-  } else if (details.code === 'ER_ACCESS_DENIED_ERROR') {
-    parts.push('hint=check DB user/password from Plesk Databases panel');
-  } else if (details.code === 'ERR_MODULE_NOT_FOUND' || details.message.includes('mysql2')) {
-    parts.push('hint=run npm install on the server so node_modules/mysql2 exists');
+  if (!(error instanceof Error)) {
+    return 'The database could not be reached. Try again later or contact support.';
   }
 
-  return parts.join(' · ');
+  const details = error as Error & { code?: string; syscall?: string };
+
+  if (details.message.includes('EEXIST')) {
+    return 'The database connection settings are incorrect. Contact your administrator to review the database configuration.';
+  }
+  if (details.code === 'ECONNREFUSED' || details.message.includes('ECONNREFUSED')) {
+    return 'The database server is not responding. It may be offline — try again later or contact support.';
+  }
+  if (details.code === 'ER_ACCESS_DENIED_ERROR') {
+    return 'The database login details are incorrect. Contact your administrator to verify the database credentials.';
+  }
+  if (details.code === 'ERR_MODULE_NOT_FOUND' || details.message.includes('mysql2')) {
+    return 'The database driver is missing on the server. Contact your administrator to complete the server setup.';
+  }
+
+  return 'The database could not be reached. Try again later or contact support.';
 }
 
 export function resetDbPoolForTests(): void {

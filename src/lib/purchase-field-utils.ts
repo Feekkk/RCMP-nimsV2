@@ -16,7 +16,7 @@ export function parseOptionalDate(
   if (!iso) {
     errors.push({
       row: rowNum,
-      message: `Invalid ${column} (use ${IMPORT_DATE_FORMAT_HINT})`,
+      message: `"${column}" is not a valid date. Use the format ${IMPORT_DATE_FORMAT_HINT}.`,
     });
     return null;
   }
@@ -33,7 +33,7 @@ export function parseOptionalDecimal(
   if (!val) return null;
   const n = Number(val);
   if (Number.isNaN(n)) {
-    errors.push({ row: rowNum, message: `Invalid ${column}` });
+    errors.push({ row: rowNum, message: `"${column}" is not a valid number. Enter a numeric value or leave blank.` });
     return null;
   }
   return n;

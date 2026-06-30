@@ -1,5 +1,8 @@
 /** Outbound notification payloads (recipients come from users.email in DB at send time). */
 
+export const EMAIL_NOT_CONFIGURED_MESSAGE =
+  'Email notifications are not set up on this server. Your action may have completed, but no email was sent. Contact IT to enable email.';
+
 export type EmailAttachment = {
   filename: string;
   content: Buffer | Uint8Array | string;
