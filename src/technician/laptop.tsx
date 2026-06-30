@@ -16,24 +16,50 @@ import { AssetStatusActions } from '@/technician/asset-status-actions';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
 import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
+import {
+	LAPTOP_CATEGORY_OPTIONS,
+	normalizeCategory,
+} from '@/hooks/assetid-generator';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStockSummary } from '@/technician/asset-stock-summary';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
+
+type LaptopCategoryView = 'all' | (typeof LAPTOP_CATEGORY_OPTIONS)[number];
+
+const LAPTOP_CATEGORY_VIEWS: LaptopCategoryView[] = ['all', ...LAPTOP_CATEGORY_OPTIONS];
+
+function laptopCategoryHeaderLabel(view: LaptopCategoryView): string {
+	return view === 'all' ? 'Category' : view;
+}
+
+function nextLaptopCategoryView(view: LaptopCategoryView): LaptopCategoryView {
+	const index = LAPTOP_CATEGORY_VIEWS.indexOf(view);
+	return LAPTOP_CATEGORY_VIEWS[(index + 1) % LAPTOP_CATEGORY_VIEWS.length];
+}
+
+function matchesLaptopCategory(category: string | null, view: LaptopCategoryView): boolean {
+	if (view === 'all') return true;
+	return normalizeCategory(category ?? '') === normalizeCategory(view);
+}
 
 export function TechnicianLaptopPage() {
 	const navigate = useNavigate();
 	const [search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<number | null>(null);
+	const [categoryView, setCategoryView] = useState<LaptopCategoryView>('all');
 	const { items, isLoading, error, updateStatus } = useAssets('laptop');
 
 	const filtered = useMemo(() => {
-		const bySearch = filterBySearch(items, search, (c) => c.category ?? '');
+		const byCategory = items.filter((item) => matchesLaptopCategory(item.category, categoryView));
+		const bySearch = filterBySearch(byCategory, search, (c) => c.category ?? '');
 		return filterByStatus(bySearch, statusFilter);
-	}, [items, search, statusFilter]);
+	}, [items, search, statusFilter, categoryView]);
 
 	const pagination = usePagination(filtered, {
-		resetKey: `${search}|${statusFilter ?? ''}`,
+		resetKey: `${search}|${statusFilter ?? ''}|${categoryView}`,
 	});
+
+	const nextCategoryView = nextLaptopCategoryView(categoryView);
 
 	return (
 		<TechnicianShell>
@@ -74,7 +100,20 @@ export function TechnicianLaptopPage() {
 							<TableHeader>
 								<TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
 									<TableHead className="whitespace-nowrap font-semibold">ID</TableHead>
-									<TableHead className="whitespace-nowrap font-semibold">Category</TableHead>
+									<TableHead className="whitespace-nowrap font-semibold">
+										<button
+											type="button"
+											className="inline-flex items-center gap-1 rounded-[6px] px-1 -mx-1 text-left hover:text-foreground hover:underline underline-offset-2"
+											title={
+												nextCategoryView === 'all'
+													? 'Show all categories'
+													: `Show ${laptopCategoryHeaderLabel(nextCategoryView).toLowerCase()} only`
+											}
+											onClick={() => setCategoryView(nextCategoryView)}
+										>
+											{laptopCategoryHeaderLabel(categoryView)}
+										</button>
+									</TableHead>
 									<TableHead className="min-w-[180px] font-semibold">Model</TableHead>
 									<TableHead className="whitespace-nowrap font-semibold">Brand</TableHead>
 									<TableHead className="whitespace-nowrap font-semibold">Serial</TableHead>
@@ -92,7 +131,7 @@ export function TechnicianLaptopPage() {
 								) : filtered.length === 0 ? (
 									<TableRow>
 										<TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-											No assets match your search or status filter.
+											No assets match your search, status, or category filter.
 										</TableCell>
 									</TableRow>
 								) : (
