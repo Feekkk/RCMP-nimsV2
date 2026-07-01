@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Download, LayoutDashboard, Users } from 'lucide-react';
+import { Download, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NimsLogo } from '@/components/brand/NimsLogo';
@@ -8,6 +8,7 @@ import { NimsLogo } from '@/components/brand/NimsLogo';
 const DASH = '/admin/dashboard' as const;
 const USERS = '/admin/users' as const;
 const EXPORT = '/admin/export' as const;
+const SETTINGS = '/admin/settings' as const;
 
 function NavLink({
   to,
@@ -61,6 +62,13 @@ function AdminSideBarNav() {
         active={pathname === EXPORT || pathname.startsWith(`${EXPORT}/`)}
       >
         Export
+      </NavLink>
+      <NavLink
+        to={SETTINGS}
+        icon={Settings}
+        active={pathname === SETTINGS || pathname.startsWith(`${SETTINGS}/`)}
+      >
+        Setting
       </NavLink>
     </nav>
   );

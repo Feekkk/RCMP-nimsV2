@@ -33,6 +33,7 @@ import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bu
 import { Route as TechnicianAvRouteImport } from './routes/technician/av'
 import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminExportRouteImport } from './routes/admin/export'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as ApiCronOverdueReturnEmailsRouteImport } from './routes/api/cron/overdue-return-emails'
@@ -159,6 +160,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminExportRoute = AdminExportRouteImport.update({
   id: '/admin/export',
   path: '/admin/export',
@@ -193,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/export': typeof AdminExportRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/export': typeof AdminExportRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/export': typeof AdminExportRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
@@ -289,6 +298,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/dashboard'
     | '/admin/export'
+    | '/admin/settings'
     | '/admin/users'
     | '/technician/add-asset'
     | '/technician/av'
@@ -320,6 +330,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/dashboard'
     | '/admin/export'
+    | '/admin/settings'
     | '/admin/users'
     | '/technician/add-asset'
     | '/technician/av'
@@ -351,6 +362,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/dashboard'
     | '/admin/export'
+    | '/admin/settings'
     | '/admin/users'
     | '/technician/add-asset'
     | '/technician/av'
@@ -383,6 +395,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminExportRoute: typeof AdminExportRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   TechnicianAddAssetRoute: typeof TechnicianAddAssetRoute
   TechnicianAvRoute: typeof TechnicianAvRoute
@@ -580,6 +593,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/export': {
       id: '/admin/export'
       path: '/admin/export'
@@ -623,6 +643,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminExportRoute: AdminExportRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
   TechnicianAddAssetRoute: TechnicianAddAssetRoute,
   TechnicianAvRoute: TechnicianAvRoute,
