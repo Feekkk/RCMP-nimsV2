@@ -169,11 +169,14 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
   let row = await findUserByEmail(email);
   let accountCreated = false;
 
+  const { assertUserRoleLoginAllowed } = await import('@/server/system-settings-repo.server');
+
   if (!row) {
     row = await findUserByOid(oid);
   }
 
   if (!row) {
+    await assertUserRoleLoginAllowed(ROLE_USER);
     row = await createMicrosoftUserAccount(oid, email);
     accountCreated = true;
   } else {
@@ -182,6 +185,7 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
         'Your Microsoft sign-in email does not match the email on your account. Ask an administrator to update your registered email.',
       );
     }
+    await assertUserRoleLoginAllowed(row.role_id);
     await touchMicrosoftLogin(row.id, oid);
   }
 

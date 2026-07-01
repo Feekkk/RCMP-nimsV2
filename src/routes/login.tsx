@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, Wrench } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
@@ -44,7 +44,6 @@ function LoginPage() {
   }, []);
 
   const handleMicrosoftSignIn = async () => {
-    if (maintenanceEnabled) return;
     setIsLoading(true);
 
     try {
@@ -78,25 +77,25 @@ function LoginPage() {
             <NimsLogo size="lg" variant="light" />
             <div>
               <h1 className="text-xl font-bold leading-[0.96] tracking-[-0.02em] text-foreground sm:text-2xl">
-                {maintenanceEnabled ? LOGIN_MAINTENANCE_MESSAGE : 'Welcome to NIMS'}
+                Welcome to NIMS
               </h1>
               <p className="mt-2 text-sm leading-[1.5] text-muted-foreground">
-                {maintenanceEnabled
-                  ? 'We are performing scheduled maintenance. Please try again later.'
-                  : 'Sign in with your organization Microsoft account.'}
+                Sign in with your organization Microsoft account.
               </p>
             </div>
           </div>
+
+          {!maintenanceLoading && maintenanceEnabled && (
+            <div className="rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-900 dark:text-amber-200">
+              {LOGIN_MAINTENANCE_MESSAGE} — regular user sign-in is unavailable. Administrators and technicians can
+              still sign in.
+            </div>
+          )}
 
           {maintenanceLoading ? (
             <div className="flex h-11 items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Checking system status…
-            </div>
-          ) : maintenanceEnabled ? (
-            <div className="flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-border/60 bg-secondary/50 text-sm font-medium text-muted-foreground">
-              <Wrench className="h-4 w-4 shrink-0" />
-              Sign-in temporarily unavailable
             </div>
           ) : (
             <Button
@@ -110,11 +109,9 @@ function LoginPage() {
             </Button>
           )}
 
-          {!maintenanceEnabled && (
-            <p className="text-center text-xs text-muted-foreground">
-              All the personal data is managed by Microsoft Entra ID. We do not store any of your personal data in our database.
-            </p>
-          )}
+          <p className="text-center text-xs text-muted-foreground">
+            All the personal data is managed by Microsoft Entra ID. We do not store any of your personal data in our database.
+          </p>
         </div>
       </div>
       <Toaster />

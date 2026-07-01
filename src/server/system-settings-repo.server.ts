@@ -1,4 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
+import { ROLE_USER } from '@/lib/auth-session';
 import { LOGIN_MAINTENANCE_MESSAGE } from '@/lib/system-settings';
 import { getDbPool } from '@/server/db';
 
@@ -40,8 +41,9 @@ export async function setLoginMaintenanceEnabled(enabled: boolean): Promise<void
   );
 }
 
-export async function assertLoginAvailable(): Promise<void> {
-  if (await isLoginMaintenanceEnabled()) {
+/** Blocks sign-in for role 3 (user) when maintenance mode is on. Staff and admins may still sign in. */
+export async function assertUserRoleLoginAllowed(roleId: number): Promise<void> {
+  if (roleId === ROLE_USER && (await isLoginMaintenanceEnabled())) {
     throw new Error(LOGIN_MAINTENANCE_MESSAGE);
   }
 }

@@ -31,7 +31,7 @@ export function AdminSettingsPage() {
     setSaving(true);
     try {
       await setLoginMaintenanceModeFn({ data: { callerRoleId: admin.roleId, enabled } });
-      toast.success(enabled ? 'Login blocked — maintenance mode is on' : 'Login restored');
+      toast.success(enabled ? 'User sign-in blocked — maintenance mode is on' : 'User sign-in restored');
     } catch (e) {
       setMaintenanceEnabled(previous);
       toast.error(e instanceof Error ? e.message : 'Could not update setting');
@@ -56,7 +56,8 @@ export function AdminSettingsPage() {
             <div className="min-w-0">
               <CardTitle className="text-base">Login maintenance</CardTitle>
               <CardDescription>
-                When enabled, the sign-in page shows a maintenance message and new sign-ins are blocked.
+                When enabled, users with role &quot;user&quot; cannot sign in. Administrators and technicians can
+                still access the system.
               </CardDescription>
             </div>
           </div>
@@ -71,11 +72,11 @@ export function AdminSettingsPage() {
             <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-secondary/30 px-4 py-3">
               <div className="space-y-0.5">
                 <Label htmlFor="login-maintenance" className="text-sm font-medium">
-                  Block login page
+                  Block user sign-in
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   {maintenanceEnabled
-                    ? 'Users see “System under maintenance” on the login page.'
+                    ? 'User cannot sign in. Staff and admin sign-in remains available.'
                     : 'Sign-in is available to all users.'}
                 </p>
               </div>
