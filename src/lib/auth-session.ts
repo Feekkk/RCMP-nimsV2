@@ -48,7 +48,6 @@ export function readTechnicianSession(): SessionUser | null {
   if (typeof window === 'undefined') return null;
   const raw = sessionStorage.getItem(TECHNICIAN_SESSION_KEY);
   if (!raw) return null;
-  if (raw === '1') return null;
   try {
     const parsed = JSON.parse(raw) as SessionUser;
     return isStaffRole(parsed.roleId) ? parsed : null;
@@ -76,10 +75,5 @@ export function clearAllSessions(): void {
 }
 
 export function hasTechnicianSession(): boolean {
-  if (typeof window === 'undefined') return false;
-  const raw = sessionStorage.getItem(TECHNICIAN_SESSION_KEY);
-  if (!raw) return false;
-  if (raw === '1') return true;
-  const user = readTechnicianSession();
-  return user !== null;
+  return readTechnicianSession() !== null;
 }

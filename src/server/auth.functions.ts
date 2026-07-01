@@ -26,7 +26,6 @@ export const updateUserProfileFn = createServerFn({ method: 'POST' })
       fullName: string;
       email: string;
       phone: string | null;
-      password?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -48,7 +47,6 @@ export const updateStaffProfileFn = createServerFn({ method: 'POST' })
       fullName: string;
       email: string;
       phone: string | null;
-      password?: string;
     }) => data,
   )
   .handler(async ({ data }) => {

@@ -205,7 +205,7 @@ export default defineConfig(({ mode }) => {
     },
     define: envDefine,
     ssr: {
-      external: ['mysql2', 'mysql2/promise', 'nodemailer', 'bcrypt'],
+      external: ['mysql2', 'mysql2/promise', 'nodemailer'],
     },
     resolve: {
       alias: {
@@ -226,7 +226,7 @@ export default defineConfig(({ mode }) => {
       nitro({
         preset: 'node-server',
         rollupConfig: {
-          external: ['mysql2', 'mysql2/promise', 'nodemailer', 'bcrypt'],
+          external: ['mysql2', 'mysql2/promise', 'nodemailer'],
         },
       }),
     ],

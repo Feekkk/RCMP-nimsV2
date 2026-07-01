@@ -9,16 +9,6 @@ export type MicrosoftAuthConfig = {
   allowedEmailDomains: string[];
 };
 
-export function isMicrosoftSsoEnabled(): boolean {
-  return getMicrosoftAuthConfig() != null;
-}
-
-/** True when the login page should show Microsoft sign-in (default on unless explicitly disabled). */
-export function isMicrosoftSsoEnabledForClient(): boolean {
-  if (import.meta.env.VITE_MICROSOFT_SSO_ENABLED === 'false') return false;
-  return true;
-}
-
 export function getMicrosoftAuthConfig(): MicrosoftAuthConfig | null {
   const tenantId = process.env.AZURE_TENANT_ID?.trim();
   const clientId = process.env.AZURE_CLIENT_ID?.trim();

@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
-import { getDirectoryUserByEmail, resolveAccountProfile } from '@/server/azure-directory.server';
+import { resolveAccountProfile } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 export type AuthUserRow = {
@@ -24,8 +24,6 @@ type UserRow = RowDataPacket & {
   phone: string | null;
   role_name: string;
 };
-
-export type LoginRole = 'user' | 'staff';
 
 const USER_SELECT = `SELECT u.id, u.oid, u.email, u.role_id, u.phone, r.name AS role_name`;
 
@@ -91,47 +89,6 @@ async function touchMicrosoftLogin(userId: number, oid: string): Promise<void> {
     `UPDATE users SET oid = ?, last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
     [oid, userId],
   );
-}
-
-function assertLoginRole(row: UserRow, loginRole: LoginRole): void {
-  if (loginRole === 'staff' && row.role_id === ROLE_USER) {
-    throw new Error(
-      'This email is registered as a user account. Choose "User" on the sign-in page and try again.',
-    );
-  }
-  if (loginRole === 'user' && row.role_id !== ROLE_USER) {
-    throw new Error(
-      'This email is registered as a staff account. Choose "Staff" on the sign-in page and try again.',
-    );
-  }
-}
-
-export type PrepareLoginResult = {
-  emailRegistered: boolean;
-};
-
-/** Validates email + selected role before redirecting to Microsoft. */
-export async function prepareLogin(email: string, loginRole: LoginRole): Promise<PrepareLoginResult> {
-  const normalized = email.trim().toLowerCase();
-  if (!normalized || !normalized.includes('@')) {
-    throw new Error(
-      'The email address is missing or incomplete. Enter a full address with an @ symbol (for example, name@example.com).',
-    );
-  }
-
-  const row = await findUserByEmail(normalized);
-  if (row) {
-    assertLoginRole(row, loginRole);
-    return { emailRegistered: true };
-  }
-
-  if (loginRole === 'staff') {
-    throw new Error(
-      'This email is not registered for staff access. Ask an administrator to add your account, then try signing in again.',
-    );
-  }
-
-  return { emailRegistered: false };
 }
 
 export type MicrosoftLoginInput = {
@@ -203,7 +160,6 @@ export type UpdateUserProfileInput = {
   fullName: string;
   email: string;
   phone: string | null;
-  password?: string;
 };
 
 function parseUserId(staffId: string): number {
