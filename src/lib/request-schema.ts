@@ -10,6 +10,7 @@ export type RequestAssignableKind = 'laptop' | 'av';
 export type RequestPoolAsset = {
   kind: RequestAssignableKind;
   assetId: number;
+  assetIdOld: string | null;
   model: string | null;
   brand: string | null;
   category: string | null;
@@ -24,6 +25,7 @@ export type RequestPoolAsset = {
 export type ActiveForRequestAsset = {
   kind: RequestAssignableKind;
   assetId: number;
+  assetIdOld: string | null;
   model: string | null;
   brand: string | null;
   category: string | null;

@@ -67,6 +67,7 @@ type LaptopRow = RowDataPacket & {
 
 type AvRow = RowDataPacket & {
   asset_id: number;
+  asset_id_old: string | null;
   model: string | null;
   brand: string | null;
   category: string | null;
@@ -84,6 +85,7 @@ async function queryLaptopActive(): Promise<ActiveForRequestAsset[]> {
   return rows.map((r) => ({
     kind: 'laptop',
     assetId: r.asset_id,
+    assetIdOld: null,
     model: r.model,
     brand: r.brand,
     category: r.category,
@@ -95,13 +97,14 @@ async function queryLaptopActive(): Promise<ActiveForRequestAsset[]> {
 async function queryAvActive(): Promise<ActiveForRequestAsset[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<AvRow[]>(
-    `SELECT asset_id, model, brand, category, serial_num, status_id
+    `SELECT asset_id, asset_id_old, model, brand, category, serial_num, status_id
      FROM av WHERE status_id = ? ORDER BY asset_id`,
     [ACTIVE_STATUS],
   );
   return rows.map((r) => ({
     kind: 'av',
     assetId: r.asset_id,
+    assetIdOld: r.asset_id_old,
     model: r.model,
     brand: r.brand,
     category: r.category,
@@ -112,6 +115,7 @@ async function queryAvActive(): Promise<ActiveForRequestAsset[]> {
 
 type PoolRow = RowDataPacket & {
   asset_id: number;
+  asset_id_old?: string | null;
   model: string | null;
   brand: string | null;
   category: string | null;
@@ -141,6 +145,7 @@ async function queryLaptopPool(): Promise<RequestPoolAsset[]> {
   return rows.map((r) => ({
     kind: 'laptop',
     assetId: r.asset_id,
+    assetIdOld: null,
     model: r.model,
     brand: r.brand,
     category: r.category,
@@ -155,7 +160,7 @@ async function queryLaptopPool(): Promise<RequestPoolAsset[]> {
 async function queryAvPool(): Promise<RequestPoolAsset[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<PoolRow[]>(
-    `SELECT a.asset_id, a.model, a.brand, a.category, a.serial_num, a.status_id,
+    `SELECT a.asset_id, a.asset_id_old, a.model, a.brand, a.category, a.serial_num, a.status_id,
             ra.request_id, u.oid AS requester_oid, ra.assignment_id
      FROM av a
      LEFT JOIN request_assignment ra
@@ -170,6 +175,7 @@ async function queryAvPool(): Promise<RequestPoolAsset[]> {
   return rows.map((r) => ({
     kind: 'av',
     assetId: r.asset_id,
+    assetIdOld: r.asset_id_old ?? null,
     model: r.model,
     brand: r.brand,
     category: r.category,

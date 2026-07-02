@@ -64,7 +64,15 @@ export function TechnicianRequestAssetPage() {
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter((a) =>
-      [String(a.assetId), a.model, a.brand, a.category, a.serialNum, a.kind]
+      [
+        String(a.assetId),
+        a.assetIdOld,
+        a.model,
+        a.brand,
+        a.category,
+        a.serialNum,
+        a.kind,
+      ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
@@ -154,13 +162,13 @@ export function TechnicianRequestAssetPage() {
           <div>
             <CardTitle className="text-base">Active assets</CardTitle>
             <CardDescription>
-              {filtered.length} shown · {assets.length} total
+              {filtered.length} shown · {assets.length} total · search by asset ID, legacy ID (AV), model, brand, category, or serial
             </CardDescription>
           </div>
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search…"
+              placeholder="Search asset ID, legacy ID, model, brand, serial…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-9 rounded-[8px] pl-9"
