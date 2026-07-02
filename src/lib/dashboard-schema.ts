@@ -7,6 +7,21 @@ export const DASHBOARD_REQUEST_STATUS_LABEL: Record<DashboardRequestStatus, stri
   due_return: 'Due for return',
 };
 
+export type DashboardRequestWorkflowKey = DashboardRequestStatus | 'completed';
+
+export const DASHBOARD_REQUEST_WORKFLOW_LABEL: Record<DashboardRequestWorkflowKey, string> = {
+  ...DASHBOARD_REQUEST_STATUS_LABEL,
+  completed: 'Completed',
+};
+
+export const DASHBOARD_REQUEST_WORKFLOW_KEYS = [
+  'preparing',
+  'checkout',
+  'in_use',
+  'due_return',
+  'completed',
+] as const satisfies readonly DashboardRequestWorkflowKey[];
+
 export type DashboardTimetableEntry = {
   requestId: number;
   requesterName: string;
@@ -20,10 +35,45 @@ export type DashboardTimetableEntry = {
   needsAction: boolean;
 };
 
+export const DASHBOARD_ASSET_STORE_STATUS_IDS = [1, 2, 4, 5] as const;
+export const DASHBOARD_ASSET_DEPLOY_STATUS_IDS = [3] as const;
+export const DASHBOARD_ASSET_STATUS_IDS = [1, 2, 3, 4, 5] as const;
+export const DASHBOARD_REQUEST_STATUS_IDS = [6, 7, 8] as const;
+
+export type DashboardStatusCount = {
+  statusId: number;
+  count: number;
+};
+
+export type DashboardAssetKindStats = {
+  store: number;
+  deploy: number;
+  total: number;
+  registeredTotal: number;
+  byStatus: DashboardStatusCount[];
+};
+
+export type DashboardRequestWorkflowCount = {
+  key: DashboardRequestWorkflowKey;
+  count: number;
+};
+
+export type DashboardRequestKindCount = {
+  kind: 'laptop' | 'av' | 'network';
+  count: number;
+};
+
+export type DashboardRequestStats = {
+  total: number;
+  byWorkflow: DashboardRequestWorkflowCount[];
+  poolByKind: DashboardRequestKindCount[];
+};
+
 export type TechnicianDashboardStats = {
-  pendingRequests: number;
-  awaitingCheckout: number;
-  checkedOut: number;
+  laptop: DashboardAssetKindStats;
+  av: DashboardAssetKindStats;
+  network: DashboardAssetKindStats;
+  totalRequest: DashboardRequestStats;
   requestPoolCount: number;
   laptopCount: number;
   avCount: number;

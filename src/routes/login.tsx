@@ -1,11 +1,12 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { getMicrosoftLoginUrlFn } from '@/server/auth.functions';
+import { persistSession } from '@/lib/auth-session';
+import { devLoginAsTechnicianFn, getMicrosoftLoginUrlFn } from '@/server/auth.functions';
 import { getLoginMaintenanceModeFn } from '@/server/system-settings.functions';
 import { LOGIN_MAINTENANCE_MESSAGE } from '@/lib/system-settings';
 import { MICROSOFT_OAUTH_STATE_KEY } from '@/auth/microsoft-callback-page';
@@ -32,9 +33,11 @@ export const Route = createFileRoute('/login')({
 });
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
+  const isDev = import.meta.env.DEV;
 
   useEffect(() => {
     void getLoginMaintenanceModeFn()
@@ -52,6 +55,21 @@ function LoginPage() {
       window.location.href = url;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign-in unavailable';
+      toast.error(message);
+      setIsLoading(false);
+    }
+  };
+
+  const handleDevTechnicianSignIn = async () => {
+    setIsLoading(true);
+
+    try {
+      const user = await devLoginAsTechnicianFn();
+      persistSession(user);
+      toast.success(`Dev sign-in as ${user.fullName}`);
+      void navigate({ to: '/technician/dashboard' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Dev sign-in unavailable';
       toast.error(message);
       setIsLoading(false);
     }
@@ -87,8 +105,7 @@ function LoginPage() {
 
           {!maintenanceLoading && maintenanceEnabled && (
             <div className="rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-900 dark:text-amber-200">
-              {LOGIN_MAINTENANCE_MESSAGE} — regular user sign-in is unavailable. Administrators and technicians can
-              still sign in.
+              {LOGIN_MAINTENANCE_MESSAGE} - if you want to make request, please contact the IT Department or come to the office at Avicenna Building, Level 1.
             </div>
           )}
 
@@ -98,15 +115,29 @@ function LoginPage() {
               Checking system status…
             </div>
           ) : (
-            <Button
-              type="button"
-              className="h-11 w-full gap-2 rounded-[8px] bg-foreground font-semibold text-background hover:opacity-90"
-              disabled={isLoading}
-              onClick={() => void handleMicrosoftSignIn()}
-            >
-              <MicrosoftIcon />
-              {isLoading ? 'Redirecting to Microsoft…' : 'Sign in with Microsoft'}
-            </Button>
+            <div className="space-y-3">
+              <Button
+                type="button"
+                className="h-11 w-full gap-2 rounded-[8px] bg-foreground font-semibold text-background hover:opacity-90"
+                disabled={isLoading}
+                onClick={() => void handleMicrosoftSignIn()}
+              >
+                <MicrosoftIcon />
+                {isLoading ? 'Redirecting to Microsoft…' : 'Sign in with Microsoft'}
+              </Button>
+
+              {isDev && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full rounded-[8px] border-dashed font-medium"
+                  disabled={isLoading}
+                  onClick={() => void handleDevTechnicianSignIn()}
+                >
+                  {isLoading ? 'Signing in…' : 'Dev: Sign in as Technician'}
+                </Button>
+              )}
+            </div>
           )}
 
           <p className="text-center text-xs text-muted-foreground">

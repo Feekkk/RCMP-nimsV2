@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState, type ElementType, type React
 import { Link } from '@tanstack/react-router';
 import {
   AlertCircle,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -10,41 +9,202 @@ import {
   Loader2,
   MoreVertical,
   Network,
-  Package,
-  PackageCheck,
   Tv,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  DASHBOARD_ASSET_STATUS_IDS,
   DASHBOARD_REQUEST_STATUS_LABEL,
-  type DashboardInventorySlice,
+  DASHBOARD_REQUEST_WORKFLOW_KEYS,
+  DASHBOARD_REQUEST_WORKFLOW_LABEL,
+  type DashboardAssetKindStats,
+  type DashboardRequestKindCount,
+  type DashboardRequestStats,
   type DashboardRequestStatus,
+  type DashboardStatusCount,
   type DashboardTimetableEntry,
   type TechnicianDashboardData,
-  type TechnicianDashboardStats,
 } from '@/lib/dashboard-schema';
+import { ASSET_KIND_LABEL, formatStatusLabel } from '@/lib/inventory-schema';
 import { formatDateLabel, isoToLocalDate, localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { getTechnicianDashboardFn } from '@/server/dashboard.functions';
-import {
-  InventoryMixChart,
-  MiniSparkline,
-  RequestTrendChart,
-} from '@/technician/dashboard-charts';
 import { TechnicianShell } from '@/technician/technician-shell';
 
-const EMPTY_SPARK = Array(7).fill(0);
-
-const SPARK_COLORS = {
-  pending: 'hsl(262 55% 58%)',
-  checkout: 'hsl(210 70% 55%)',
-  onLoan: 'hsl(239 84% 67%)',
-  pool: 'hsl(152 60% 42%)',
+const EMPTY_ASSET_STATS: DashboardAssetKindStats = {
+  store: 0,
+  deploy: 0,
+  total: 0,
+  registeredTotal: 0,
+  byStatus: [],
 };
+
+const EMPTY_REQUEST_STATS: DashboardRequestStats = {
+  total: 0,
+  byWorkflow: DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => ({ key, count: 0 })),
+  poolByKind: [],
+};
+
+function StatusBreakdown({
+  items,
+  statusIds,
+}: {
+  items: DashboardStatusCount[];
+  statusIds: readonly number[];
+}) {
+  const countByStatus = new Map(items.map((item) => [item.statusId, item.count]));
+  const rows = statusIds.map((statusId) => ({
+    statusId,
+    count: countByStatus.get(statusId) ?? 0,
+  }));
+
+  return (
+    <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
+      {rows.map(({ statusId, count }) => (
+        <li
+          key={statusId}
+          className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+        >
+          <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
+          <span className="shrink-0 tabular-nums font-medium text-foreground">{count}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function RequestWorkflowBreakdown({
+  items,
+}: {
+  items: DashboardRequestStats['byWorkflow'];
+}) {
+  const countByKey = new Map(items.map((item) => [item.key, item.count]));
+
+  return (
+    <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
+      {DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => (
+        <li
+          key={key}
+          className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+        >
+          <span className="min-w-0 truncate">{DASHBOARD_REQUEST_WORKFLOW_LABEL[key]}</span>
+          <span className="shrink-0 tabular-nums font-medium text-foreground">
+            {countByKey.get(key) ?? 0}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function KindBreakdown({
+  title,
+  items,
+}: {
+  title: string;
+  items: DashboardRequestKindCount[];
+}) {
+  const kinds = ['laptop', 'av', 'network'] as const;
+  const countByKind = new Map(items.map((item) => [item.kind, item.count]));
+
+  return (
+    <div className="border-t border-border/60 pt-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      <ul className="mt-2 space-y-1">
+        {kinds.map((kind) => (
+          <li
+            key={kind}
+            className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+          >
+            <span className="min-w-0 truncate">{ASSET_KIND_LABEL[kind]}</span>
+            <span className="shrink-0 tabular-nums font-medium text-foreground">
+              {countByKind.get(kind) ?? 0}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function InventoryStatCard({
+  icon: Icon,
+  label,
+  stats,
+  tint,
+  href,
+}: {
+  icon: ElementType;
+  label: string;
+  stats: DashboardAssetKindStats;
+  tint: string;
+  href: string;
+}) {
+  return (
+    <Link to={href} className="block outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl">
+      <div className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className="text-[11px] text-muted-foreground">{stats.total} total assets</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Store</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{stats.store}</p>
+          </div>
+          <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Deploy</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{stats.deploy}</p>
+          </div>
+        </div>
+
+        <StatusBreakdown items={stats.byStatus} statusIds={DASHBOARD_ASSET_STATUS_IDS} />
+      </div>
+    </Link>
+  );
+}
+
+function TotalRequestStatCard({
+  stats,
+}: {
+  stats: DashboardRequestStats;
+}) {
+  return (
+    <Link
+      to="/technician/requests"
+      className="block outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
+    >
+      <div className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-lavender/15 text-[oklch(0.45_0.12_290)]">
+            <ClipboardList className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total request</p>
+            <p className="text-[11px] text-muted-foreground">Equipment requests</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Open requests</p>
+          <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">{stats.total}</p>
+        </div>
+
+        <RequestWorkflowBreakdown items={stats.byWorkflow} />
+        <KindBreakdown title="Assets in pool" items={stats.poolByKind} />
+      </div>
+    </Link>
+  );
+}
 
 const STATUS_BAR: Record<DashboardRequestStatus, string> = {
   preparing: 'bg-amber-400/90 dark:bg-amber-500',
@@ -101,51 +261,6 @@ function DashboardPanel({
       <CardContent className={cn('pt-0', contentClassName)}>{children}</CardContent>
     </Card>
   );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  description,
-  value,
-  tint,
-  sparkData,
-  sparkColor,
-  href,
-}: {
-  icon: ElementType;
-  label: string;
-  description: string;
-  value: number;
-  tint: string;
-  sparkData: number[];
-  sparkColor: string;
-  href?: string;
-}) {
-  const inner = (
-    <div className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
-      <div className="flex min-w-0 items-start gap-3">
-        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold tabular-nums text-foreground">{value}</p>
-          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      <MiniSparkline data={sparkData} color={sparkColor} />
-    </div>
-  );
-
-  if (href) {
-    return (
-      <Link to={href} className="block outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl">
-        {inner}
-      </Link>
-    );
-  }
-  return inner;
 }
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
@@ -517,137 +632,6 @@ function RequestTimetable({
   );
 }
 
-const INVENTORY_BUCKET_META: Record<
-  keyof Omit<DashboardInventorySlice, 'kind'>,
-  { label: string; description: string }
-> = {
-  active: { label: 'In stock', description: 'On-site or reserved' },
-  deploy: { label: 'Deployed', description: 'With staff or at a place' },
-  requestFlow: { label: 'Request flow', description: 'In an active request' },
-  maintenance: { label: 'Disposed / other', description: 'Disposed or unavailable' },
-};
-
-function AssetDetailsPanel({
-  stats,
-  inventoryMix,
-  loading,
-}: {
-  stats: TechnicianDashboardStats | undefined;
-  inventoryMix: DashboardInventorySlice[];
-  loading: boolean;
-}) {
-  const kindLinks = [
-    {
-      label: 'Laptop',
-      description: 'All registered laptops & desktops',
-      count: stats?.laptopCount ?? 0,
-      href: '/technician/laptop' as const,
-      icon: Laptop,
-    },
-    {
-      label: 'AV',
-      description: 'All registered AV equipment',
-      count: stats?.avCount ?? 0,
-      href: '/technician/av' as const,
-      icon: Tv,
-    },
-    {
-      label: 'Network',
-      description: 'All registered network gear',
-      count: stats?.networkCount ?? 0,
-      href: '/technician/network' as const,
-      icon: Network,
-    },
-  ];
-
-  const totals = inventoryMix.reduce(
-    (acc, row) => ({
-      active: acc.active + row.active,
-      deploy: acc.deploy + row.deploy,
-      requestFlow: acc.requestFlow + row.requestFlow,
-      maintenance: acc.maintenance + row.maintenance,
-    }),
-    { active: 0, deploy: 0, requestFlow: 0, maintenance: 0 },
-  );
-
-  return (
-    <DashboardPanel
-      title="Asset inventory"
-      description="Status breakdown across laptop, AV, and network"
-      className="h-full"
-      headerExtra={
-        <Button variant="outline" size="sm" className="h-8 rounded-lg" asChild>
-          <Link to="/technician/request-assets">Request pool ({stats?.requestPoolCount ?? 0})</Link>
-        </Button>
-      }
-    >
-      {loading ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading assets…
-        </div>
-      ) : (
-        <div className="space-y-5">
-          <div className="grid grid-cols-3 gap-2">
-            {kindLinks.map(({ label, description, count, href, icon: Icon }) => (
-              <Link
-                key={href}
-                to={href}
-                className="rounded-xl border border-border/80 bg-muted/30 p-3 transition-colors hover:bg-secondary/60"
-              >
-                <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
-                  <Icon className="h-3.5 w-3.5" />
-                  <span className="text-[10px] font-medium uppercase tracking-wide">{label}</span>
-                </div>
-                <p className="text-xl font-bold tabular-nums text-foreground">{count}</p>
-                <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{description}</p>
-              </Link>
-            ))}
-          </div>
-
-          <InventoryMixChart data={inventoryMix} />
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {(Object.keys(INVENTORY_BUCKET_META) as (keyof typeof INVENTORY_BUCKET_META)[]).map(
-              (key) => (
-                <div
-                  key={key}
-                  className="rounded-lg border border-border/70 bg-card px-3 py-2 text-center"
-                >
-                  <p className="text-[10px] text-muted-foreground">{INVENTORY_BUCKET_META[key].label}</p>
-                  <p className="text-lg font-bold tabular-nums">{totals[key]}</p>
-                  <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-                    {INVENTORY_BUCKET_META[key].description}
-                  </p>
-                </div>
-              ),
-            )}
-          </div>
-
-          {inventoryMix.length > 0 && (
-            <ScrollArea className="max-h-40">
-              <div className="space-y-2 pr-2">
-                {inventoryMix.map((row) => (
-                  <div
-                    key={row.kind}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-xs"
-                  >
-                    <span className="font-semibold text-foreground">{row.kind}</span>
-                    <span className="text-muted-foreground">
-                      Active {row.active} · Deploy {row.deploy} · Request {row.requestFlow} · Other{' '}
-                      {row.maintenance}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </div>
-      )}
-    </DashboardPanel>
-  );
-}
-
 export function TechnicianDashboardPage() {
   const [viewMonth, setViewMonth] = useState(currentCalendarMonth);
   const [data, setData] = useState<TechnicianDashboardData | null>(null);
@@ -685,13 +669,6 @@ export function TechnicianDashboardPage() {
   }).format(new Date());
 
   const stats = data?.stats;
-  const charts = data?.charts;
-  const sparklines = charts?.sparklines ?? {
-    pending: EMPTY_SPARK,
-    checkout: EMPTY_SPARK,
-    onLoan: EMPTY_SPARK,
-    pool: EMPTY_SPARK,
-  };
   const timetable = data?.timetable ?? [];
 
   return (
@@ -704,46 +681,28 @@ export function TechnicianDashboardPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          icon={ClipboardList}
-          label="Needs action"
-          description="Requests require attention"
-          value={stats?.pendingRequests ?? 0}
-          tint="bg-lavender/15 text-[oklch(0.45_0.12_290)]"
-          sparkData={sparklines.pending.length ? sparklines.pending : EMPTY_SPARK}
-          sparkColor={SPARK_COLORS.pending}
-          href="/technician/requests"
-        />
-        <StatCard
-          icon={PackageCheck}
-          label="Ready checkout"
-          description="Requests ready for checkout"
-          value={stats?.awaitingCheckout ?? 0}
+        <InventoryStatCard
+          icon={Laptop}
+          label={ASSET_KIND_LABEL.laptop}
+          stats={stats?.laptop ?? EMPTY_ASSET_STATS}
           tint="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200"
-          sparkData={sparklines.checkout.length ? sparklines.checkout : EMPTY_SPARK}
-          sparkColor={SPARK_COLORS.checkout}
-          href="/technician/requests"
+          href="/technician/laptop"
         />
-        <StatCard
-          icon={CalendarDays}
-          label="Out on loan"
-          description="Requests currently on loan"
-          value={stats?.checkedOut ?? 0}
-          tint="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200"
-          sparkData={sparklines.onLoan.length ? sparklines.onLoan : EMPTY_SPARK}
-          sparkColor={SPARK_COLORS.onLoan}
-          href="/technician/requests"
+        <InventoryStatCard
+          icon={Tv}
+          label={ASSET_KIND_LABEL.av}
+          stats={stats?.av ?? EMPTY_ASSET_STATS}
+          tint="bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+          href="/technician/av"
         />
-        <StatCard
-          icon={Package}
-          label="Request pool"
-          description="Assets available for requests"
-          value={stats?.requestPoolCount ?? 0}
+        <InventoryStatCard
+          icon={Network}
+          label={ASSET_KIND_LABEL.network}
+          stats={stats?.network ?? EMPTY_ASSET_STATS}
           tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-          sparkData={sparklines.pool.length ? sparklines.pool : EMPTY_SPARK}
-          sparkColor={SPARK_COLORS.pool}
-          href="/technician/request-assets"
+          href="/technician/network"
         />
+        <TotalRequestStatCard stats={stats?.totalRequest ?? EMPTY_REQUEST_STATS} />
       </div>
 
       <div className="mb-6">
@@ -757,27 +716,9 @@ export function TechnicianDashboardPage() {
           onThisMonth={() => setViewMonth(currentCalendarMonth())}
         />
       </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <DashboardPanel
-          title="Request activity"
-          description="New submissions and returns due · last 14 days"
-        >
-          {loading && !charts ? (
-            <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading chart…
-            </div>
-          ) : (
-            <RequestTrendChart data={charts?.requestTrend ?? []} />
-          )}
-        </DashboardPanel>
-
-        <AssetDetailsPanel
-          stats={stats}
-          inventoryMix={charts?.inventoryMix ?? []}
-          loading={loading}
-        />
+      <br />
+      <div className="text-right text-[11px] text-muted-foreground">
+        <span className="font-medium">Created for Information Technology Department UniKL RCMP</span>
       </div>
     </TechnicianShell>
   );

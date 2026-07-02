@@ -1,15 +1,22 @@
 import type { RowDataPacket } from 'mysql2';
-import type {
-  DashboardRequestStatus,
-  DashboardTimetableEntry,
-  TechnicianDashboardData,
-  TechnicianDashboardStats,
+import {
+  DASHBOARD_ASSET_DEPLOY_STATUS_IDS,
+  DASHBOARD_ASSET_STATUS_IDS,
+  DASHBOARD_ASSET_STORE_STATUS_IDS,
+  DASHBOARD_REQUEST_STATUS_IDS,
+  DASHBOARD_REQUEST_WORKFLOW_KEYS,
+  type DashboardAssetKindStats,
+  type DashboardRequestStats,
+  type DashboardRequestStatus,
+  type DashboardRequestWorkflowKey,
+  type DashboardTimetableEntry,
+  type TechnicianDashboardData,
+  type TechnicianDashboardStats,
 } from '@/lib/dashboard-schema';
 import type { RequestItemRow } from '@/lib/request-schema';
 import { REQUEST_STATUS_ACTIVE } from '@/lib/request-schema';
 import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
-import { loadDashboardCharts } from '@/server/dashboard-charts.server';
 
 function formatDate(val: Date | string | null | undefined): string {
   if (val == null) return '';
@@ -80,42 +87,158 @@ function computeRequestStatus(
   return 'preparing';
 }
 
+const ASSET_STORE_STATUS_IDS = new Set<number>(DASHBOARD_ASSET_STORE_STATUS_IDS);
+const ASSET_DEPLOY_STATUS_IDS = new Set<number>(DASHBOARD_ASSET_DEPLOY_STATUS_IDS);
+const REQUEST_STATUS_IDS = new Set<number>(DASHBOARD_REQUEST_STATUS_IDS);
+
+async function loadAssetKindStats(
+  pool: ReturnType<typeof getDbPool>,
+  table: 'laptop' | 'av' | 'network',
+): Promise<DashboardAssetKindStats> {
+  const [rows] = await pool.query<(RowDataPacket & { status_id: number; cnt: number })[]>(
+    `SELECT status_id, COUNT(*) AS cnt FROM \`${table}\` GROUP BY status_id`,
+  );
+
+  const countByStatus = new Map<number, number>();
+  let store = 0;
+  let deploy = 0;
+  let total = 0;
+  let registeredTotal = 0;
+
+  for (const row of rows) {
+    const statusId = Number(row.status_id);
+    const count = Number(row.cnt);
+    registeredTotal += count;
+    if (REQUEST_STATUS_IDS.has(statusId)) continue;
+
+    countByStatus.set(statusId, count);
+    total += count;
+    if (ASSET_STORE_STATUS_IDS.has(statusId)) store += count;
+    if (ASSET_DEPLOY_STATUS_IDS.has(statusId)) deploy += count;
+  }
+
+  const byStatus = DASHBOARD_ASSET_STATUS_IDS.map((statusId) => ({
+    statusId,
+    count: countByStatus.get(statusId) ?? 0,
+  })).filter((status) => status.count > 0);
+
+  return { store, deploy, total, registeredTotal, byStatus };
+}
+
+function isRequestCompleted(
+  items: RequestItemRow[],
+  openAssignmentCount: number,
+  returnedByItem: Map<number, number>,
+): boolean {
+  const totalReturned = items.every((item) => (returnedByItem.get(item.requestItemId) ?? 0) >= item.quantity);
+  return totalReturned && openAssignmentCount === 0;
+}
+
+async function loadRequestStats(pool: ReturnType<typeof getDbPool>): Promise<DashboardRequestStats> {
+  const workflowCounts = new Map<DashboardRequestWorkflowKey, number>(
+    DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => [key, 0]),
+  );
+
+  const [headers] = await pool.query<(RowDataPacket & { request_id: number; return_date: Date | string })[]>(
+    `SELECT request_id, return_date FROM request WHERE rejected_at IS NULL`,
+  );
+
+  for (const header of headers) {
+    const [items] = await pool.query<
+      (RowDataPacket & { request_item_id: number; asset_type: string; quantity: number })[]
+    >(`SELECT request_item_id, asset_type, quantity FROM request_item WHERE request_id = ?`, [
+      header.request_id,
+    ]);
+
+    const [returnedRows] = await pool.query<
+      (RowDataPacket & { request_item_id: number; cnt: number })[]
+    >(
+      `SELECT request_item_id, COUNT(*) AS cnt
+       FROM request_assignment
+       WHERE request_id = ? AND returned_at IS NOT NULL AND request_item_id IS NOT NULL
+       GROUP BY request_item_id`,
+      [header.request_id],
+    );
+    const returnedByItem = new Map(returnedRows.map((row) => [row.request_item_id, Number(row.cnt)]));
+
+    const itemRows: RequestItemRow[] = items.map((item) => ({
+      requestItemId: item.request_item_id,
+      assetType: item.asset_type,
+      quantity: item.quantity,
+      returnedCount: returnedByItem.get(item.request_item_id) ?? 0,
+    }));
+
+    const [assignments] = await pool.query<
+      (RowDataPacket & {
+        checkout_at: Date | string | null;
+        assigned_at: Date | string | null;
+        unavailable_at: Date | string | null;
+        asset_id: number | null;
+      })[]
+    >(
+      `SELECT checkout_at, assigned_at, unavailable_at, asset_id
+       FROM request_assignment
+       WHERE request_id = ? AND returned_at IS NULL`,
+      [header.request_id],
+    );
+
+    if (isRequestCompleted(itemRows, assignments.length, returnedByItem)) {
+      workflowCounts.set('completed', (workflowCounts.get('completed') ?? 0) + 1);
+      continue;
+    }
+
+    const status = computeRequestStatus(itemRows, assignments, formatDate(header.return_date));
+    workflowCounts.set(status, (workflowCounts.get(status) ?? 0) + 1);
+  }
+
+  const poolByKind: DashboardRequestStats['poolByKind'] = [];
+  for (const { kind, table } of [
+    { kind: 'laptop' as const, table: 'laptop' },
+    { kind: 'av' as const, table: 'av' },
+    { kind: 'network' as const, table: 'network' },
+  ]) {
+    const [rows] = await pool.query<(RowDataPacket & { cnt: number })[]>(
+      `SELECT COUNT(*) AS cnt FROM \`${table}\` WHERE status_id = ?`,
+      [REQUEST_STATUS_ACTIVE],
+    );
+    poolByKind.push({ kind, count: Number(rows[0]?.cnt ?? 0) });
+  }
+
+  const byWorkflow = DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => ({
+    key,
+    count: workflowCounts.get(key) ?? 0,
+  }));
+  const total = byWorkflow
+    .filter((row) => row.key !== 'completed')
+    .reduce((sum, row) => sum + row.count, 0);
+
+  return { total, byWorkflow, poolByKind };
+}
+
 export async function getTechnicianDashboard(
   calendar: DashboardCalendarMonth,
 ): Promise<TechnicianDashboardData> {
   const pool = getDbPool();
   const { start: weekStart, end: weekEnd } = monthRange(calendar.year, calendar.month);
-  const charts = await loadDashboardCharts(pool, 14);
 
-  const [statRows] = await pool.query<
-    (RowDataPacket & {
-      pool_laptop: number;
-      pool_av: number;
-      laptop_total: number;
-      av_total: number;
-      network_total: number;
-      checked_out: number;
-    })[]
-  >(
-    `SELECT
-      (SELECT COUNT(*) FROM laptop WHERE status_id = ${REQUEST_STATUS_ACTIVE}) AS pool_laptop,
-      (SELECT COUNT(*) FROM av WHERE status_id = ${REQUEST_STATUS_ACTIVE}) AS pool_av,
-      (SELECT COUNT(*) FROM laptop) AS laptop_total,
-      (SELECT COUNT(*) FROM av) AS av_total,
-      (SELECT COUNT(*) FROM network) AS network_total,
-      (SELECT COUNT(*) FROM request_assignment ra
-       INNER JOIN request r ON r.request_id = ra.request_id
-       WHERE ra.checkout_at IS NOT NULL AND ra.returned_at IS NULL AND r.rejected_at IS NULL) AS checked_out`,
-  );
-  const statRow = statRows[0];
+  const [laptop, av, network, totalRequest] = await Promise.all([
+    loadAssetKindStats(pool, 'laptop'),
+    loadAssetKindStats(pool, 'av'),
+    loadAssetKindStats(pool, 'network'),
+    loadRequestStats(pool),
+  ]);
+  const requestPoolCount =
+    (totalRequest.poolByKind.find((item) => item.kind === 'laptop')?.count ?? 0) +
+    (totalRequest.poolByKind.find((item) => item.kind === 'av')?.count ?? 0);
   const stats: TechnicianDashboardStats = {
-    pendingRequests: 0,
-    awaitingCheckout: 0,
-    checkedOut: Number(statRow?.checked_out ?? 0),
-    requestPoolCount: Number(statRow?.pool_laptop ?? 0) + Number(statRow?.pool_av ?? 0),
-    laptopCount: Number(statRow?.laptop_total ?? 0),
-    avCount: Number(statRow?.av_total ?? 0),
-    networkCount: Number(statRow?.network_total ?? 0),
+    laptop,
+    av,
+    network,
+    totalRequest,
+    requestPoolCount,
+    laptopCount: laptop.registeredTotal,
+    avCount: av.registeredTotal,
+    networkCount: network.registeredTotal,
   };
 
   const [headers] = await pool.query<
@@ -186,16 +309,6 @@ export async function getTechnicianDashboard(
     if (totalReturned && assignments.length === 0) continue;
 
     const needsAction = requestNeedsTechnicianWork(itemRows, assignments.length, returnedByItem);
-    if (needsAction) stats.pendingRequests++;
-
-    const awaitingCheckout = assignments.filter(
-      (a) =>
-        a.assigned_at != null &&
-        a.asset_id != null &&
-        a.checkout_at == null &&
-        a.unavailable_at == null,
-    ).length;
-    stats.awaitingCheckout += awaitingCheckout;
 
     const borrowDate = formatDate(h.borrow_date);
     const returnDate = formatDate(h.return_date);
@@ -215,5 +328,17 @@ export async function getTechnicianDashboard(
     });
   }
 
-  return { stats, timetable, weekStart, weekEnd, charts };
+  return {
+    stats,
+    timetable,
+    weekStart,
+    weekEnd,
+    charts: {
+      requestTrend: [],
+      requestsByProgram: [],
+      programKeys: [],
+      inventoryMix: [],
+      sparklines: { pending: [], checkout: [], onLoan: [], pool: [] },
+    },
+  };
 }
