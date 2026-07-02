@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { Filter, PlusSquare } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,18 +19,21 @@ type RegisterAssetActionsProps = {
   kind: AssetKind;
   statusFilter: number | null;
   onStatusFilterChange: (statusId: number | null) => void;
+  leading?: ReactNode;
 };
 
 export function RegisterAssetActions({
   kind,
   statusFilter,
   onStatusFilterChange,
+  leading,
 }: RegisterAssetActionsProps) {
   const filterActive = statusFilter != null;
   const radioValue = statusFilter == null ? 'all' : String(statusFilter);
 
   return (
     <div className="ml-3 flex shrink-0 items-center gap-2">
+      {leading}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

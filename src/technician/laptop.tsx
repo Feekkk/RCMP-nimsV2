@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Laptop as LaptopIcon, Monitor, Search } from 'lucide-react';
+import { Laptop as LaptopIcon, Monitor, Search, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -84,6 +85,14 @@ export function TechnicianLaptopPage() {
 					kind="laptop"
 					statusFilter={statusFilter}
 					onStatusFilterChange={setStatusFilter}
+					leading={
+						<Button size="sm" variant="outline" asChild>
+							<Link to="/technician/handover-staff">
+								<Users className="h-4 w-4" />
+								<span className="hidden sm:inline">Handover Directory</span>
+							</Link>
+						</Button>
+					}
 				/>
 			</div>
 

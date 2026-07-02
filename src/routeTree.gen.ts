@@ -26,6 +26,7 @@ import { Route as TechnicianProfileRouteImport } from './routes/technician/profi
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
 import { Route as TechnicianHistoryRouteImport } from './routes/technician/history'
+import { Route as TechnicianHandoverStaffRouteImport } from './routes/technician/handover-staff'
 import { Route as TechnicianDisposalRouteImport } from './routes/technician/disposal'
 import { Route as TechnicianDeployRouteImport } from './routes/technician/deploy'
 import { Route as TechnicianDashboardRouteImport } from './routes/technician/dashboard'
@@ -125,6 +126,11 @@ const TechnicianHistoryRoute = TechnicianHistoryRouteImport.update({
   path: '/technician/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicianHandoverStaffRoute = TechnicianHandoverStaffRouteImport.update({
+  id: '/technician/handover-staff',
+  path: '/technician/handover-staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianDisposalRoute = TechnicianDisposalRouteImport.update({
   id: '/technician/disposal',
   path: '/technician/disposal',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
+  '/technician/handover-staff': typeof TechnicianHandoverStaffRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
+  '/technician/handover-staff': typeof TechnicianHandoverStaffRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -272,6 +280,7 @@ export interface FileRoutesById {
   '/technician/dashboard': typeof TechnicianDashboardRoute
   '/technician/deploy': typeof TechnicianDeployRoute
   '/technician/disposal': typeof TechnicianDisposalRoute
+  '/technician/handover-staff': typeof TechnicianHandoverStaffRoute
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
@@ -306,6 +315,7 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
+    | '/technician/handover-staff'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
@@ -338,6 +348,7 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
+    | '/technician/handover-staff'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/deploy'
     | '/technician/disposal'
+    | '/technician/handover-staff'
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
@@ -403,6 +415,7 @@ export interface RootRouteChildren {
   TechnicianDashboardRoute: typeof TechnicianDashboardRoute
   TechnicianDeployRoute: typeof TechnicianDeployRoute
   TechnicianDisposalRoute: typeof TechnicianDisposalRoute
+  TechnicianHandoverStaffRoute: typeof TechnicianHandoverStaffRoute
   TechnicianHistoryRoute: typeof TechnicianHistoryRoute
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
@@ -544,6 +557,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianHistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technician/handover-staff': {
+      id: '/technician/handover-staff'
+      path: '/technician/handover-staff'
+      fullPath: '/technician/handover-staff'
+      preLoaderRoute: typeof TechnicianHandoverStaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/disposal': {
       id: '/technician/disposal'
       path: '/technician/disposal'
@@ -651,6 +671,7 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianDashboardRoute: TechnicianDashboardRoute,
   TechnicianDeployRoute: TechnicianDeployRoute,
   TechnicianDisposalRoute: TechnicianDisposalRoute,
+  TechnicianHandoverStaffRoute: TechnicianHandoverStaffRoute,
   TechnicianHistoryRoute: TechnicianHistoryRoute,
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
