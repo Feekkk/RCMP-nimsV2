@@ -11,8 +11,10 @@ export const Route = createFileRoute('/api/cron/overdue-return-emails')({
         }
 
         const { runOverdueReturnEmailJob } = await import('@/server/overdue-return-email-job.server');
-        const result = await runOverdueReturnEmailJob({ skipTimeCheck: true });
-        return Response.json(result);
+        const { runOverdueAutoRejectJob } = await import('@/server/overdue-auto-reject-job.server');
+        const overdueReturnEmails = await runOverdueReturnEmailJob({ skipTimeCheck: true });
+        const overdueAutoReject = await runOverdueAutoRejectJob({ skipTimeCheck: true });
+        return Response.json({ overdueReturnEmails, overdueAutoReject });
       },
     },
   },
