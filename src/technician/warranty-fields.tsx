@@ -12,25 +12,24 @@ export function WarrantyFieldsSection({
   return (
     <section className="space-y-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vendor warranty</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vendor warranty (Optional)</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Optional. Stored on first registration (database warranty table). Required for warranty claims while
-          in date range.
+          Stored on first registration. Required for warranty claims while in date range.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <DatePickerField
-          label="Warranty start (warranty_start_date)"
+          label="Warranty start"
           value={values.startDate}
           onChange={(v) => onChange({ startDate: v })}
         />
         <DatePickerField
-          label="Warranty end (warranty_end_date)"
+          label="Warranty end"
           value={values.endDate}
           onChange={(v) => onChange({ endDate: v })}
         />
         <div className="sm:col-span-2">
-        <FormField label="Warranty remarks (warranty_remarks)">
+        <FormField label="Warranty remarks">
           <Textarea
             value={values.remarks}
             onChange={(e) => onChange({ remarks: e.target.value })}

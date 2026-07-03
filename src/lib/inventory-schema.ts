@@ -84,6 +84,7 @@ export type LaptopAsset = {
   gpu: string | null;
   statusId: number;
   remarks: string | null;
+  recipientDivision: string | null;
 } & PurchaseFields;
 
 export type PlaceFields = {
@@ -167,6 +168,8 @@ export type AssetTrailEvent = {
   category: string;
   title: string;
   detail: string | null;
+  requestId?: number | null;
+  disposalId?: number | null;
 };
 
 export type AssetDetailMeta = {

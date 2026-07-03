@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Laptop, Search, Tv } from 'lucide-react';
+import { Laptop, Search, Tv, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -13,20 +14,33 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { REQUEST_STATUS_ACTIVE } from '@/lib/request-schema';
+import {
+  REQUEST_STATUS_ACTIVE,
+  REQUEST_STATUS_BOOKED,
+  REQUEST_STATUS_CHECKOUT,
+} from '@/lib/request-schema';
 import type { RequestAssignableKind, RequestPoolAsset } from '@/lib/request-schema';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
-import { listRequestPoolAssetsFn } from '@/server/request.functions';
+import { listRequestPoolAssetsFn, removeAssetFromRequestPoolFn } from '@/server/request.functions';
 
 type KindFilter = 'all' | RequestAssignableKind;
+
+function assetKey(kind: RequestAssignableKind, assetId: number) {
+  return `${kind}:${assetId}`;
+}
+
+function canRemoveFromPool(asset: RequestPoolAsset) {
+  return asset.statusId === REQUEST_STATUS_ACTIVE && asset.assignmentId == null;
+}
 
 export function TechnicianRequestViewPage() {
   const [assets, setAssets] = useState<RequestPoolAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
+  const [removingKey, setRemovingKey] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,7 +85,23 @@ export function TechnicianRequestViewPage() {
   }, [assets, search, kindFilter]);
 
   const assignedCount = assets.filter((a) => a.assignmentId != null).length;
-  const availableCount = assets.length - assignedCount;
+  const availableCount = assets.filter((a) => canRemoveFromPool(a)).length;
+
+  const handleRemoveFromPool = async (asset: RequestPoolAsset) => {
+    const key = assetKey(asset.kind, asset.assetId);
+    setRemovingKey(key);
+    try {
+      await removeAssetFromRequestPoolFn({
+        data: { kind: asset.kind, assetId: asset.assetId },
+      });
+      toast.success(`${asset.kind === 'laptop' ? 'Laptop' : 'AV'} #${asset.assetId} returned to inventory (status return)`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not remove asset from pool');
+    } finally {
+      setRemovingKey(null);
+    }
+  };
 
   return (
     <TechnicianShell>
@@ -92,7 +122,7 @@ export function TechnicianRequestViewPage() {
             <div>
               <CardTitle className="text-base">Request pool</CardTitle>
               <CardDescription>
-                {filtered.length} shown · {assets.length} total in pool · search by asset ID, legacy ID (AV), model, brand, request ID, or requester
+                {filtered.length} shown · {assets.length} total in pool · search by asset ID, legacy ID, model, brand, request ID, or requester
               </CardDescription>
             </div>
             <div className="relative w-full sm:max-w-xs">
@@ -136,8 +166,8 @@ export function TechnicianRequestViewPage() {
                   <TableHead className="font-semibold">Model</TableHead>
                   <TableHead className="font-semibold">Brand</TableHead>
                   <TableHead className="font-semibold">Category</TableHead>
-                  <TableHead className="font-semibold">Assignment</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Assignment · status</TableHead>
+                  <TableHead className="font-semibold">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -166,29 +196,48 @@ export function TechnicianRequestViewPage() {
                       <TableCell className="text-muted-foreground">{a.brand ?? '—'}</TableCell>
                       <TableCell className="text-muted-foreground">{a.category ?? '—'}</TableCell>
                       <TableCell>
-                        {a.assignmentId ? (
-                          <>
-                            <span className="text-sm font-medium">Request #{a.requestId}</span>
-                            {a.requesterName && (
-                              <span className="mt-0.5 block text-xs text-muted-foreground">
-                                {a.requesterName}
-                              </span>
-                            )}
-                            <Badge variant="secondary" className="mt-1 rounded-[6px] text-[10px]">
-                              Assigned
+                        <div className="space-y-1.5">
+                          <AssetStatusBadge statusId={a.statusId} />
+                          {a.assignmentId ? (
+                            <>
+                              <span className="block text-sm font-medium">Request #{a.requestId}</span>
+                              {a.requesterName && (
+                                <span className="block text-xs text-muted-foreground">{a.requesterName}</span>
+                              )}
+                              <Badge variant="secondary" className="rounded-[6px] text-[10px]">
+                                {a.statusId === REQUEST_STATUS_CHECKOUT
+                                  ? 'Checked out'
+                                  : a.statusId === REQUEST_STATUS_BOOKED
+                                    ? 'Booked'
+                                    : 'Assigned'}
+                              </Badge>
+                            </>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="rounded-[6px] border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
+                            >
+                              Available
                             </Badge>
-                          </>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="rounded-[6px] border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
-                          >
-                            Available
-                          </Badge>
-                        )}
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <AssetStatusBadge statusId={a.statusId} />
+                        {canRemoveFromPool(a) ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1 rounded-[8px] text-xs"
+                            disabled={removingKey === assetKey(a.kind, a.assetId)}
+                            onClick={() => void handleRemoveFromPool(a)}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            {removingKey === assetKey(a.kind, a.assetId) ? 'Removing…' : 'Remove'}
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

@@ -12,40 +12,40 @@ export function PurchaseFieldsSection({
 }) {
   return (
     <section className="space-y-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Procurement (PO / DO / invoice)</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Procurement</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <DatePickerField
-          label="PO date (PO_DATE)"
+          label="PO date"
           value={values.poDate}
           onChange={(v) => onChange({ poDate: v })}
         />
-        <Field label="PO number (PO_NUM)">
-          <Input value={values.poNum} onChange={(e) => onChange({ poNum: e.target.value })} className="rounded-[8px]" />
+        <Field label="PO number">
+          <Input value={values.poNum} onChange={(e) => onChange({ poNum: e.target.value })} className="rounded-[8px]" placeholder="Enter PO number (e.g. PO-123456)" />
         </Field>
         <DatePickerField
-          label="DO date (DO_DATE)"
+          label="DO date"
           value={values.doDate}
           onChange={(v) => onChange({ doDate: v })}
         />
-        <Field label="DO number (DO_NUM)">
-          <Input value={values.doNum} onChange={(e) => onChange({ doNum: e.target.value })} className="rounded-[8px]" />
+        <Field label="DO number">
+          <Input value={values.doNum} onChange={(e) => onChange({ doNum: e.target.value })} className="rounded-[8px]" placeholder="Enter DO number (e.g. DO-123456)" />
         </Field>
         <DatePickerField
-          label="Invoice date (INVOICE_DATE)"
+          label="Invoice date"
           value={values.invoiceDate}
           onChange={(v) => onChange({ invoiceDate: v })}
         />
-        <Field label="Invoice number (INVOICE_NUM)">
-          <Input value={values.invoiceNum} onChange={(e) => onChange({ invoiceNum: e.target.value })} className="rounded-[8px]" />
+        <Field label="Invoice number">
+          <Input value={values.invoiceNum} onChange={(e) => onChange({ invoiceNum: e.target.value })} className="rounded-[8px]" placeholder="Enter invoice number (e.g. INV-123456)" />
         </Field>
-        <Field label="Purchase cost (PURCHASE_COST)">
+        <Field label="Purchase cost">
           <Input
             type="number"
             min={0}
             step="0.01"
             value={values.purchaseCost}
             onChange={(e) => onChange({ purchaseCost: e.target.value })}
-            placeholder="0.00"
+            placeholder="RM 0.00"
             className="rounded-[8px]"
           />
         </Field>

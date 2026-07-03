@@ -6,7 +6,13 @@ export type DeployReturnSearch = {
   assetId: number;
 };
 
-export const RETURN_CONDITIONS = ['Good', 'Fair', 'Damaged', 'Missing parts'] as const;
+export const RETURN_CONDITIONS = ['Good', 'Bad'] as const;
+
+export const CAMPUS_BUILDINGS = ['Al Razi', 'Avicenna', 'Al Zahrawi'] as const;
+
+export type CampusBuilding = (typeof CAMPUS_BUILDINGS)[number];
+
+export type ReturnCondition = (typeof RETURN_CONDITIONS)[number];
 
 export type StaffRecipient = {
   employeeNo: string;
@@ -25,6 +31,7 @@ export type LaptopHandoverOpen = {
   employeeNo: string;
   recipientName: string;
   department: string | null;
+  handledBy: string | null;
 };
 
 export type LaptopPlaceOpen = {
@@ -32,6 +39,7 @@ export type LaptopPlaceOpen = {
   handoverId: number;
   handoverDate: string;
   handoverRemarks: string | null;
+  handledBy: string | null;
 };
 
 export type PlaceDeploymentOpen = {
@@ -41,6 +49,7 @@ export type PlaceDeploymentOpen = {
   zone: string;
   deploymentDate: string;
   deploymentRemarks: string | null;
+  handledBy: string | null;
 };
 
 export type OpenReturnContext =
@@ -105,7 +114,15 @@ export type ReturnPlaceInput = {
   returnRemarks?: string | null;
 };
 
-export function getReturnTargetStatusId(_kind: AssetKind): number {
+export function getReturnTargetStatusId(
+  _kind: AssetKind,
+  condition?: string | null,
+): number {
+  return getReturnStatusIdForCondition(condition);
+}
+
+export function getReturnStatusIdForCondition(condition?: string | null): number {
+  if (condition?.trim().toLowerCase() === 'bad') return STATUS_ID.DISPOSED;
   return STATUS_ID.RETURN;
 }
 

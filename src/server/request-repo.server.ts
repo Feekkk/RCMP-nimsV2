@@ -4,6 +4,7 @@ import type {
   AssignAssetToRequestInput,
   MarkAssetForRequestInput,
   PendingRequest,
+  RemoveAssetFromRequestPoolInput,
   RequestAssignableKind,
   RequestAssignmentRow,
   RequestItemRow,
@@ -21,6 +22,7 @@ import {
   REQUEST_STATUS_BOOKED,
   REQUEST_STATUS_CHECKOUT,
 } from '@/lib/request-schema';
+import { STATUS_ID } from '@/lib/asset-status-actions';
 import type {
   ChangeBookedAssignmentInput,
   CheckoutRequestAssignmentInput,
@@ -35,7 +37,6 @@ import type {
   ReturnUserRequestInput,
   ReturnUserRequestResult,
 } from '@/lib/request-schema';
-import { STATUS_ID } from '@/lib/asset-status-actions';
 import { requestItemKindFromAssetType } from '@/lib/request-asset-types';
 import { isUserProfileComplete } from '@/lib/user-profile';
 import { attachDisplayNames, resolveAccountProfile } from '@/server/azure-directory.server';
@@ -137,9 +138,9 @@ async function queryLaptopPool(): Promise<RequestPoolAsset[]> {
        ON ra.asset_id = l.asset_id AND ra.returned_at IS NULL
      LEFT JOIN request r ON r.request_id = ra.request_id AND r.rejected_at IS NULL
      LEFT JOIN users u ON u.id = r.requested_by
-     WHERE l.status_id = ?
+     WHERE l.status_id IN (?, ?, ?)
      ORDER BY l.asset_id`,
-    [REQUEST_STATUS_ACTIVE],
+    [REQUEST_STATUS_ACTIVE, REQUEST_STATUS_BOOKED, REQUEST_STATUS_CHECKOUT],
   );
   await attachDisplayNames(rows, 'requester_oid', 'requester_name');
   return rows.map((r) => ({
@@ -167,9 +168,9 @@ async function queryAvPool(): Promise<RequestPoolAsset[]> {
        ON ra.asset_id = a.asset_id AND ra.returned_at IS NULL
      LEFT JOIN request r ON r.request_id = ra.request_id AND r.rejected_at IS NULL
      LEFT JOIN users u ON u.id = r.requested_by
-     WHERE a.status_id = ?
+     WHERE a.status_id IN (?, ?, ?)
      ORDER BY a.asset_id`,
-    [REQUEST_STATUS_ACTIVE],
+    [REQUEST_STATUS_ACTIVE, REQUEST_STATUS_BOOKED, REQUEST_STATUS_CHECKOUT],
   );
   await attachDisplayNames(rows, 'requester_oid', 'requester_name');
   return rows.map((r) => ({
@@ -256,6 +257,41 @@ export async function markAssetsForRequest(
     }
   }
   return { updated, errors };
+}
+
+export async function removeAssetFromRequestPool(
+  input: RemoveAssetFromRequestPoolInput,
+): Promise<void> {
+  const pool = getDbPool();
+  const table = input.kind === 'laptop' ? 'laptop' : 'av';
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
+    [input.assetId],
+  );
+  const row = rows[0] as { status_id: number } | undefined;
+  if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
+  if (row.status_id !== REQUEST_STATUS_ACTIVE) {
+    throw new Error(
+      'Only available request-pool assets can be removed. Booked or checked-out assets must be returned through the request workflow.',
+    );
+  }
+
+  const [openAssign] = await pool.query<RowDataPacket[]>(
+    `SELECT assignment_id FROM request_assignment
+     WHERE asset_id = ? AND returned_at IS NULL LIMIT 1`,
+    [input.assetId],
+  );
+  if (openAssign[0]) {
+    throw new Error(
+      'This asset is assigned to an open request and cannot be removed here. Release the booking from the request page first.',
+    );
+  }
+
+  await pool.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
+    STATUS_ID.RETURN,
+    input.assetId,
+  ]);
 }
 
 async function assertAssetInPool(kind: RequestAssignableKind, assetId: number) {

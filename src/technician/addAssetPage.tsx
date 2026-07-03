@@ -16,6 +16,10 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { INVENTORY_STATUSES } from '@/lib/inventory-schema';
+import { STATUS_ID } from '@/lib/asset-status-actions';
+import { readTechnicianSession } from '@/lib/auth-session';
+import { normalizeToIsoDate } from '@/lib/date-format';
+import type { StaffRecipient } from '@/lib/deploy-return-schema';
 import { emptyPurchaseFormState, purchaseFormToInput } from '@/lib/purchase-field-utils';
 import { emptyWarrantyFormState, warrantyFormToInput } from '@/lib/warranty-field-utils';
 import {
@@ -23,7 +27,13 @@ import {
   LAPTOP_CATEGORY_OPTIONS,
   useNextAssetId,
 } from '@/hooks/assetid-generator';
+import {
+  bulkCreateAvImportFn,
+  bulkCreateLaptopsImportFn,
+  bulkCreateNetworkImportFn,
+} from '@/server/assets.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { AddAssetDeployFields, type LaptopDeployMode } from '@/technician/add-asset-deploy-fields';
 import { PurchaseFieldsSection } from '@/technician/asset-purchase-fields';
 import { WarrantyFieldsSection } from '@/technician/warranty-fields';
 import {
@@ -157,6 +167,18 @@ function AssetForm({
   const [macAddress, setMacAddress] = useState('');
   const [ipAddress, setIpAddress] = useState('');
 
+  const [laptopDeployMode, setLaptopDeployMode] = useState<LaptopDeployMode>('staff');
+  const [deployRecipient, setDeployRecipient] = useState<StaffRecipient | null>(null);
+  const [handoverDate, setHandoverDate] = useState('');
+  const [handoverRemarks, setHandoverRemarks] = useState('');
+  const [deployBuilding, setDeployBuilding] = useState('');
+  const [deployLevel, setDeployLevel] = useState('');
+  const [deployZone, setDeployZone] = useState('');
+  const [deploymentDate, setDeploymentDate] = useState('');
+  const [deploymentRemarks, setDeploymentRemarks] = useState('');
+
+  const isDeployStatus = statusId === String(STATUS_ID.DEPLOY);
+
   const {
     assetId: generatedAssetId,
     isLoading: assetIdLoading,
@@ -189,6 +211,72 @@ function AssetForm({
       return;
     }
 
+    let deployHandover: {
+      handoverStaffEmail: string;
+      handoverDate: string;
+      handoverRemarks: string | null;
+      employeeNo: string | null;
+    } | null = null;
+    let deployPlacement: {
+      deploymentStaffEmail: string;
+      building: string;
+      level: string;
+      zone: string;
+      deploymentDate: string;
+      deploymentRemarks: string | null;
+    } | null = null;
+
+    if (isDeployStatus) {
+      const session = readTechnicianSession();
+      if (!session?.email?.trim()) {
+        toast.error('Your technician session could not be verified. Sign out and sign in again.');
+        return;
+      }
+      const staffEmail = session.email.trim().toLowerCase();
+
+      if (kind === 'laptop') {
+        const isoHandoverDate = normalizeToIsoDate(handoverDate);
+        if (!isoHandoverDate) {
+          toast.error('Select a handover date');
+          return;
+        }
+        if (laptopDeployMode === 'staff') {
+          if (!deployRecipient) {
+            toast.error('Select a staff recipient');
+            return;
+          }
+          if (!deployRecipient.email?.trim().includes('@')) {
+            toast.error('Selected staff has no email in the directory — add email before handover');
+            return;
+          }
+        }
+        deployHandover = {
+          handoverStaffEmail: staffEmail,
+          handoverDate: isoHandoverDate,
+          handoverRemarks: handoverRemarks.trim() || null,
+          employeeNo: laptopDeployMode === 'staff' ? deployRecipient!.employeeNo : null,
+        };
+      } else {
+        const isoDeploymentDate = normalizeToIsoDate(deploymentDate);
+        if (!isoDeploymentDate) {
+          toast.error('Select a deployment date');
+          return;
+        }
+        if (!deployBuilding.trim() || !deployLevel.trim() || !deployZone.trim()) {
+          toast.error('Building, level, and zone are required');
+          return;
+        }
+        deployPlacement = {
+          deploymentStaffEmail: staffEmail,
+          building: deployBuilding.trim(),
+          level: deployLevel.trim(),
+          zone: deployZone.trim(),
+          deploymentDate: isoDeploymentDate,
+          deploymentRemarks: deploymentRemarks.trim() || null,
+        };
+      }
+    }
+
     setSaving(true);
     try {
       if (kind === 'laptop') {
@@ -202,7 +290,7 @@ function AssetForm({
           setSaving(false);
           return;
         }
-        await createLaptop({
+        const laptopInput = {
           assetId: id,
           serialNum: serialNum.trim(),
           category: category.trim(),
@@ -218,14 +306,19 @@ function AssetForm({
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
           warranty: warrantyInput,
-        });
+        };
+        if (isDeployStatus && deployHandover) {
+          await bulkCreateLaptopsImportFn({ data: [{ ...laptopInput, handover: deployHandover }] });
+        } else {
+          await createLaptop(laptopInput);
+        }
       } else if (kind === 'av') {
         if (!assetIdOld.trim()) {
           toast.error('Legacy asset ID is required for AV equipment. Enter the previous asset identifier.');
           setSaving(false);
           return;
         }
-        await createAv({
+        const avInput = {
           assetId: id,
           assetIdOld: assetIdOld.trim(),
           category: avCategory.trim() || null,
@@ -236,9 +329,14 @@ function AssetForm({
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
           warranty: warrantyInput,
-        });
+        };
+        if (isDeployStatus && deployPlacement) {
+          await bulkCreateAvImportFn({ data: [{ ...avInput, deployment: deployPlacement }] });
+        } else {
+          await createAv(avInput);
+        }
       } else {
-        await createNetwork({
+        const networkInput = {
           assetId: id,
           serialNum: serialNum.trim() || null,
           brand: brand.trim() || null,
@@ -249,7 +347,12 @@ function AssetForm({
           statusId: parsedStatusId,
           remarks: remarks.trim() || null,
           warranty: warrantyInput,
-        });
+        };
+        if (isDeployStatus && deployPlacement) {
+          await bulkCreateNetworkImportFn({ data: [{ ...networkInput, deployment: deployPlacement }] });
+        } else {
+          await createNetwork(networkInput);
+        }
       }
       onCreated(kind);
     } catch (err) {
@@ -283,14 +386,14 @@ function AssetForm({
       <Card className="rounded-[14px] border-border shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Asset details</CardTitle>
-          <CardDescription>Fields marked * match schema COMMENT &quot;required&quot;.</CardDescription>
+          <CardDescription>Please fill in the required fields.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <section className="space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Core</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Main Details</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Asset ID (auto-generated)" required>
+                <Field label="Asset ID (auto-generated)">
                   <div className="flex h-10 items-center gap-2 rounded-[8px] border border-input bg-muted/40 px-3 font-mono text-sm">
                     {assetIdLoading ? (
                       <>
@@ -309,7 +412,7 @@ function AssetForm({
                     )}
                   </div>
                 </Field>
-                <Field label="Status (status_id)" required>
+                <Field label="Choose status" required>
                   <Select value={statusId} onValueChange={setStatusId}>
                     <SelectTrigger className="rounded-[8px]">
                       <SelectValue />
@@ -324,17 +427,18 @@ function AssetForm({
                   </Select>
                 </Field>
                 <Field label="Brand">
-                  <Input value={brand} onChange={(e) => setBrand(e.target.value)} className="rounded-[8px]" />
+                  <Input value={brand} onChange={(e) => setBrand(e.target.value)} className="rounded-[8px]" placeholder="Lenovo, HP, Dell, etc." />
                 </Field>
                 <Field label="Model">
-                  <Input value={model} onChange={(e) => setModel(e.target.value)} className="rounded-[8px]" />
+                  <Input value={model} onChange={(e) => setModel(e.target.value)} className="rounded-[8px]" placeholder="ThinkPad X1 Carbon, HP EliteBook 840 G8, etc." />
                 </Field>
-                <Field label="Serial (serial_num)" required={kind === 'laptop'}>
+                <Field label="Serial number" required={kind === 'laptop'}>
                   <Input
                     value={serialNum}
                     onChange={(e) => setSerialNum(e.target.value)}
                     required={kind === 'laptop'}
                     className="rounded-[8px]"
+                    placeholder="Enter serial number (e.g. LN1234567890)"
                   />
                 </Field>
                 <Field label="Remarks">
@@ -342,10 +446,35 @@ function AssetForm({
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
                     className="min-h-[72px] rounded-[8px]"
+                    placeholder="Enter remarks (e.g. Laptop is used for development)"
                   />
                 </Field>
               </div>
             </section>
+
+            {isDeployStatus && (
+              <AddAssetDeployFields
+                kind={kind}
+                laptopMode={laptopDeployMode}
+                onLaptopModeChange={setLaptopDeployMode}
+                recipient={deployRecipient}
+                onRecipientChange={setDeployRecipient}
+                handoverDate={handoverDate}
+                onHandoverDateChange={setHandoverDate}
+                handoverRemarks={handoverRemarks}
+                onHandoverRemarksChange={setHandoverRemarks}
+                building={deployBuilding}
+                onBuildingChange={setDeployBuilding}
+                level={deployLevel}
+                onLevelChange={setDeployLevel}
+                zone={deployZone}
+                onZoneChange={setDeployZone}
+                deploymentDate={deploymentDate}
+                onDeploymentDateChange={setDeploymentDate}
+                deploymentRemarks={deploymentRemarks}
+                onDeploymentRemarksChange={setDeploymentRemarks}
+              />
+            )}
 
             {kind === 'laptop' && (
               <section className="space-y-4">
@@ -365,23 +494,23 @@ function AssetForm({
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Field label="Part number (part_number)">
-                    <Input value={partNumber} onChange={(e) => setPartNumber(e.target.value)} className="rounded-[8px]" />
+                  <Field label="Part number">
+                    <Input value={partNumber} onChange={(e) => setPartNumber(e.target.value)} className="rounded-[8px]" placeholder="Enter part number (e.g. 1234567890)" />
                   </Field>
                   <Field label="Processor">
-                    <Input value={processor} onChange={(e) => setProcessor(e.target.value)} className="rounded-[8px]" />
+                    <Input value={processor} onChange={(e) => setProcessor(e.target.value)} className="rounded-[8px]" placeholder="Enter processor (e.g. Intel Core i5-1135G7)" />
                   </Field>
                   <Field label="Memory">
-                    <Input value={memory} onChange={(e) => setMemory(e.target.value)} placeholder="e.g. 16GB" className="rounded-[8px]" />
+                    <Input value={memory} onChange={(e) => setMemory(e.target.value)} placeholder="Enter memory (e.g. 16GB)" className="rounded-[8px]" />
                   </Field>
                   <Field label="OS">
-                    <Input value={os} onChange={(e) => setOs(e.target.value)} className="rounded-[8px]" />
+                    <Input value={os} onChange={(e) => setOs(e.target.value)} className="rounded-[8px]" placeholder="Enter OS (e.g. Windows 10)" />
                   </Field>
                   <Field label="Storage">
-                    <Input value={storage} onChange={(e) => setStorage(e.target.value)} placeholder="e.g. 512GB" className="rounded-[8px]" />
+                    <Input value={storage} onChange={(e) => setStorage(e.target.value)} placeholder="Enter storage (e.g. 512GB)" className="rounded-[8px]" />
                   </Field>
                   <Field label="GPU">
-                    <Input value={gpu} onChange={(e) => setGpu(e.target.value)} className="rounded-[8px]" />
+                    <Input value={gpu} onChange={(e) => setGpu(e.target.value)} className="rounded-[8px]" placeholder="Enter GPU (e.g. Intel Iris Xe Graphics)" />
                   </Field>
                 </div>
               </section>
@@ -391,7 +520,7 @@ function AssetForm({
               <section className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AV</p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Legacy ID (asset_id_old)" required>
+                  <Field label="Legacy ID" required>
                     <Input value={assetIdOld} onChange={(e) => setAssetIdOld(e.target.value)} required className="rounded-[8px]" />
                   </Field>
                   <Field label="Category">
@@ -410,10 +539,10 @@ function AssetForm({
               <section className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Network</p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="MAC address (mac_address)">
+                  <Field label="MAC address">
                     <Input value={macAddress} onChange={(e) => setMacAddress(e.target.value)} className="rounded-[8px]" />
                   </Field>
-                  <Field label="IP address (ip_address)">
+                  <Field label="IP address">
                     <Input value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} className="rounded-[8px]" />
                   </Field>
                 </div>

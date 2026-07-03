@@ -1,11 +1,12 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { getMicrosoftLoginUrlFn } from '@/server/auth.functions';
+import { persistSession } from '@/lib/auth-session';
+import { devLoginAsTechnicianFn, getMicrosoftLoginUrlFn } from '@/server/auth.functions';
 import { getLoginMaintenanceModeFn } from '@/server/system-settings.functions';
 import { LOGIN_MAINTENANCE_MESSAGE } from '@/lib/system-settings';
 import { MICROSOFT_OAUTH_STATE_KEY } from '@/auth/microsoft-callback-page';
@@ -32,9 +33,11 @@ export const Route = createFileRoute('/login')({
 });
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
+  const isDev = import.meta.env.DEV;
 
   useEffect(() => {
     void getLoginMaintenanceModeFn()
@@ -52,6 +55,21 @@ function LoginPage() {
       window.location.href = url;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign-in unavailable';
+      toast.error(message);
+      setIsLoading(false);
+    }
+  };
+
+  const handleDevTechnicianSignIn = async () => {
+    setIsLoading(true);
+
+    try {
+      const user = await devLoginAsTechnicianFn();
+      persistSession(user);
+      toast.success(`Dev sign-in as ${user.fullName}`);
+      void navigate({ to: '/technician/dashboard' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Dev sign-in unavailable';
       toast.error(message);
       setIsLoading(false);
     }
@@ -107,6 +125,18 @@ function LoginPage() {
                 <MicrosoftIcon />
                 {isLoading ? 'Redirecting to Microsoft…' : 'Sign in with Microsoft'}
               </Button>
+
+              {isDev && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full rounded-[8px] border-dashed font-medium"
+                  disabled={isLoading}
+                  onClick={() => void handleDevTechnicianSignIn()}
+                >
+                  {isLoading ? 'Signing in…' : 'Dev: Sign in as Technician'}
+                </Button>
+              )}
             </div>
           )}
 

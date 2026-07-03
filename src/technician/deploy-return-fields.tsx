@@ -24,7 +24,7 @@ import {
   isoToLocalDate,
   localDateToIso,
 } from '@/lib/date-format';
-import { RETURN_CONDITIONS } from '@/lib/deploy-return-schema';
+import { RETURN_CONDITIONS, CAMPUS_BUILDINGS } from '@/lib/deploy-return-schema';
 import { cn } from '@/lib/utils';
 
 export function FormField({
@@ -124,6 +124,29 @@ export function DatePickerField({
 /** @deprecated Use DatePickerField */
 export const DateDdMmYyField = DatePickerField;
 
+export function CampusBuildingSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <Select value={value || undefined} onValueChange={onChange}>
+      <SelectTrigger className="rounded-[8px]">
+        <SelectValue placeholder="Select building" />
+      </SelectTrigger>
+      <SelectContent>
+        {CAMPUS_BUILDINGS.map((building) => (
+          <SelectItem key={building} value={building}>
+            {building}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function ReturnDetailsFields({
   returnDate,
   setReturnDate,
@@ -159,12 +182,7 @@ export function ReturnDetailsFields({
         />
       </FormField>
       <FormField label="Return place">
-        <Input
-          value={returnPlace}
-          onChange={(e) => setReturnPlace(e.target.value)}
-          placeholder="e.g. IT store, Building A"
-          className="rounded-[8px]"
-        />
+        <CampusBuildingSelect value={returnPlace} onChange={setReturnPlace} />
       </FormField>
       <FormField label="Condition" required>
         <Select value={condition} onValueChange={setCondition}>
@@ -179,12 +197,16 @@ export function ReturnDetailsFields({
             ))}
           </SelectContent>
         </Select>
+        <p className="text-[11px] text-muted-foreground">
+          Good condition sets status to return; Bad condition sets status to pre-disposed.
+        </p>
       </FormField>
       <FormField label="Return remarks">
         <Textarea
           value={returnRemarks}
           onChange={(e) => setReturnRemarks(e.target.value)}
           className="min-h-[80px] rounded-[8px]"
+          placeholder="e.g. broken screen, missing keyboard, etc."
         />
       </FormField>
     </>

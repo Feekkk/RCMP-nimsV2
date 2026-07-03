@@ -18,11 +18,16 @@ import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
 import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
 import {
+	isDesktopCategory,
+	isNotebookCategory,
 	LAPTOP_CATEGORY_OPTIONS,
 	normalizeCategory,
 } from '@/hooks/assetid-generator';
 import { usePagination } from '@/hooks/use-pagination';
-import { AssetStockSummary } from '@/technician/asset-stock-summary';
+import {
+	LaptopAssetStockSummary,
+	type LaptopFormFactorFilter,
+} from '@/technician/laptop-stock-summary';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 
 type LaptopCategoryView = 'all' | (typeof LAPTOP_CATEGORY_OPTIONS)[number];
@@ -43,21 +48,42 @@ function matchesLaptopCategory(category: string | null, view: LaptopCategoryView
 	return normalizeCategory(category ?? '') === normalizeCategory(view);
 }
 
+function matchesFormFactor(
+	category: string | null,
+	formFactorFilter: LaptopFormFactorFilter,
+): boolean {
+	if (formFactorFilter === 'all') return true;
+	if (formFactorFilter === 'laptop') return isNotebookCategory(category);
+	return isDesktopCategory(category);
+}
+
 export function TechnicianLaptopPage() {
 	const navigate = useNavigate();
 	const [search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<number | null>(null);
+	const [formFactorFilter, setFormFactorFilter] = useState<LaptopFormFactorFilter>('all');
 	const [categoryView, setCategoryView] = useState<LaptopCategoryView>('all');
 	const { items, isLoading, error, updateStatus } = useAssets('laptop');
 
+	const handleStatusMetricClick = (formFactor: 'laptop' | 'desktop', statusId: number) => {
+		if (statusFilter === statusId && formFactorFilter === formFactor) {
+			setStatusFilter(null);
+			setFormFactorFilter('all');
+			return;
+		}
+		setFormFactorFilter(formFactor);
+		setStatusFilter(statusId);
+	};
+
 	const filtered = useMemo(() => {
-		const byCategory = items.filter((item) => matchesLaptopCategory(item.category, categoryView));
+		const byFormFactor = items.filter((item) => matchesFormFactor(item.category, formFactorFilter));
+		const byCategory = byFormFactor.filter((item) => matchesLaptopCategory(item.category, categoryView));
 		const bySearch = filterBySearch(byCategory, search, (c) => c.category ?? '');
 		return filterByStatus(bySearch, statusFilter);
-	}, [items, search, statusFilter, categoryView]);
+	}, [items, search, statusFilter, categoryView, formFactorFilter]);
 
 	const pagination = usePagination(filtered, {
-		resetKey: `${search}|${statusFilter ?? ''}|${categoryView}`,
+		resetKey: `${search}|${statusFilter ?? ''}|${categoryView}|${formFactorFilter}`,
 	});
 
 	const nextCategoryView = nextLaptopCategoryView(categoryView);
@@ -65,11 +91,16 @@ export function TechnicianLaptopPage() {
 	return (
 		<TechnicianShell>
 			<div className="mb-5 flex flex-col gap-1 sm:mb-6">
-				<h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Laptop &amp; desktop</h1>
+				<h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Laptop &amp; Desktop</h1>
 				<p className="text-xs text-muted-foreground sm:text-sm">List of laptops and desktops in the system</p>
 			</div>
 
-			<AssetStockSummary items={items} />
+			<LaptopAssetStockSummary
+				items={items}
+				statusFilter={statusFilter}
+				formFactorFilter={formFactorFilter}
+				onStatusClick={handleStatusMetricClick}
+			/>
 
 			<div className="mb-4 flex items-center justify-between">
 				<div className="relative w-full sm:max-w-sm">
@@ -84,7 +115,10 @@ export function TechnicianLaptopPage() {
 				<RegisterAssetActions
 					kind="laptop"
 					statusFilter={statusFilter}
-					onStatusFilterChange={setStatusFilter}
+					onStatusFilterChange={(statusId) => {
+						setStatusFilter(statusId);
+						if (statusId == null) setFormFactorFilter('all');
+					}}
 					leading={
 						<Button size="sm" variant="outline" asChild>
 							<Link to="/technician/handover-staff">
@@ -140,7 +174,7 @@ export function TechnicianLaptopPage() {
 								) : filtered.length === 0 ? (
 									<TableRow>
 										<TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-											No assets match your search, status, or category filter.
+											No assets match your search, status, form factor, or category filter.
 										</TableCell>
 									</TableRow>
 								) : (

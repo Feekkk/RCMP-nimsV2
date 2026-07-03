@@ -14,7 +14,8 @@ import type {
   ReturnPlaceInput,
   StaffRecipient,
 } from '@/lib/deploy-return-schema';
-import { getReturnTargetStatusId } from '@/lib/deploy-return-schema';
+import { getReturnStatusIdForCondition } from '@/lib/deploy-return-schema';
+import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
 const ASSET_TABLE: Record<AssetKind, string> = {
@@ -68,19 +69,23 @@ export async function getOpenReturnContext(
         employee_no: string;
         full_name: string;
         department: string | null;
+        technician_oid: string | null;
+        technician_name: string;
       })[]
     >(
       `SELECT h.handover_id, hs.handover_staff_id, h.handover_date, h.handover_remarks,
-              hs.employee_no, s.full_name, s.department
+              hs.employee_no, s.full_name, s.department, tech.oid AS technician_oid
        FROM handover h
        INNER JOIN handover_staff hs ON hs.handover_id = h.handover_id
        INNER JOIN staff s ON s.employee_no = hs.employee_no
+       INNER JOIN users tech ON tech.id = h.user_id
        LEFT JOIN handover_return hr ON hr.handover_staff_id = hs.handover_staff_id
        WHERE h.asset_id = ? AND hr.return_id IS NULL
        ORDER BY h.handover_id DESC
        LIMIT 1`,
       [assetId],
     );
+    await attachDisplayNames(staffRows, 'technician_oid', 'technician_name');
     if (staffRows[0]) {
       const r = staffRows[0];
       const record: LaptopHandoverOpen = {
@@ -92,6 +97,7 @@ export async function getOpenReturnContext(
         employeeNo: r.employee_no,
         recipientName: r.full_name,
         department: r.department,
+        handledBy: r.technician_name?.trim() || null,
       };
       return { kind: 'laptop', record };
     }
@@ -101,10 +107,13 @@ export async function getOpenReturnContext(
         handover_id: number;
         handover_date: Date | string;
         handover_remarks: string | null;
+        technician_oid: string | null;
+        technician_name: string;
       })[]
     >(
-      `SELECT h.handover_id, h.handover_date, h.handover_remarks
+      `SELECT h.handover_id, h.handover_date, h.handover_remarks, tech.oid AS technician_oid
        FROM handover h
+       INNER JOIN users tech ON tech.id = h.user_id
        LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
        LEFT JOIN handover_return hr ON hr.handover_id = h.handover_id
        WHERE h.asset_id = ? AND hs.handover_staff_id IS NULL AND hr.return_id IS NULL
@@ -112,6 +121,7 @@ export async function getOpenReturnContext(
        LIMIT 1`,
       [assetId],
     );
+    await attachDisplayNames(placeRows, 'technician_oid', 'technician_name');
     if (placeRows[0]) {
       const r = placeRows[0];
       const record: LaptopPlaceOpen = {
@@ -119,6 +129,7 @@ export async function getOpenReturnContext(
         handoverId: r.handover_id,
         handoverDate: formatDateOnly(r.handover_date),
         handoverRemarks: r.handover_remarks,
+        handledBy: r.technician_name?.trim() || null,
       };
       return { kind: 'laptop', record };
     }
@@ -136,10 +147,14 @@ export async function getOpenReturnContext(
       zone: string;
       deployment_date: Date | string;
       deployment_remarks: string | null;
+      technician_oid: string | null;
+      technician_name: string;
     })[]
   >(
-    `SELECT d.deployment_id, d.building, d.level, d.zone, d.deployment_date, d.deployment_remarks
+    `SELECT d.deployment_id, d.building, d.level, d.zone, d.deployment_date, d.deployment_remarks,
+            u.oid AS technician_oid
      FROM \`${deployTable}\` d
+     INNER JOIN users u ON u.id = d.user_id
      WHERE d.asset_id = ?
        AND NOT EXISTS (
          SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d.deployment_id
@@ -148,6 +163,7 @@ export async function getOpenReturnContext(
      LIMIT 1`,
     [assetId],
   );
+  await attachDisplayNames(rows, 'technician_oid', 'technician_name');
 
   if (!rows[0]) return null;
 
@@ -159,6 +175,7 @@ export async function getOpenReturnContext(
     zone: r.zone,
     deploymentDate: formatDateOnly(r.deployment_date),
     deploymentRemarks: r.deployment_remarks,
+    handledBy: r.technician_name?.trim() || null,
   };
   return { kind, record };
 }
@@ -276,6 +293,8 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
       throw new Error('This handover record could not be found. Refresh the page and try again.');
     }
 
+    const statusId = getReturnStatusIdForCondition(input.condition);
+
     const [insertResult] = await conn.execute(
       `INSERT INTO handover_return
         (handover_staff_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks, return_status_id)
@@ -288,11 +307,11 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
         input.returnPlace ?? null,
         input.condition ?? null,
         input.returnRemarks ?? null,
-        STATUS_ID.RETURN,
+        statusId,
       ],
     );
     await conn.execute(`UPDATE laptop SET status_id = ? WHERE asset_id = ?`, [
-      STATUS_ID.RETURN,
+      statusId,
       row.asset_id,
     ]);
     await conn.commit();
@@ -322,6 +341,8 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
       throw new Error('This handover record could not be found. Refresh the page and try again.');
     }
 
+    const statusId = getReturnStatusIdForCondition(input.condition);
+
     const [insertResult] = await conn.execute(
       `INSERT INTO handover_return
         (handover_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks, return_status_id)
@@ -334,11 +355,11 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
         input.returnPlace ?? null,
         input.condition ?? null,
         input.returnRemarks ?? null,
-        STATUS_ID.RETURN,
+        statusId,
       ],
     );
     await conn.execute(`UPDATE laptop SET status_id = ? WHERE asset_id = ?`, [
-      STATUS_ID.RETURN,
+      statusId,
       row.asset_id,
     ]);
     await conn.commit();
@@ -370,6 +391,8 @@ export async function returnPlaceAsset(input: ReturnPlaceInput) {
       throw new Error('This deployment record could not be found. Refresh the page and try again.');
     }
 
+    const statusId = getReturnStatusIdForCondition(input.condition);
+
     await conn.execute(
       `INSERT INTO \`${returnTable}\`
         (deployment_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks)
@@ -385,7 +408,7 @@ export async function returnPlaceAsset(input: ReturnPlaceInput) {
       ],
     );
     await conn.execute(`UPDATE \`${ASSET_TABLE[input.kind]}\` SET status_id = ? WHERE asset_id = ?`, [
-      getReturnTargetStatusId(input.kind),
+      statusId,
       row.asset_id,
     ]);
     await conn.commit();

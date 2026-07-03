@@ -32,9 +32,18 @@ export function normalizeCategory(category: string): string {
   return category.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-/** Prefix for laptop rows from the category column (bulk import / add form). */
 function categoryInList(list: readonly string[], normalizedKey: string): boolean {
   return list.some((c) => normalizeCategory(c) === normalizedKey);
+}
+
+export function isNotebookCategory(category: string | null | undefined): boolean {
+  if (!category?.trim()) return false;
+  return categoryInList(LAPTOP_NOTEBOOK_CATEGORIES, normalizeCategory(category));
+}
+
+export function isDesktopCategory(category: string | null | undefined): boolean {
+  if (!category?.trim()) return false;
+  return categoryInList(LAPTOP_DESKTOP_CATEGORIES, normalizeCategory(category));
 }
 
 export function getLaptopAssetIdPrefix(category: string): typeof ASSET_ID_PREFIX.laptop | typeof ASSET_ID_PREFIX.desktop {

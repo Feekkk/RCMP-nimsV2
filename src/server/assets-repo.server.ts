@@ -200,6 +200,7 @@ type LaptopRow = RowDataPacket &
     gpu: string | null;
     status_id: number;
     remarks: string | null;
+    recipient_division?: string | null;
   };
 
 type AvRow = RowDataPacket &
@@ -261,6 +262,7 @@ function mapLaptop(row: LaptopRow): LaptopAsset {
     gpu: row.gpu,
     statusId: row.status_id,
     remarks: row.remarks,
+    recipientDivision: row.recipient_division ?? null,
     ...mapPurchase(row),
   };
 }
@@ -418,7 +420,27 @@ function networkParams(input: CreateNetworkInput) {
 export async function listAssets(kind: AssetKind) {
   const pool = getDbPool();
   if (kind === 'laptop') {
-    const [rows] = await pool.query<LaptopRow[]>('SELECT * FROM laptop ORDER BY asset_id');
+    const [rows] = await pool.query<LaptopRow[]>(
+      `SELECT l.*, ho.recipient_division
+       FROM laptop l
+       LEFT JOIN (
+         SELECT h.asset_id, s.division AS recipient_division
+         FROM handover h
+         INNER JOIN handover_staff hs ON hs.handover_id = h.handover_id
+         INNER JOIN staff s ON s.employee_no = hs.employee_no
+         LEFT JOIN handover_return hr ON hr.handover_staff_id = hs.handover_staff_id
+         INNER JOIN (
+           SELECT h2.asset_id, MAX(h2.handover_id) AS handover_id
+           FROM handover h2
+           INNER JOIN handover_staff hs2 ON hs2.handover_id = h2.handover_id
+           LEFT JOIN handover_return hr2 ON hr2.handover_staff_id = hs2.handover_staff_id
+           WHERE hr2.return_id IS NULL
+           GROUP BY h2.asset_id
+         ) open_h ON open_h.handover_id = h.handover_id AND open_h.asset_id = h.asset_id
+         WHERE hr.return_id IS NULL
+       ) ho ON ho.asset_id = l.asset_id
+       ORDER BY l.asset_id`,
+    );
     return rows.map(mapLaptop);
   }
   if (kind === 'av') {
@@ -673,6 +695,7 @@ async function listRequestTrails(assetId: number): Promise<AssetTrailEvent[]> {
         category: 'Borrow request',
         title: 'Booked',
         detail: [base, row.booked_by ? `by ${row.booked_by}` : null].filter(Boolean).join(' · '),
+        requestId: row.request_id,
       });
     }
     if (row.checkout_at) {
@@ -681,6 +704,7 @@ async function listRequestTrails(assetId: number): Promise<AssetTrailEvent[]> {
         category: 'Borrow request',
         title: 'Checked out',
         detail: base,
+        requestId: row.request_id,
       });
     }
     if (row.returned_at) {
@@ -689,6 +713,7 @@ async function listRequestTrails(assetId: number): Promise<AssetTrailEvent[]> {
         category: 'Borrow request',
         title: 'Returned',
         detail: [base, row.return_condition].filter(Boolean).join(' · '),
+        requestId: row.request_id,
       });
     }
   }
@@ -984,6 +1009,7 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
   if (kind === 'laptop' || kind === 'av' || kind === 'network') {
     const [disposals] = await pool.query<
       (RowDataPacket & {
+        disposal_id: number;
         disposal_date: Date | string;
         disposal_remarks: string | null;
         item_remarks: string | null;
@@ -992,7 +1018,7 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
         requested_by: string;
       })[]
     >(
-      `SELECT d.disposal_date, d.disposal_remarks, di.item_remarks, di.created_at,
+      `SELECT d.disposal_id, d.disposal_date, d.disposal_remarks, di.item_remarks, di.created_at,
               u.oid AS requested_oid
        FROM disposal_item di
        INNER JOIN disposal d ON d.disposal_id = di.disposal_id
@@ -1011,6 +1037,7 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
         detail: [row.requested_by ? `by ${row.requested_by}` : null, row.disposal_remarks, row.item_remarks]
           .filter(Boolean)
           .join(' · '),
+        disposalId: row.disposal_id,
       });
     }
   }

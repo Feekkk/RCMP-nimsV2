@@ -19,7 +19,7 @@ import {
 import { generateHandoverPdfFn } from '@/server/handover-pdf.functions';
 import { sendHandoverEmailFn } from '@/server/handover-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
+import { DatePickerField, CampusBuildingSelect, FormField } from '@/technician/deploy-return-fields';
 import { StaffRecipientSearch } from '@/technician/staff-recipient-search';
 
 type LaptopDeployMode = 'staff' | 'place';
@@ -222,8 +222,8 @@ export function TechnicianDeployPage() {
           <CardTitle className="text-base">Deployment details</CardTitle>
           <CardDescription>
             {kind === 'laptop'
-              ? 'Handover to staff (handover + handover_staff) or deploy to a place (handover only).'
-              : 'Record location deployment (building / level / zone).'}
+              ? 'Handover to staff or deploy to a place.'
+              : 'Record location deployment.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -281,12 +281,7 @@ export function TechnicianDeployPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField label="Building" required>
-                  <Input
-                    value={building}
-                    onChange={(e) => setBuilding(e.target.value)}
-                    required
-                    className="rounded-[8px]"
-                  />
+                  <CampusBuildingSelect value={building} onChange={setBuilding} />
                 </FormField>
                 <FormField label="Level" required>
                   <Input value={level} onChange={(e) => setLevel(e.target.value)} required className="rounded-[8px]" />

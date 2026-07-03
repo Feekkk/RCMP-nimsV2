@@ -12,6 +12,14 @@ export const completeMicrosoftLoginFn = createServerFn({ method: 'POST' })
     return completeMicrosoftLogin(data.code, data.state);
   });
 
+export const devLoginAsTechnicianFn = createServerFn({ method: 'POST' }).handler(async () => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Development sign-in is not available.');
+  }
+  const { devLoginAsTechnician } = await import('@/server/auth-repo.server');
+  return devLoginAsTechnician();
+});
+
 export const getUserProfileFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { staffId: string }) => data)
   .handler(async ({ data }) => {

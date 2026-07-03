@@ -11,6 +11,7 @@ import type {
   ReturnUserRequestInput,
   MarkAssetForRequestInput,
   MarkAssetsForRequestInput,
+  RemoveAssetFromRequestPoolInput,
   RejectUserRequestInput,
   SubmitUserRequestInput,
 } from '@/lib/request-schema';
@@ -57,6 +58,13 @@ export const markAssetsForRequestFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: input }) => {
     const { markAssetsForRequest } = await import('@/server/request-repo.server');
     return markAssetsForRequest(input.assets);
+  });
+
+export const removeAssetFromRequestPoolFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: RemoveAssetFromRequestPoolInput) => input)
+  .handler(async ({ data: input }) => {
+    const { removeAssetFromRequestPool } = await import('@/server/request-repo.server');
+    await removeAssetFromRequestPool(input);
   });
 
 export const listUserRequestHistoryFn = createServerFn({ method: 'POST' })

@@ -308,9 +308,7 @@ export function TechnicianReturnPage() {
         <CardHeader>
           <CardTitle className="text-base">Return details</CardTitle>
           <CardDescription>
-            {kind === 'laptop'
-              ? 'Saved to handover_return (staff or place handover).'
-              : 'Saved to av_return or network_return.'}
+            Please fill in the return details below.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -150,6 +150,11 @@ export type MarkAssetForRequestInput = {
   assetId: number;
 };
 
+export type RemoveAssetFromRequestPoolInput = {
+  kind: RequestAssignableKind;
+  assetId: number;
+};
+
 export type MarkAssetsForRequestInput = {
   assets: MarkAssetForRequestInput[];
 };
