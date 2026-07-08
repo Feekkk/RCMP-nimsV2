@@ -167,6 +167,15 @@
     50% { transform: translateY(-12px); }
   }
 
+  .animate-scan-line {
+    animation: scan-line 2s ease-in-out infinite;
+  }
+
+  @keyframes scan-line {
+    0%, 100% { top: 0%; }
+    50% { top: calc(100% - 2px); }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
