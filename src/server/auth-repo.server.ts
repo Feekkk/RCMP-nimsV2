@@ -83,20 +83,6 @@ async function findUserByOid(oid: string): Promise<UserRow | null> {
   return rows[0] ?? null;
 }
 
-async function findFirstTechnician(): Promise<UserRow | null> {
-  const pool = getDbPool();
-  const [rows] = await pool.query<UserRow[]>(
-    `${USER_SELECT}
-     FROM users u
-     INNER JOIN role r ON r.id = u.role_id
-     WHERE u.role_id = ?
-     ORDER BY u.id ASC
-     LIMIT 1`,
-    [ROLE_TECHNICIAN],
-  );
-  return rows[0] ?? null;
-}
-
 async function touchMicrosoftLogin(userId: number, oid: string): Promise<void> {
   const pool = getDbPool();
   await pool.execute(
@@ -167,16 +153,6 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
     );
   }
   return { ...(await mapUserWithAzureProfile(updated)), accountCreated };
-}
-
-export async function devLoginAsTechnician(): Promise<AuthUserRow> {
-  const row = await findFirstTechnician();
-  if (!row) {
-    throw new Error(
-      'No technician account found in the database. Add a user with the technician role before using dev sign-in.',
-    );
-  }
-  return mapUserWithAzureProfile(row);
 }
 
 export type UpdateUserProfileInput = {
