@@ -110,3 +110,11 @@ export const getAssetDetailFn = createServerFn({ method: 'GET' })
     const { getAssetDetail } = await import('@/server/assets-repo.server');
     return getAssetDetail(input.kind, input.assetId);
   });
+
+/** Resolves an asset by ID alone (used by the barcode/manual asset lookup — no kind guessing needed). */
+export const findAssetByAnyIdFn = createServerFn({ method: 'GET' })
+  .inputValidator((assetId: number) => assetId)
+  .handler(async ({ data: assetId }) => {
+    const { findAssetByAnyId } = await import('@/server/assets-repo.server');
+    return findAssetByAnyId(assetId);
+  });

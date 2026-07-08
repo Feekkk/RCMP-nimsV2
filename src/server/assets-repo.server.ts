@@ -1107,6 +1107,29 @@ export async function getAssetDetail(kind: AssetKind, assetId: number): Promise<
   return { asset, trails };
 }
 
+/** Looks up which table an asset ID actually belongs to (DB-driven, no prefix guesswork). */
+export async function findAssetKindByAssetId(assetId: number): Promise<AssetKind | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT 'laptop' AS kind FROM laptop WHERE asset_id = ?
+     UNION ALL
+     SELECT 'av' AS kind FROM av WHERE asset_id = ?
+     UNION ALL
+     SELECT 'network' AS kind FROM network WHERE asset_id = ?
+     LIMIT 1`,
+    [assetId, assetId, assetId],
+  );
+  const kind = rows[0]?.kind as AssetKind | undefined;
+  return kind ?? null;
+}
+
+/** Scan/search entry point: resolves an asset by ID alone, checking every asset table. */
+export async function findAssetByAnyId(assetId: number): Promise<AssetDetailResponse | null> {
+  const kind = await findAssetKindByAssetId(assetId);
+  if (!kind) return null;
+  return getAssetDetail(kind, assetId);
+}
+
 /** Full lifecycle trail for export / reporting (newest first). */
 export async function getAssetTrailEvents(
   kind: AssetKind,

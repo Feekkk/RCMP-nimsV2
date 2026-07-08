@@ -5,8 +5,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getKindForAssetId } from '@/hooks/assetid-generator';
-import { getAssetDetailFn } from '@/server/assets.functions';
+import { findAssetByAnyIdFn } from '@/server/assets.functions';
 import { AssetBarcodeScanner } from '@/technician/asset-barcode-scanner';
 
 /** Strips dashes/spaces (e.g. "12-25-001" or scanned "12 25 001") down to the raw numeric asset ID. */
@@ -34,23 +33,20 @@ export function AssetLookupButton() {
         return;
       }
 
-      const kind = getKindForAssetId(assetId);
-      if (!kind) {
-        toast.error(`Asset ID ${assetId} does not match a known asset prefix`);
-        return;
-      }
-
       resolvingRef.current = true;
       setLoading(true);
       try {
-        const result = await getAssetDetailFn({ data: { kind, assetId } });
+        const result = await findAssetByAnyIdFn({ data: assetId });
         if (!result) {
           toast.error(`Asset ${assetId} was not found`);
           return;
         }
         setOpen(false);
         setValue('');
-        void navigate({ to: '/technician/asset/$kind/$assetId', params: { kind, assetId } });
+        void navigate({
+          to: '/technician/asset/$kind/$assetId',
+          params: { kind: result.asset.kind, assetId },
+        });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to look up asset');
       } finally {
