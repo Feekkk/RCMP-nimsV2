@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import type { IScannerControls } from '@zxing/browser';
-import { CameraOff } from 'lucide-react';
+import { CameraOff, ImageUp, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function ScanFrame({ detected }: { detected: boolean }) {
@@ -34,16 +34,20 @@ export function AssetBarcodeScanner({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
   const [error, setError] = useState<string | null>(null);
   const [detected, setDetected] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
     setError(null);
     setDetected(false);
+    setUploadError(null);
 
     const reader = new BrowserMultiFormatReader();
     reader
@@ -72,24 +76,64 @@ export function AssetBarcodeScanner({
     };
   }, [active]);
 
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setUploadError(null);
+    setUploading(true);
+    const url = URL.createObjectURL(file);
+    try {
+      const result = await new BrowserMultiFormatReader().decodeFromImageUrl(url);
+      setDetected(true);
+      onDetectedRef.current(result.getText());
+    } catch {
+      setUploadError('No barcode found in that image. Try a clearer photo.');
+    } finally {
+      URL.revokeObjectURL(url);
+      setUploading(false);
+    }
+  };
+
   if (!active) return null;
 
   return (
-    <div className="relative aspect-square w-full overflow-hidden rounded-[10px] border border-border bg-black">
-      {error ? (
-        <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
-          <CameraOff className="h-6 w-6 text-muted-foreground" />
-          <p className="text-xs text-muted-foreground">{error}</p>
-        </div>
-      ) : (
-        <>
-          <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
-          <ScanFrame detected={detected} />
-          <p className="absolute bottom-2 left-0 right-0 text-center text-[11px] font-medium text-white/90 drop-shadow">
-            {detected ? 'Barcode found — opening asset…' : 'Align the barcode within the frame'}
-          </p>
-        </>
-      )}
+    <div className="space-y-2">
+      <div className="relative aspect-square w-full overflow-hidden rounded-[10px] border border-border bg-black">
+        {error ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+            <CameraOff className="h-6 w-6 text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">{error}</p>
+          </div>
+        ) : (
+          <>
+            <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+            <ScanFrame detected={detected} />
+            <p className="absolute bottom-2 left-0 right-0 text-center text-[11px] font-medium text-white/90 drop-shadow">
+              {detected ? 'Barcode found — opening asset…' : 'Align the barcode within the frame'}
+            </p>
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-input px-3 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-60"
+      >
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageUp className="h-4 w-4" />}
+        {uploading ? 'Scanning image…' : 'Upload barcode image'}
+      </button>
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      {uploadError && <p className="text-[11px] text-destructive">{uploadError}</p>}
     </div>
   );
 }
