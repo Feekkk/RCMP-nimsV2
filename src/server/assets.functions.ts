@@ -111,10 +111,13 @@ export const getAssetDetailFn = createServerFn({ method: 'GET' })
     return getAssetDetail(input.kind, input.assetId);
   });
 
-/** Resolves an asset by ID alone (used by the barcode/manual asset lookup — no kind guessing needed). */
-export const findAssetByAnyIdFn = createServerFn({ method: 'GET' })
-  .inputValidator((assetId: number) => assetId)
-  .handler(async ({ data: assetId }) => {
-    const { findAssetByAnyId } = await import('@/server/assets-repo.server');
-    return findAssetByAnyId(assetId);
+/**
+ * Resolves an asset by scanned/typed code — tries the current asset ID first, then falls back to
+ * AV's legacy `asset_id_old` label. Used by the barcode/manual asset lookup.
+ */
+export const findAssetByCodeFn = createServerFn({ method: 'GET' })
+  .inputValidator((code: string) => code)
+  .handler(async ({ data: code }) => {
+    const { findAssetByCode } = await import('@/server/assets-repo.server');
+    return findAssetByCode(code);
   });

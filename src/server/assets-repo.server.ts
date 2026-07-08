@@ -1123,11 +1123,40 @@ export async function findAssetKindByAssetId(assetId: number): Promise<AssetKind
   return kind ?? null;
 }
 
-/** Scan/search entry point: resolves an asset by ID alone, checking every asset table. */
+/** Resolves an asset by its current asset ID, checking every asset table. */
 export async function findAssetByAnyId(assetId: number): Promise<AssetDetailResponse | null> {
   const kind = await findAssetKindByAssetId(assetId);
   if (!kind) return null;
   return getAssetDetail(kind, assetId);
+}
+
+/** AV equipment carries over a legacy `asset_id_old` label from before the current ID scheme. */
+export async function findAvAssetByOldId(oldId: string): Promise<AssetDetailResponse | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT asset_id FROM av WHERE asset_id_old = ? LIMIT 1`,
+    [oldId],
+  );
+  const assetId = rows[0]?.asset_id as number | undefined;
+  if (assetId == null) return null;
+  return getAssetDetail('av', assetId);
+}
+
+/** Scan/search entry point: tries the current asset ID first, then falls back to AV's legacy old ID. */
+export async function findAssetByCode(code: string): Promise<AssetDetailResponse | null> {
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits) {
+    const assetId = Number(digits);
+    if (Number.isFinite(assetId) && assetId > 0) {
+      const byId = await findAssetByAnyId(assetId);
+      if (byId) return byId;
+    }
+  }
+
+  return findAvAssetByOldId(trimmed);
 }
 
 /** Full lifecycle trail for export / reporting (newest first). */

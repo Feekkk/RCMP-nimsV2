@@ -5,16 +5,8 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { findAssetByAnyIdFn } from '@/server/assets.functions';
+import { findAssetByCodeFn } from '@/server/assets.functions';
 import { AssetBarcodeScanner } from '@/technician/asset-barcode-scanner';
-
-/** Strips dashes/spaces (e.g. "12-25-001" or scanned "12 25 001") down to the raw numeric asset ID. */
-function parseScannedAssetId(raw: string): number | null {
-  const digits = raw.replace(/\D/g, '');
-  if (!digits) return null;
-  const assetId = Number(digits);
-  return Number.isFinite(assetId) && assetId > 0 ? assetId : null;
-}
 
 export function AssetLookupButton() {
   const navigate = useNavigate();
@@ -27,8 +19,8 @@ export function AssetLookupButton() {
   const resolveAndGo = useCallback(
     async (raw: string) => {
       if (resolvingRef.current) return;
-      const assetId = parseScannedAssetId(raw);
-      if (!assetId) {
+      const code = raw.trim();
+      if (!code) {
         toast.error('Scan or type a valid asset ID');
         return;
       }
@@ -36,16 +28,16 @@ export function AssetLookupButton() {
       resolvingRef.current = true;
       setLoading(true);
       try {
-        const result = await findAssetByAnyIdFn({ data: assetId });
+        const result = await findAssetByCodeFn({ data: code });
         if (!result) {
-          toast.error(`Asset ${assetId} was not found`);
+          toast.error(`Asset "${code}" was not found`);
           return;
         }
         setOpen(false);
         setValue('');
         void navigate({
           to: '/technician/asset/$kind/$assetId',
-          params: { kind: result.asset.kind, assetId },
+          params: { kind: result.asset.kind, assetId: result.asset.assetId },
         });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to look up asset');
@@ -101,8 +93,8 @@ export function AssetLookupButton() {
           <TabsContent value="camera" className="space-y-2">
             <AssetBarcodeScanner active={open && tab === 'camera'} onDetected={(text) => void resolveAndGo(text)} />
             <p className="text-[11px] text-muted-foreground">
-              Point the camera at the asset's barcode. It will jump to the asset's details automatically once
-              recognized.
+              Point the camera at the asset's barcode (asset ID or, for AV equipment, its old ID label). It will
+              jump to the asset's details automatically once recognized.
             </p>
           </TabsContent>
 
@@ -112,14 +104,14 @@ export function AssetLookupButton() {
                 autoFocus
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder="Scan or enter asset ID…"
+                placeholder="Scan or enter asset ID / old ID…"
                 disabled={loading}
                 className="h-10 rounded-[8px]"
                 autoComplete="off"
-                inputMode="numeric"
               />
               <p className="text-[11px] text-muted-foreground">
-                Use a handheld barcode scanner or type the asset ID, then press Enter.
+                Use a handheld barcode scanner or type the asset ID (or an AV asset's legacy old ID), then press
+                Enter.
               </p>
             </form>
           </TabsContent>
