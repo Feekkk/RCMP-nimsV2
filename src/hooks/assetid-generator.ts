@@ -80,6 +80,25 @@ export function parseAssetId(assetId: number): AssetIdParts {
   return { prefix, year, sequence };
 }
 
+/** Reverse of getPrefixForKind — resolves the asset kind from an asset ID's prefix digits. */
+export function getKindForPrefix(prefix: number): AssetKind | null {
+  switch (prefix) {
+    case ASSET_ID_PREFIX.laptop:
+    case ASSET_ID_PREFIX.desktop:
+      return 'laptop';
+    case ASSET_ID_PREFIX.network:
+      return 'network';
+    case ASSET_ID_PREFIX.av:
+      return 'av';
+    default:
+      return null;
+  }
+}
+
+export function getKindForAssetId(assetId: number): AssetKind | null {
+  return getKindForPrefix(parseAssetId(assetId).prefix);
+}
+
 export function getAssetIdRange(prefix: number, yearDigits: number): { min: number; max: number } {
   return {
     min: formatAssetId(prefix, yearDigits, ASSET_ID_SEQUENCE_MIN),

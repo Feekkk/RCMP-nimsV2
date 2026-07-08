@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { TechSideBar } from '@/components/ui/techSideBar';
 import { Toaster } from '@/components/ui/sonner';
 import { clearAllSessions, hasTechnicianSession, isAdminRole, readTechnicianSession } from '@/lib/auth-session';
+import { AssetLookupButton } from '@/technician/asset-lookup';
 
 export function TechnicianShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -77,6 +78,7 @@ export function TechnicianShell({ children }: { children: ReactNode }) {
 
         <main className="relative mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-6">{children}</main>
       </div>
+      <AssetLookupButton />
       <Toaster />
     </div>
   );
