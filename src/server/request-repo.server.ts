@@ -42,8 +42,12 @@ import { isUserProfileComplete } from '@/lib/user-profile';
 import { attachDisplayNames, resolveAccountProfile } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
-/** Source pool for marking an asset available to borrow (see status.md): freshly registered "new" assets. */
-const ACTIVE_STATUS = STATUS_ID.NEW;
+/** Source statuses eligible to enter the request pool: new (1) and return (2). */
+const REQUEST_POOL_ELIGIBLE_STATUS_IDS = [STATUS_ID.NEW, STATUS_ID.RETURN] as const;
+
+function isRequestPoolEligibleStatus(statusId: number): boolean {
+  return (REQUEST_POOL_ELIGIBLE_STATUS_IDS as readonly number[]).includes(statusId);
+}
 
 function formatDate(val: Date | string | null | undefined): string {
   if (val == null) return '';
@@ -80,8 +84,8 @@ async function queryLaptopActive(): Promise<ActiveForRequestAsset[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<LaptopRow[]>(
     `SELECT asset_id, model, brand, category, serial_num, status_id
-     FROM laptop WHERE status_id = ? ORDER BY asset_id`,
-    [ACTIVE_STATUS],
+     FROM laptop WHERE status_id IN (?, ?) ORDER BY asset_id`,
+    [...REQUEST_POOL_ELIGIBLE_STATUS_IDS],
   );
   return rows.map((r) => ({
     kind: 'laptop',
@@ -99,8 +103,8 @@ async function queryAvActive(): Promise<ActiveForRequestAsset[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<AvRow[]>(
     `SELECT asset_id, asset_id_old, model, brand, category, serial_num, status_id
-     FROM av WHERE status_id = ? ORDER BY asset_id`,
-    [ACTIVE_STATUS],
+     FROM av WHERE status_id IN (?, ?) ORDER BY asset_id`,
+    [...REQUEST_POOL_ELIGIBLE_STATUS_IDS],
   );
   return rows.map((r) => ({
     kind: 'av',
@@ -219,9 +223,9 @@ export async function markAssetForRequest(input: MarkAssetForRequestInput): Prom
   );
   const row = rows[0] as { status_id: number } | undefined;
   if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
-  if (row.status_id !== ACTIVE_STATUS) {
+  if (!isRequestPoolEligibleStatus(row.status_id)) {
     throw new Error(
-      'This asset is not available for requests — only new (unassigned) assets can be added. Check its status or choose a different asset.',
+      'This asset is not available for requests — only new or return assets can be added. Check its status or choose a different asset.',
     );
   }
 

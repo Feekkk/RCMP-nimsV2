@@ -151,7 +151,7 @@ export function TechnicianRequestAssetPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Add assets for request</h1>
           <p className="mt-1 max-w-xl text-xs text-muted-foreground sm:text-sm">
-            Select active laptop or AV assets and add them to the request pool.
+            Select new or return laptop or AV assets and add them to the request pool.
           </p>
         </div>
         <RequestToolbarActions />
@@ -160,7 +160,7 @@ export function TechnicianRequestAssetPage() {
       <Card className="rounded-[14px] border-border shadow-sm">
         <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
           <div>
-            <CardTitle className="text-base">Active assets</CardTitle>
+            <CardTitle className="text-base">Eligible assets</CardTitle>
             <CardDescription>
               {filtered.length} shown · {assets.length} total · search by asset ID, legacy ID (AV), model, brand, category, or serial
             </CardDescription>
@@ -242,7 +242,7 @@ export function TechnicianRequestAssetPage() {
                   <TableRow>
                     <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                       {assets.length === 0
-                        ? 'No active laptop or AV assets found.'
+                        ? 'No new or return laptop or AV assets found.'
                         : 'No assets match your filters.'}
                     </TableCell>
                   </TableRow>
