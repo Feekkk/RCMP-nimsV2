@@ -8,7 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { findAssetByCodeFn } from '@/server/assets.functions';
 import { AssetBarcodeScanner } from '@/technician/asset-barcode-scanner';
 
-export function AssetLookupButton() {
+type AssetLookupButtonProps = {
+  variant?: 'technician' | 'admin';
+};
+
+export function AssetLookupButton({ variant = 'technician' }: AssetLookupButtonProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'camera' | 'manual'>('camera');
@@ -36,7 +40,10 @@ export function AssetLookupButton() {
         setOpen(false);
         setValue('');
         void navigate({
-          to: '/technician/asset/$kind/$assetId',
+          to:
+            variant === 'admin'
+              ? '/admin/asset/$kind/$assetId'
+              : '/technician/asset/$kind/$assetId',
           params: { kind: result.asset.kind, assetId: result.asset.assetId },
         });
       } catch (err) {
@@ -46,7 +53,7 @@ export function AssetLookupButton() {
         setLoading(false);
       }
     },
-    [navigate],
+    [navigate, variant],
   );
 
   const handleManualSubmit = (e: FormEvent) => {
@@ -93,7 +100,7 @@ export function AssetLookupButton() {
           <TabsContent value="camera" className="space-y-2">
             <AssetBarcodeScanner active={open && tab === 'camera'} onDetected={(text) => void resolveAndGo(text)} />
             <p className="text-[11px] text-muted-foreground">
-              Point the camera at the asset's barcode (asset ID or, for AV equipment, its old ID label). It will
+              Point the camera at the asset's barcode. It will
               jump to the asset's details automatically once recognized.
             </p>
           </TabsContent>

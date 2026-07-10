@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AdminSideBar } from '@/components/ui/adminSidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { clearAllSessions, hasAdminSession, isStaffRole, readTechnicianSession } from '@/lib/auth-session';
+import { AssetLookupButton } from '@/technician/asset-lookup';
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -26,6 +27,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
     clearAllSessions();
     void navigate({ to: '/login' });
   };
+
+  const todayLabel = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date());
 
   return (
     <div className="relative flex min-h-svh bg-background">
@@ -57,7 +64,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               </Sheet>
               <div className="min-w-0">
                 <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Administrator
+                  {todayLabel}
                 </p>
                 <p className="truncate text-sm font-bold text-foreground">Asset Management System</p>
               </div>
@@ -79,6 +86,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
         <main className="relative mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-6">{children}</main>
       </div>
+      <AssetLookupButton variant="admin" />
       <Toaster />
     </div>
   );

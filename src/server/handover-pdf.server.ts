@@ -1,9 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { Template } from '@pdfme/common';
 import { generate } from '@pdfme/generator';
 import { image, text } from '@pdfme/schemas';
 import type { HandoverPdfData } from '@/lib/handover-pdf-types';
+import { loadLogoBase64 } from '@/server/pdf-form-common.server';
 
 const UNIKL_HEADER = 'UNIVERSITY KUALA LUMPUR ROYAL COLLEGE OF MEDICINE PERAK';
 
@@ -51,11 +50,6 @@ iv. Installation of any unauthorized/illegal software into this Notebook/Desktop
 v. Any request for repair due to mechanical defect must be forwarded to the IT Department by filling in the requisition form and subject to approval by the management.
 
 vi. The user is responsible for repairing or replacement cost of the damage or loss due to negligence or intentional misconduct.`;
-
-function loadLogoBase64(): string {
-  const path = join(process.cwd(), 'src', 'assets', 'unikl-logo.png');
-  return `data:image/png;base64,${readFileSync(path).toString('base64')}`;
-}
 
 type TextOpts = {
   align?: 'left' | 'center' | 'right';
@@ -147,46 +141,47 @@ function buildPage3Schemas(data: HandoverPdfData) {
   ];
 }
 
+/** Pages 1 and 2 never depend on handover data — built once and reused across every PDF generation. */
+const PAGE1_SCHEMA = [
+  ...pageHeaderFields('p1', 'EMPLOYEE SOFTWARE COMPLIANCE STATEMENT'),
+  T('p1_intro', 14, 70, 182, 10, 9),
+  T('p1_points', 14, 82, 182, 148, 8.5, { lineHeight: 1.3 }),
+  T('p1_agree', 14, 232, 182, 12, 9),
+  T('p1_sigLine', 14, FOOTER_Y, 182, 5, 9),
+  T('p1_sigLabel', 14, FOOTER_Y + 5, 182, 5, 9),
+  T('p1_empName', 14, FOOTER_Y + 11, 182, 5, 9),
+  T('p1_empDesig', 14, FOOTER_Y + 17, 182, 5, 9),
+  T('p1_staffId', 14, FOOTER_Y + 23, 182, 5, 9),
+  T('p1_date', 14, FOOTER_Y + 29, 182, 5, 9),
+  pageFooterField('p1'),
+];
+
+const PAGE2_SCHEMA = [
+  ...pageHeaderFields('p2', "HANDING OVER OF COMPANY'S NOTEBOOK/DESKTOP"),
+  T('p2_to', 14, 70, 95, 11, 10, { backgroundColor: '#D4E8F7' }),
+  T('p2_assetId', 114, 70, 82, 11, 10, { backgroundColor: '#E8E8E8' }),
+  T('p2_intro', 14, 86, 182, 6, 10),
+  T('p2_assetHeading', 14, 94, 182, 6, 10),
+  T('p2_itemName', 22, 102, 174, 5, 9),
+  T('p2_brand', 22, 108, 174, 5, 9),
+  T('p2_model', 22, 114, 174, 5, 9),
+  T('p2_serial', 22, 120, 174, 5, 9),
+  T('p2_adapter', 22, 126, 174, 5, 9),
+  T('p2_remark', 22, 132, 174, 5, 9),
+  T('p2_closing', 14, 140, 182, 6, 10),
+  T('p2_requirements', 14, 148, 182, 94, 8.5, { lineHeight: 1.3 }),
+  T('p2_footerTitle', 14, FOOTER_Y, 90, 6, 9),
+  T('p2_footerName', 14, FOOTER_Y + 7, 90, 5, 9),
+  T('p2_footerDesig', 14, FOOTER_Y + 13, 90, 5, 9),
+  T('p2_footerDate', 14, FOOTER_Y + 19, 90, 5, 9),
+  T('p2_footerSig', 120, FOOTER_Y + 19, 76, 6, 9, { align: 'right' }),
+  pageFooterField('p2'),
+];
+
 function buildTemplate(data: HandoverPdfData): Template {
   return {
     basePdf: BASE_PDF,
-    schemas: [
-      [
-        ...pageHeaderFields('p1', 'EMPLOYEE SOFTWARE COMPLIANCE STATEMENT'),
-        T('p1_intro', 14, 70, 182, 10, 9),
-        T('p1_points', 14, 82, 182, 148, 8.5, { lineHeight: 1.3 }),
-        T('p1_agree', 14, 232, 182, 12, 9),
-        T('p1_sigLine', 14, FOOTER_Y, 182, 5, 9),
-        T('p1_sigLabel', 14, FOOTER_Y + 5, 182, 5, 9),
-        T('p1_empName', 14, FOOTER_Y + 11, 182, 5, 9),
-        T('p1_empDesig', 14, FOOTER_Y + 17, 182, 5, 9),
-        T('p1_staffId', 14, FOOTER_Y + 23, 182, 5, 9),
-        T('p1_date', 14, FOOTER_Y + 29, 182, 5, 9),
-        pageFooterField('p1'),
-      ],
-      [
-        ...pageHeaderFields('p2', "HANDING OVER OF COMPANY'S NOTEBOOK/DESKTOP"),
-        T('p2_to', 14, 70, 95, 11, 10, { backgroundColor: '#D4E8F7' }),
-        T('p2_assetId', 114, 70, 82, 11, 10, { backgroundColor: '#E8E8E8' }),
-        T('p2_intro', 14, 86, 182, 6, 10),
-        T('p2_assetHeading', 14, 94, 182, 6, 10),
-        T('p2_itemName', 22, 102, 174, 5, 9),
-        T('p2_brand', 22, 108, 174, 5, 9),
-        T('p2_model', 22, 114, 174, 5, 9),
-        T('p2_serial', 22, 120, 174, 5, 9),
-        T('p2_adapter', 22, 126, 174, 5, 9),
-        T('p2_remark', 22, 132, 174, 5, 9),
-        T('p2_closing', 14, 140, 182, 6, 10),
-        T('p2_requirements', 14, 148, 182, 94, 8.5, { lineHeight: 1.3 }),
-        T('p2_footerTitle', 14, FOOTER_Y, 90, 6, 9),
-        T('p2_footerName', 14, FOOTER_Y + 7, 90, 5, 9),
-        T('p2_footerDesig', 14, FOOTER_Y + 13, 90, 5, 9),
-        T('p2_footerDate', 14, FOOTER_Y + 19, 90, 5, 9),
-        T('p2_footerSig', 120, FOOTER_Y + 19, 76, 6, 9, { align: 'right' }),
-        pageFooterField('p2'),
-      ],
-      buildPage3Schemas(data),
-    ],
+    schemas: [PAGE1_SCHEMA, PAGE2_SCHEMA, buildPage3Schemas(data)],
   };
 }
 
@@ -236,19 +231,23 @@ function buildInputs(data: HandoverPdfData, logo: string): Record<string, string
   return [{ ...page1, ...page2, ...page3, ...genFooter }];
 }
 
-export async function generateHandoverPdfBuffer(handoverId: number): Promise<Uint8Array> {
-  const { getHandoverPdfData } = await import('@/server/handover-pdf-repo.server');
-  const data = await getHandoverPdfData(handoverId);
-  if (!data) {
-    throw new Error('This handover record could not be found. Refresh the page and try again.');
-  }
-
+export async function buildHandoverPdfFromData(data: HandoverPdfData): Promise<Uint8Array> {
   const logo = loadLogoBase64();
   return generate({
     template: buildTemplate(data),
     inputs: buildInputs(data, logo),
     plugins: { text, image },
   });
+}
+
+export async function generateHandoverPdfBuffer(handoverId: number): Promise<Uint8Array> {
+  const { getHandoverNotificationData } = await import('@/server/handover-pdf-repo.server');
+  const data = await getHandoverNotificationData(handoverId);
+  if (!data) {
+    throw new Error('This handover record could not be found. Refresh the page and try again.');
+  }
+
+  return buildHandoverPdfFromData(data);
 }
 
 export async function generateHandoverPdfBase64(handoverId: number): Promise<string> {

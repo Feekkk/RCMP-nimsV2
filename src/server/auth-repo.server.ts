@@ -83,6 +83,20 @@ async function findUserByOid(oid: string): Promise<UserRow | null> {
   return rows[0] ?? null;
 }
 
+async function findFirstUserByRole(roleId: number): Promise<UserRow | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<UserRow[]>(
+    `${USER_SELECT}
+     FROM users u
+     INNER JOIN role r ON r.id = u.role_id
+     WHERE u.role_id = ?
+     ORDER BY u.id ASC
+     LIMIT 1`,
+    [roleId],
+  );
+  return rows[0] ?? null;
+}
+
 async function touchMicrosoftLogin(userId: number, oid: string): Promise<void> {
   const pool = getDbPool();
   await pool.execute(
@@ -153,6 +167,30 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
     );
   }
   return { ...(await mapUserWithAzureProfile(updated)), accountCreated };
+}
+
+const DEV_ROLE_LABELS: Record<number, string> = {
+  [ROLE_TECHNICIAN]: 'technician',
+  [ROLE_ADMIN]: 'admin',
+};
+
+async function devLoginAsRole(roleId: number): Promise<AuthUserRow> {
+  const row = await findFirstUserByRole(roleId);
+  const roleLabel = DEV_ROLE_LABELS[roleId] ?? 'staff';
+  if (!row) {
+    throw new Error(
+      `No ${roleLabel} account found in the database. Add a user with the ${roleLabel} role before using dev sign-in.`,
+    );
+  }
+  return mapUserWithAzureProfile(row);
+}
+
+export async function devLoginAsTechnician(): Promise<AuthUserRow> {
+  return devLoginAsRole(ROLE_TECHNICIAN);
+}
+
+export async function devLoginAsAdmin(): Promise<AuthUserRow> {
+  return devLoginAsRole(ROLE_ADMIN);
 }
 
 export type UpdateUserProfileInput = {
@@ -245,4 +283,10 @@ export async function updateUserProfile(input: UpdateUserProfileInput): Promise<
   await pool.execute(`UPDATE users SET email = ?, phone = ? WHERE id = ?`, [email, phone, userId]);
 
   return getUserProfile(input.staffId);
+}
+
+export async function getAuthUserByStaffId(staffId: string): Promise<AuthUserRow | null> {
+  const row = await findUserById(parseUserId(staffId));
+  if (!row) return null;
+  return mapUserWithAzureProfile(row);
 }

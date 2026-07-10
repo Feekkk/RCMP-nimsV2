@@ -19,6 +19,7 @@ import type { OpenReturnContext } from '@/lib/deploy-return-schema';
 import { formatAssetAge, formatDateLabel, formatPurchaseDateLabel } from '@/lib/date-format';
 import { formatPurchaseCost } from '@/lib/purchase-field-utils';
 import { cn } from '@/lib/utils';
+import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetStatusActions } from '@/technician/asset-status-actions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { getAssetDetailFn } from '@/server/assets.functions';
@@ -162,8 +163,8 @@ function PurchaseBlock({ asset }: { asset: AssetDetail }) {
   );
 }
 
-function TrailEventLinks({ event }: { event: AssetTrailEvent }) {
-  if (event.requestId == null && event.disposalId == null) return null;
+function TrailEventLinks({ event, readOnly }: { event: AssetTrailEvent; readOnly?: boolean }) {
+  if (readOnly || (event.requestId == null && event.disposalId == null)) return null;
 
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2">
@@ -191,7 +192,7 @@ function TrailEventLinks({ event }: { event: AssetTrailEvent }) {
   );
 }
 
-function TrailsTable({ trails }: { trails: AssetTrailEvent[] }) {
+function TrailsTable({ trails, readOnly }: { trails: AssetTrailEvent[]; readOnly?: boolean }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
@@ -260,7 +261,7 @@ function TrailsTable({ trails }: { trails: AssetTrailEvent[] }) {
                           </p>
                           <p className="text-sm text-foreground">{ev.detail ?? 'No additional details.'}</p>
                           <p className="text-xs text-muted-foreground">{formatTrailWhen(ev.at)}</p>
-                          <TrailEventLinks event={ev} />
+                          <TrailEventLinks event={ev} readOnly={readOnly} />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -275,12 +276,21 @@ function TrailsTable({ trails }: { trails: AssetTrailEvent[] }) {
   );
 }
 
-type TechnicianAssetViewPageProps = {
+type AssetViewContentProps = {
   kind: AssetKind;
   assetId: number;
+  readOnly?: boolean;
+  backTo: string;
+  backLabel?: string;
 };
 
-export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPageProps) {
+export function AssetViewContent({
+  kind,
+  assetId,
+  readOnly = false,
+  backTo,
+  backLabel = 'Back to list',
+}: AssetViewContentProps) {
   const [data, setData] = useState<AssetDetailResponse | null>(null);
   const [deployment, setDeployment] = useState<OpenReturnContext | null>(null);
   const [loading, setLoading] = useState(true);
@@ -307,7 +317,6 @@ export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPa
     void load();
   }, [load]);
 
-  const listPath = ASSET_LIST_PATH[kind];
   const asset = data?.asset;
   const assetAge = asset ? formatAssetAge(asset.poDate, asset.createdAt) : null;
 
@@ -318,12 +327,12 @@ export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPa
   };
 
   return (
-    <TechnicianShell>
+    <>
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <Button variant="outline" size="sm" className="rounded-[8px]" asChild>
-          <Link to={listPath}>
+          <Link to={backTo}>
             <ArrowLeft className="mr-1.5 h-4 w-4" />
-            Back to list
+            {backLabel}
           </Link>
         </Button>
       </div>
@@ -353,12 +362,16 @@ export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPa
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {assetAge && <p className="text-sm text-muted-foreground">{assetAge}</p>}
-              <AssetStatusActions
-                kind={kind}
-                assetId={asset.assetId}
-                statusId={asset.statusId}
-                onStatusChange={handleStatusChange}
-              />
+              {readOnly ? (
+                <AssetStatusBadge statusId={asset.statusId} />
+              ) : (
+                <AssetStatusActions
+                  kind={kind}
+                  assetId={asset.assetId}
+                  statusId={asset.statusId}
+                  onStatusChange={handleStatusChange}
+                />
+              )}
             </div>
           </div>
 
@@ -409,22 +422,39 @@ export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPa
                   Handovers, deployments, borrow requests, repairs, warranty, and disposal events
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" className="shrink-0 rounded-[8px]" asChild>
-                <Link to="/technician/history">
-                  Full history
-                  <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-                </Link>
-              </Button>
+              {!readOnly ? (
+                <Button variant="outline" size="sm" className="shrink-0 rounded-[8px]" asChild>
+                  <Link to="/technician/history">
+                    Full history
+                    <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              ) : null}
             </CardHeader>
             <CardContent>
               <p className="mb-3 text-xs text-muted-foreground">
                 Click a row to view full event details.
               </p>
-              <TrailsTable trails={data.trails} />
+              <TrailsTable trails={data.trails} readOnly={readOnly} />
             </CardContent>
           </Card>
         </>
       )}
+    </>
+  );
+}
+
+type TechnicianAssetViewPageProps = {
+  kind: AssetKind;
+  assetId: number;
+};
+
+export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPageProps) {
+  const listPath = ASSET_LIST_PATH[kind];
+
+  return (
+    <TechnicianShell>
+      <AssetViewContent kind={kind} assetId={assetId} backTo={listPath} />
     </TechnicianShell>
   );
 }

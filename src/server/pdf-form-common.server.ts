@@ -17,9 +17,28 @@ export function boldContent(text: string): string {
   return `**${text}**`;
 }
 
+let cachedLogoBuffer: Buffer | null = null;
+let cachedLogoBase64: string | null = null;
+
+function readLogoBuffer(): Buffer {
+  if (!cachedLogoBuffer) {
+    const path = join(process.cwd(), 'src', 'assets', 'unikl-logo.png');
+    cachedLogoBuffer = readFileSync(path);
+  }
+  return cachedLogoBuffer;
+}
+
+/** Cached after first read — avoids a disk read + base64 encode on every PDF generation. */
 export function loadLogoBase64(): string {
-  const path = join(process.cwd(), 'src', 'assets', 'unikl-logo.png');
-  return `data:image/png;base64,${readFileSync(path).toString('base64')}`;
+  if (!cachedLogoBase64) {
+    cachedLogoBase64 = `data:image/png;base64,${readLogoBuffer().toString('base64')}`;
+  }
+  return cachedLogoBase64;
+}
+
+/** Cached after first read — shared by handover/return email senders for the inline logo attachment. */
+export function loadLogoBuffer(): Buffer {
+  return readLogoBuffer();
 }
 
 export type TextOpts = {

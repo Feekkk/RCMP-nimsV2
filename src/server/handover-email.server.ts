@@ -1,20 +1,15 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { HandoverEmailData } from '@/lib/handover-email-types';
 import type { SendHandoverEmailResult } from '@/lib/handover-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml } from '@/server/email.server';
-import { getHandoverEmailData } from '@/server/handover-email-repo.server';
-import { generateHandoverPdfBuffer } from '@/server/handover-pdf.server';
+import { markHandoverEmailStatus } from '@/server/handover-email-repo.server';
+import { buildHandoverPdfFromData } from '@/server/handover-pdf.server';
+import { getHandoverNotificationData } from '@/server/handover-pdf-repo.server';
+import { loadLogoBuffer } from '@/server/pdf-form-common.server';
 
 const HANDOVER_CC = 'it.rcmp@unikl.edu.my';
 const LOGO_CID = 'unikl-logo';
-
-function loadLogoBuffer(): Buffer {
-  const path = join(process.cwd(), 'src', 'assets', 'unikl-logo.png');
-  return readFileSync(path);
-}
 
 function detailRow(label: string, value: unknown): string {
   return `<tr>
@@ -127,42 +122,65 @@ export async function sendHandoverEmail(handoverId: number): Promise<SendHandove
     throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
-  const data = await getHandoverEmailData(handoverId);
-  if (!data) {
-    throw new Error(
-      'The handover email could not be sent. Check that the handover record exists, a staff recipient is selected, and the recipient has an email in the directory.',
-    );
+  await markHandoverEmailStatus(handoverId, 'sending').catch(() => {});
+
+  try {
+    const data = await getHandoverNotificationData(handoverId);
+    if (!data) {
+      throw new Error('This handover record could not be found. Refresh the page and try again.');
+    }
+
+    const email = data.recipientEmail?.trim();
+    if (!email || !email.includes('@')) {
+      throw new Error(
+        `Staff recipient "${data.recipientName}" has no email in the directory. Add an email address in staff records before sending.`,
+      );
+    }
+
+    const emailData: HandoverEmailData = { ...data, recipientEmail: email };
+    const pdfBytes = await buildHandoverPdfFromData(data);
+    const logo = loadLogoBuffer();
+    const pdfFilename = `handover-${handoverId}-asset-${data.assetId}.pdf`;
+
+    const { sendNotificationEmail } = await import('@/server/email.server');
+    const result = await sendNotificationEmail({
+      to: email,
+      cc: HANDOVER_CC,
+      subject: `UNIKL RCMP — Laptop/Desktop Handover (Asset ${data.assetId})`,
+      text: buildHandoverEmailText(emailData),
+      html: buildHandoverEmailHtml(emailData),
+      attachments: [
+        {
+          filename: 'unikl-logo.png',
+          content: logo,
+          contentType: 'image/png',
+          cid: LOGO_CID,
+        },
+        {
+          filename: pdfFilename,
+          content: pdfBytes,
+          contentType: 'application/pdf',
+        },
+      ],
+    });
+
+    await markHandoverEmailStatus(handoverId, 'sent').catch(() => {});
+
+    return {
+      messageId: result.messageId,
+      to: email,
+      cc: HANDOVER_CC,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'The handover email failed to send.';
+    await markHandoverEmailStatus(handoverId, 'failed', message).catch(() => {});
+    throw err;
   }
+}
 
-  const pdfBytes = await generateHandoverPdfBuffer(handoverId);
-  const logo = loadLogoBuffer();
-  const pdfFilename = `handover-${handoverId}-asset-${data.assetId}.pdf`;
-
-  const { sendNotificationEmail } = await import('@/server/email.server');
-  const result = await sendNotificationEmail({
-    to: data.recipientEmail,
-    cc: HANDOVER_CC,
-    subject: `UNIKL RCMP — Laptop/Desktop Handover (Asset ${data.assetId})`,
-    text: buildHandoverEmailText(data),
-    html: buildHandoverEmailHtml(data),
-    attachments: [
-      {
-        filename: 'unikl-logo.png',
-        content: logo,
-        contentType: 'image/png',
-        cid: LOGO_CID,
-      },
-      {
-        filename: pdfFilename,
-        content: pdfBytes,
-        contentType: 'application/pdf',
-      },
-    ],
+/** Fire-and-forget: lets the caller respond immediately while the PDF/email work continues in the background. */
+export function queueHandoverEmail(handoverId: number): void {
+  void sendHandoverEmail(handoverId).catch((err) => {
+    console.error(`[handover-email] background send failed for handover ${handoverId}:`, err);
   });
-
-  return {
-    messageId: result.messageId,
-    to: data.recipientEmail,
-    cc: HANDOVER_CC,
-  };
 }

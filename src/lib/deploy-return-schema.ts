@@ -63,6 +63,7 @@ export type DeployLaptopStaffInput = {
   employeeNo: string;
   handoverDate: string;
   handoverRemarks?: string | null;
+  handledByName: string;
 };
 
 export type DeployLaptopPlaceInput = {
@@ -70,6 +71,7 @@ export type DeployLaptopPlaceInput = {
   staffId: string;
   handoverDate: string;
   handoverRemarks?: string | null;
+  handledByName: string;
 };
 
 export type DeployPlaceInput = {
@@ -91,6 +93,7 @@ export type ReturnLaptopStaffInput = {
   returnPlace?: string | null;
   condition?: string | null;
   returnRemarks?: string | null;
+  returnedByName: string;
 };
 
 export type ReturnLaptopPlaceInput = {
@@ -101,6 +104,7 @@ export type ReturnLaptopPlaceInput = {
   returnPlace?: string | null;
   condition?: string | null;
   returnRemarks?: string | null;
+  returnedByName: string;
 };
 
 export type ReturnPlaceInput = {

@@ -17,7 +17,11 @@ import {
   deployPlaceFn,
 } from '@/server/deploy-return.functions';
 import { generateHandoverPdfFn } from '@/server/handover-pdf.functions';
-import { sendHandoverEmailFn } from '@/server/handover-email.functions';
+import {
+  getHandoverEmailStatusFn,
+  queueHandoverEmailFn,
+  sendHandoverEmailFn,
+} from '@/server/handover-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { DatePickerField, CampusBuildingSelect, FormField } from '@/technician/deploy-return-fields';
 import { StaffRecipientSearch } from '@/technician/staff-recipient-search';
@@ -91,6 +95,38 @@ export function TechnicianDeployPage() {
     }
   };
 
+  const pollHandoverEmailStatus = async (handoverId: number) => {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        const status = await getHandoverEmailStatusFn({ data: handoverId });
+        if (!status || status.status === 'pending' || status.status === 'sending') continue;
+        if (status.status === 'sent') {
+          setEmailSent(true);
+          toast.success('Handover email sent to the staff recipient');
+        } else {
+          toast.error(
+            status.error ?? 'Could not send handover email automatically. Use the button below to retry.',
+          );
+        }
+        return;
+      } catch {
+        return;
+      }
+    }
+  };
+
+  /** Queues the email in the background so the technician isn't blocked waiting for PDF generation + SMTP. */
+  const handleQueueHandoverEmail = async (handoverId: number) => {
+    try {
+      await queueHandoverEmailFn({ data: handoverId });
+      toast('Handover recorded. Sending confirmation email in the background…');
+      void pollHandoverEmailStatus(handoverId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not queue handover email');
+    }
+  };
+
   const handleDownloadHandoverPdf = async () => {
     if (lastHandoverId == null) return;
     setPdfLoading(true);
@@ -148,12 +184,13 @@ export function TechnicianDeployPage() {
               employeeNo: recipient.employeeNo,
               handoverDate: isoDate,
               handoverRemarks: handoverRemarks.trim() || null,
+              handledByName: session.fullName,
             },
           });
           setLastHandoverId(result.handoverId);
           toast.success('Asset deployed');
           setSaving(false);
-          await handleSendHandoverEmail(result.handoverId);
+          void handleQueueHandoverEmail(result.handoverId);
           return;
         } else {
           await deployLaptopPlaceFn({
@@ -162,6 +199,7 @@ export function TechnicianDeployPage() {
               staffId: session.staffId,
               handoverDate: isoDate,
               handoverRemarks: handoverRemarks.trim() || null,
+              handledByName: session.fullName,
             },
           });
         }

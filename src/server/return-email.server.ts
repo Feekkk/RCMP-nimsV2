@@ -1,11 +1,13 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { ReturnEmailData } from '@/lib/return-email-types';
 import { RETURN_IT_CC } from '@/lib/return-email-types';
 import type { SendReturnEmailResult } from '@/lib/return-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
 import { escapeHtml, sendNotificationEmail } from '@/server/email.server';
+import { loadLogoBuffer } from '@/server/pdf-form-common.server';
+import { markReturnEmailStatus } from '@/server/return-email-repo.server';
+import { buildReturnPdfFromData } from '@/server/return-pdf.server';
+import { getReturnNotificationData } from '@/server/return-pdf-repo.server';
 
 const LOGO_CID = 'unikl-logo';
 
@@ -125,10 +127,9 @@ function buildPlainText(data: ReturnEmailData): string {
 }
 
 function loadLogoAttachment() {
-  const path = join(process.cwd(), 'src', 'assets', 'unikl-logo.png');
   return {
     filename: 'unikl-logo.png',
-    content: readFileSync(path),
+    content: loadLogoBuffer(),
     contentType: 'image/png',
     cid: LOGO_CID,
   };
@@ -139,39 +140,59 @@ export async function sendReturnEmail(returnId: number): Promise<SendReturnEmail
     throw new Error(EMAIL_NOT_CONFIGURED_MESSAGE);
   }
 
-  const { getReturnEmailData } = await import('@/server/return-email-repo.server');
-  const { generateReturnPdfBuffer } = await import('@/server/return-pdf.server');
+  await markReturnEmailStatus(returnId, 'sending').catch(() => {});
 
-  const data = await getReturnEmailData(returnId);
-  if (!data) {
-    throw new Error(
-      'The return notification requires a staff handover recipient. Returns without a staff recipient cannot send an email.',
-    );
+  try {
+    const data = await getReturnNotificationData(returnId);
+    if (!data) {
+      throw new Error('This return record could not be found. Refresh the page and try again.');
+    }
+
+    const email = data.recipientEmail?.trim();
+    if (!email || !email.includes('@')) {
+      throw new Error(
+        `Staff recipient "${data.recipientName}" has no email in the directory. Add an email address in staff records before sending.`,
+      );
+    }
+
+    const emailData: ReturnEmailData = { ...data, recipientEmail: email };
+    const pdfBuffer = await buildReturnPdfFromData(data);
+    const filename = `return-${returnId}-asset-${data.assetId}.pdf`;
+    const subject = `UNIKL RCMP — Notebook/Desktop Return (Asset ${data.assetId})`;
+
+    const result = await sendNotificationEmail({
+      to: email,
+      cc: RETURN_IT_CC,
+      subject,
+      text: buildPlainText(emailData),
+      html: buildReturnEmailHtml(emailData),
+      attachments: [
+        loadLogoAttachment(),
+        {
+          filename,
+          content: Buffer.from(pdfBuffer),
+          contentType: 'application/pdf',
+        },
+      ],
+    });
+
+    await markReturnEmailStatus(returnId, 'sent').catch(() => {});
+
+    return {
+      messageId: result.messageId,
+      to: email,
+      cc: RETURN_IT_CC,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'The return email failed to send.';
+    await markReturnEmailStatus(returnId, 'failed', message).catch(() => {});
+    throw err;
   }
+}
 
-  const pdfBuffer = await generateReturnPdfBuffer(returnId);
-  const filename = `return-${returnId}-asset-${data.assetId}.pdf`;
-  const subject = `UNIKL RCMP — Notebook/Desktop Return (Asset ${data.assetId})`;
-
-  const result = await sendNotificationEmail({
-    to: data.recipientEmail,
-    cc: RETURN_IT_CC,
-    subject,
-    text: buildPlainText(data),
-    html: buildReturnEmailHtml(data),
-    attachments: [
-      loadLogoAttachment(),
-      {
-        filename,
-        content: Buffer.from(pdfBuffer),
-        contentType: 'application/pdf',
-      },
-    ],
+/** Fire-and-forget: lets the caller respond immediately while the PDF/email work continues in the background. */
+export function queueReturnEmail(returnId: number): void {
+  void sendReturnEmail(returnId).catch((err) => {
+    console.error(`[return-email] background send failed for return ${returnId}:`, err);
   });
-
-  return {
-    messageId: result.messageId,
-    to: data.recipientEmail,
-    cc: RETURN_IT_CC,
-  };
 }

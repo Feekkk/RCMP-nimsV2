@@ -5,6 +5,7 @@ export type MicrosoftAuthConfig = {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
+  mobileRedirectUris: string[];
   /** Restrict sign-in to these email domains (e.g. rcmp-grc.gc.ca). Empty = any. */
   allowedEmailDomains: string[];
 };
@@ -24,13 +25,34 @@ export function getMicrosoftAuthConfig(): MicrosoftAuthConfig | null {
     ? domainsRaw.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean)
     : [];
 
+  const mobileRaw = process.env.AZURE_MOBILE_REDIRECT_URIS?.trim() ?? '';
+  const mobileRedirectUris = mobileRaw
+    ? mobileRaw.split(',').map((d) => d.trim()).filter(Boolean)
+    : [];
+
   return {
     tenantId,
     clientId,
     clientSecret,
     redirectUri,
+    mobileRedirectUris,
     allowedEmailDomains,
   };
+}
+
+export function resolveMicrosoftRedirectUri(
+  config: MicrosoftAuthConfig,
+  requested?: string | null,
+): string {
+  const trimmed = requested?.trim();
+  if (trimmed) {
+    const allowed = new Set([config.redirectUri, ...config.mobileRedirectUris]);
+    if (!allowed.has(trimmed)) {
+      throw new Error('The redirect URI is not authorized for this application.');
+    }
+    return trimmed;
+  }
+  return config.redirectUri;
 }
 
 export function microsoftAuthority(tenantId: string): string {

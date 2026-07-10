@@ -1,5 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
-import type { HandoverPdfData } from '@/lib/handover-pdf-types';
+import type { HandoverNotificationData } from '@/lib/handover-pdf-types';
 import { getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
@@ -10,12 +10,14 @@ type HandoverRow = RowDataPacket & {
   handover_remarks: string | null;
   employee_no: string | null;
   recipient_name: string | null;
+  recipient_email: string | null;
   department: string | null;
   brand: string | null;
   model: string | null;
   category: string | null;
   serial_num: string | null;
   remarks: string | null;
+  handled_by_name: string | null;
   handed_by_oid: string | null;
   handed_by_role: string | null;
 };
@@ -25,13 +27,19 @@ function formatDateOnly(val: Date | string): string {
   return String(val).slice(0, 10);
 }
 
-export async function getHandoverPdfData(handoverId: number): Promise<HandoverPdfData | null> {
+/**
+ * Single query (+ Azure lookup only when the technician name wasn't captured at handover time) shared
+ * by both the handover PDF and the handover notification email — avoids duplicate DB/Graph round-trips.
+ */
+export async function getHandoverNotificationData(
+  handoverId: number,
+): Promise<HandoverNotificationData | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<HandoverRow[]>(
     `SELECT h.handover_id, h.asset_id, h.handover_date, h.handover_remarks,
-            hs.employee_no, s.full_name AS recipient_name, s.department,
+            hs.employee_no, s.full_name AS recipient_name, s.email AS recipient_email, s.department,
             l.brand, l.model, l.category, l.serial_num, l.remarks,
-            u.oid AS handed_by_oid, r.name AS handed_by_role
+            h.handled_by_name, u.oid AS handed_by_oid, r.name AS handed_by_role
      FROM handover h
      INNER JOIN laptop l ON l.asset_id = h.asset_id
      INNER JOIN users u ON u.id = h.user_id
@@ -51,7 +59,8 @@ export async function getHandoverPdfData(handoverId: number): Promise<HandoverPd
     );
   }
 
-  const handedByName = await getDisplayNameByOid(row.handed_by_oid);
+  const handedByName =
+    row.handled_by_name?.trim() || (await getDisplayNameByOid(row.handed_by_oid));
 
   const itemName =
     row.category?.trim() ||
@@ -62,6 +71,7 @@ export async function getHandoverPdfData(handoverId: number): Promise<HandoverPd
     assetId: row.asset_id,
     handoverDate: formatDateOnly(row.handover_date),
     recipientName: row.recipient_name,
+    recipientEmail: row.recipient_email?.trim() || null,
     employeeNo: row.employee_no,
     employeeDesignation: row.department?.trim() || '—',
     itemName,

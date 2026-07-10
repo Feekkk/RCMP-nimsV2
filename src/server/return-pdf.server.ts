@@ -104,6 +104,12 @@ function buildTemplate(): Template {
   };
 }
 
+let cachedTemplate: Template | null = null;
+function getTemplate(): Template {
+  if (!cachedTemplate) cachedTemplate = buildTemplate();
+  return cachedTemplate;
+}
+
 function buildInputs(data: ReturnPdfData, logo: string): Record<string, string>[] {
   const remarks =
     data.returnRemarks && data.returnRemarks !== '—'
@@ -135,19 +141,23 @@ function buildInputs(data: ReturnPdfData, logo: string): Record<string, string>[
   ];
 }
 
+export async function buildReturnPdfFromData(data: ReturnPdfData): Promise<Uint8Array> {
+  const logo = loadLogoBase64();
+  return generate({
+    template: getTemplate(),
+    inputs: buildInputs(data, logo),
+    plugins: { text, image },
+  });
+}
+
 export async function generateReturnPdfBuffer(returnId: number): Promise<Uint8Array> {
-  const { getReturnPdfData } = await import('@/server/return-pdf-repo.server');
-  const data = await getReturnPdfData(returnId);
+  const { getReturnNotificationData } = await import('@/server/return-pdf-repo.server');
+  const data = await getReturnNotificationData(returnId);
   if (!data) {
     throw new Error('This return record could not be found. Refresh the page and try again.');
   }
 
-  const logo = loadLogoBase64();
-  return generate({
-    template: buildTemplate(),
-    inputs: buildInputs(data, logo),
-    plugins: { text, image },
-  });
+  return buildReturnPdfFromData(data);
 }
 
 export async function generateReturnPdfBase64(returnId: number): Promise<string> {

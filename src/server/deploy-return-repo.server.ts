@@ -191,9 +191,9 @@ export async function deployLaptopToStaff(input: DeployLaptopStaffInput) {
   try {
     await conn.beginTransaction();
     const [handoverResult] = await conn.execute(
-      `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks)
-       VALUES (?, ?, ?, ?)`,
-      [input.assetId, input.staffId, input.handoverDate, input.handoverRemarks ?? null],
+      `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks, handled_by_name)
+       VALUES (?, ?, ?, ?, ?)`,
+      [input.assetId, input.staffId, input.handoverDate, input.handoverRemarks ?? null, input.handledByName],
     );
     const handoverId = (handoverResult as { insertId: number }).insertId;
     await conn.execute(
@@ -220,9 +220,9 @@ export async function deployLaptopToPlace(input: DeployLaptopPlaceInput) {
   try {
     await conn.beginTransaction();
     const [handoverResult] = await conn.execute(
-      `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks)
-       VALUES (?, ?, ?, ?)`,
-      [input.assetId, input.staffId, input.handoverDate, input.handoverRemarks ?? null],
+      `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks, handled_by_name)
+       VALUES (?, ?, ?, ?, ?)`,
+      [input.assetId, input.staffId, input.handoverDate, input.handoverRemarks ?? null, input.handledByName],
     );
     const handoverId = (handoverResult as { insertId: number }).insertId;
     await conn.execute(`UPDATE laptop SET status_id = ? WHERE asset_id = ?`, [
@@ -297,8 +297,8 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
 
     const [insertResult] = await conn.execute(
       `INSERT INTO handover_return
-        (handover_staff_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks, return_status_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        (handover_staff_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks, return_status_id, returned_by_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         input.handoverStaffId,
         input.returnedBy,
@@ -308,6 +308,7 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
         input.condition ?? null,
         input.returnRemarks ?? null,
         statusId,
+        input.returnedByName,
       ],
     );
     await conn.execute(`UPDATE laptop SET status_id = ? WHERE asset_id = ?`, [
@@ -345,8 +346,8 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
 
     const [insertResult] = await conn.execute(
       `INSERT INTO handover_return
-        (handover_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks, return_status_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        (handover_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks, return_status_id, returned_by_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         input.handoverId,
         input.returnedBy,
@@ -356,6 +357,7 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
         input.condition ?? null,
         input.returnRemarks ?? null,
         statusId,
+        input.returnedByName,
       ],
     );
     await conn.execute(`UPDATE laptop SET status_id = ? WHERE asset_id = ?`, [

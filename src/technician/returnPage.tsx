@@ -16,7 +16,11 @@ import {
   returnPlaceFn,
 } from '@/server/deploy-return.functions';
 import { generateReturnPdfFn } from '@/server/return-pdf.functions';
-import { sendReturnEmailFn } from '@/server/return-email.functions';
+import {
+  getReturnEmailStatusFn,
+  queueReturnEmailFn,
+  sendReturnEmailFn,
+} from '@/server/return-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { ReturnDetailsFields } from '@/technician/deploy-return-fields';
 import { STATUS_ID } from '@/lib/asset-status-actions';
@@ -151,6 +155,38 @@ export function TechnicianReturnPage() {
     }
   };
 
+  const pollReturnEmailStatus = async (returnId: number) => {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        const status = await getReturnEmailStatusFn({ data: returnId });
+        if (!status || status.status === 'pending' || status.status === 'sending') continue;
+        if (status.status === 'sent') {
+          setEmailSent(true);
+          toast.success('Return email sent to the staff recipient');
+        } else {
+          toast.error(
+            status.error ?? 'Could not send return email automatically. Use the button below to retry.',
+          );
+        }
+        return;
+      } catch {
+        return;
+      }
+    }
+  };
+
+  /** Queues the email in the background so the technician isn't blocked waiting for PDF generation + SMTP. */
+  const handleQueueReturnEmail = async (returnId: number) => {
+    try {
+      await queueReturnEmailFn({ data: returnId });
+      toast('Return recorded. Sending confirmation email in the background…');
+      void pollReturnEmailStatus(returnId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not queue return email');
+    }
+  };
+
   const handleDownloadReturnPdf = async () => {
     if (lastReturnId == null) return;
     setPdfLoading(true);
@@ -210,6 +246,7 @@ export function TechnicianReturnPage() {
               returnPlace: returnPlace.trim() || null,
               condition,
               returnRemarks: returnRemarks.trim() || null,
+              returnedByName: session.fullName,
             },
           });
           returnId = result.returnId;
@@ -223,6 +260,7 @@ export function TechnicianReturnPage() {
               returnPlace: returnPlace.trim() || null,
               condition,
               returnRemarks: returnRemarks.trim() || null,
+              returnedByName: session.fullName,
             },
           });
           returnId = result.returnId;
@@ -246,7 +284,7 @@ export function TechnicianReturnPage() {
         toast.success('Asset returned');
         setSaving(false);
         if (openCtx.kind === 'laptop' && openCtx.record.type === 'staff') {
-          await handleSendReturnEmail(returnId);
+          void handleQueueReturnEmail(returnId);
         }
         return;
       }

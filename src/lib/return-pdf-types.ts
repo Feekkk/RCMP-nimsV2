@@ -16,3 +16,16 @@ export type ReturnPdfData = {
   handoverByName: string;
   handoverByDesignation: string;
 };
+
+/** Superset of ReturnPdfData used to build both the PDF and the notification email from a single DB fetch. */
+export type ReturnNotificationData = ReturnPdfData & {
+  recipientEmail: string | null;
+};
+
+export type ReturnEmailStatus = 'pending' | 'sending' | 'sent' | 'failed';
+
+export type ReturnEmailStatusInfo = {
+  status: ReturnEmailStatus;
+  error: string | null;
+  sentAt: string | null;
+};

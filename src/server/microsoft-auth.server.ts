@@ -2,6 +2,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import {
   getMicrosoftAuthConfig,
   microsoftAuthority,
+  resolveMicrosoftRedirectUri,
   type MicrosoftAuthConfig,
 } from '@/lib/microsoft-auth-config';
 import { loginMicrosoftUser, type MicrosoftLoginResult } from '@/server/auth-repo.server';
@@ -78,12 +79,13 @@ export function buildMicrosoftAuthorizeUrl(config: MicrosoftAuthConfig, state: s
 async function exchangeCodeForTokens(
   config: MicrosoftAuthConfig,
   code: string,
+  redirectUri: string,
 ): Promise<TokenResponse> {
   const body = new URLSearchParams({
     client_id: config.clientId,
     client_secret: config.clientSecret,
     code,
-    redirect_uri: config.redirectUri,
+    redirect_uri: redirectUri,
     grant_type: 'authorization_code',
     scope: SCOPES.join(' '),
   });
@@ -141,15 +143,33 @@ function resolveEmail(profile: GraphMe, allowedDomains: string[]): string {
   return raw;
 }
 
-export function getMicrosoftLoginRedirect(): { url: string; state: string } {
+export function buildMicrosoftAuthorizeUrlForRedirect(
+  config: MicrosoftAuthConfig,
+  state: string,
+  redirectUri: string,
+): string {
+  const params = new URLSearchParams({
+    client_id: config.clientId,
+    response_type: 'code',
+    redirect_uri: redirectUri,
+    response_mode: 'query',
+    scope: SCOPES.join(' '),
+    state,
+    prompt: 'select_account',
+  });
+  return `${microsoftAuthority(config.tenantId)}/authorize?${params.toString()}`;
+}
+
+export function getMicrosoftLoginRedirect(redirectUri?: string | null): { url: string; state: string } {
   const config = getMicrosoftAuthConfig();
   if (!config) {
     throw new Error(
       'Microsoft sign-in is not set up on this server. Contact your administrator or use another sign-in option.',
     );
   }
+  const resolvedRedirect = resolveMicrosoftRedirectUri(config, redirectUri);
   const state = createMicrosoftOAuthState(config);
-  return { url: buildMicrosoftAuthorizeUrl(config, state), state };
+  return { url: buildMicrosoftAuthorizeUrlForRedirect(config, state, resolvedRedirect), state };
 }
 
 function parseOAuthStatePayload(config: MicrosoftAuthConfig, state: string): OAuthStatePayload | null {
@@ -163,7 +183,11 @@ function parseOAuthStatePayload(config: MicrosoftAuthConfig, state: string): OAu
   }
 }
 
-export async function completeMicrosoftLogin(code: string, state: string): Promise<MicrosoftLoginResult> {
+export async function completeMicrosoftLogin(
+  code: string,
+  state: string,
+  redirectUri?: string | null,
+): Promise<MicrosoftLoginResult> {
   const config = getMicrosoftAuthConfig();
   if (!config) {
     throw new Error(
@@ -175,7 +199,8 @@ export async function completeMicrosoftLogin(code: string, state: string): Promi
     throw new Error('Your sign-in session expired. Go back to the sign-in page and start again.');
   }
 
-  const tokens = await exchangeCodeForTokens(config, code);
+  const resolvedRedirect = resolveMicrosoftRedirectUri(config, redirectUri);
+  const tokens = await exchangeCodeForTokens(config, code, resolvedRedirect);
   const profile = await fetchGraphProfile(tokens.access_token!);
   const email = resolveEmail(profile, config.allowedEmailDomains);
 
