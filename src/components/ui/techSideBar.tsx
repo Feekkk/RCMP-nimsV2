@@ -8,6 +8,7 @@ import {
   FileBarChart,
   Laptop,
   LayoutDashboard,
+  LogOut,
   Network,
   Package,
   Trash2,
@@ -15,6 +16,7 @@ import {
   UserCircle,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NimsLogo } from '@/components/brand/NimsLogo';
@@ -114,6 +116,7 @@ function NavCollapsible({
 export interface TechSideBarProps extends React.HTMLAttributes<HTMLElement> {
   /** Omit outer &lt;aside&gt; wrapper (e.g. inside a mobile sheet). */
   embedded?: boolean;
+  onSignOut?: () => void;
 }
 
 function TechSideBarNav() {
@@ -186,7 +189,7 @@ function TechSideBarNav() {
 }
 
 const TechSideBar = React.forwardRef<HTMLElement, TechSideBarProps>(function TechSideBar(
-  { className, embedded, ...props },
+  { className, embedded, onSignOut, ...props },
   ref,
 ) {
   const inner = (
@@ -198,6 +201,19 @@ const TechSideBar = React.forwardRef<HTMLElement, TechSideBarProps>(function Tec
       <ScrollArea className="min-h-0 flex-1">
         <TechSideBarNav />
       </ScrollArea>
+      {onSignOut ? (
+        <div className="shrink-0 border-t border-border p-3">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onSignOut}
+            className="h-10 w-full justify-start gap-2.5 rounded-[10px] px-3 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4 shrink-0 opacity-80" />
+            Sign out
+          </Button>
+        </div>
+      ) : null}
     </>
   );
 

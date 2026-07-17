@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Download, LayoutDashboard, Settings, Users } from 'lucide-react';
+import { Download, LayoutDashboard, LogOut, Settings, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 
@@ -39,6 +40,7 @@ function NavLink({
 
 export interface AdminSideBarProps extends React.HTMLAttributes<HTMLElement> {
   embedded?: boolean;
+  onSignOut?: () => void;
 }
 
 function AdminSideBarNav() {
@@ -75,7 +77,7 @@ function AdminSideBarNav() {
 }
 
 const AdminSideBar = React.forwardRef<HTMLElement, AdminSideBarProps>(function AdminSideBar(
-  { className, embedded, ...props },
+  { className, embedded, onSignOut, ...props },
   ref,
 ) {
   const inner = (
@@ -89,6 +91,19 @@ const AdminSideBar = React.forwardRef<HTMLElement, AdminSideBarProps>(function A
       <ScrollArea className="min-h-0 flex-1">
         <AdminSideBarNav />
       </ScrollArea>
+      {onSignOut ? (
+        <div className="shrink-0 border-t border-border p-3">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onSignOut}
+            className="h-10 w-full justify-start gap-2.5 rounded-[10px] px-3 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4 shrink-0 opacity-80" />
+            Sign out
+          </Button>
+        </div>
+      ) : null}
     </>
   );
 

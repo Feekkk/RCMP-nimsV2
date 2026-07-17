@@ -1,12 +1,13 @@
 import { useEffect, type ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { LogOut, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AdminSideBar } from '@/components/ui/adminSidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { clearAllSessions, hasAdminSession, isStaffRole, readTechnicianSession } from '@/lib/auth-session';
 import { AssetLookupButton } from '@/technician/asset-lookup';
+import { AskAiLink } from '@/components/ask-ai-link';
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <div className="absolute -top-[160px] right-[8%] h-[480px] w-[480px] rounded-full bg-lavender/[0.08] blur-[90px]" />
       </div>
 
-      <AdminSideBar className="sticky top-0 z-40 hidden h-svh shrink-0 md:flex" />
+      <AdminSideBar className="sticky top-0 z-40 hidden h-svh shrink-0 md:flex" onSignOut={handleSignOut} />
 
       <div className="relative flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md">
@@ -59,7 +60,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="flex h-full w-[min(20rem,85vw)] flex-col p-0">
-                  <AdminSideBar embedded className="min-h-0 flex-1 overflow-hidden" />
+                  <AdminSideBar embedded className="min-h-0 flex-1 overflow-hidden" onSignOut={handleSignOut} />
                 </SheetContent>
               </Sheet>
               <div className="min-w-0">
@@ -70,16 +71,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-[8px] text-muted-foreground hover:text-foreground"
-                onClick={handleSignOut}
-                title="Sign out"
-                type="button"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
+              <AskAiLink to="/admin/prompt" />
             </div>
           </div>
         </header>

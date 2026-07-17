@@ -22,6 +22,7 @@ import { Route as TechnicianRequestLogRouteImport } from './routes/technician/re
 import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
 import { Route as TechnicianReportRouteImport } from './routes/technician/report'
 import { Route as TechnicianRepairRouteImport } from './routes/technician/repair'
+import { Route as TechnicianPromptRouteImport } from './routes/technician/prompt'
 import { Route as TechnicianProfileRouteImport } from './routes/technician/profile'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
@@ -36,6 +37,7 @@ import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminRequestRouteImport } from './routes/admin/request'
+import { Route as AdminPromptRouteImport } from './routes/admin/prompt'
 import { Route as AdminNetworkRouteImport } from './routes/admin/network'
 import { Route as AdminLaptopRouteImport } from './routes/admin/laptop'
 import { Route as AdminExportRouteImport } from './routes/admin/export'
@@ -137,6 +139,11 @@ const TechnicianRepairRoute = TechnicianRepairRouteImport.update({
   path: '/technician/repair',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicianPromptRoute = TechnicianPromptRouteImport.update({
+  id: '/technician/prompt',
+  path: '/technician/prompt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianProfileRoute = TechnicianProfileRouteImport.update({
   id: '/technician/profile',
   path: '/technician/profile',
@@ -205,6 +212,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
 const AdminRequestRoute = AdminRequestRouteImport.update({
   id: '/admin/request',
   path: '/admin/request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPromptRoute = AdminPromptRouteImport.update({
+  id: '/admin/prompt',
+  path: '/admin/prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminNetworkRoute = AdminNetworkRouteImport.update({
@@ -397,6 +409,7 @@ export interface FileRoutesByFullPath {
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
+  '/admin/prompt': typeof AdminPromptRoute
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -411,6 +424,7 @@ export interface FileRoutesByFullPath {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
+  '/technician/prompt': typeof TechnicianPromptRoute
   '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
@@ -461,6 +475,7 @@ export interface FileRoutesByTo {
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
+  '/admin/prompt': typeof AdminPromptRoute
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -475,6 +490,7 @@ export interface FileRoutesByTo {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
+  '/technician/prompt': typeof TechnicianPromptRoute
   '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
@@ -526,6 +542,7 @@ export interface FileRoutesById {
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
+  '/admin/prompt': typeof AdminPromptRoute
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -540,6 +557,7 @@ export interface FileRoutesById {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
+  '/technician/prompt': typeof TechnicianPromptRoute
   '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
@@ -592,6 +610,7 @@ export interface FileRouteTypes {
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
+    | '/admin/prompt'
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
@@ -606,6 +625,7 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
+    | '/technician/prompt'
     | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
@@ -656,6 +676,7 @@ export interface FileRouteTypes {
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
+    | '/admin/prompt'
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
@@ -670,6 +691,7 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
+    | '/technician/prompt'
     | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
@@ -720,6 +742,7 @@ export interface FileRouteTypes {
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
+    | '/admin/prompt'
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
@@ -734,6 +757,7 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
+    | '/technician/prompt'
     | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
@@ -785,6 +809,7 @@ export interface RootRouteChildren {
   AdminExportRoute: typeof AdminExportRoute
   AdminLaptopRoute: typeof AdminLaptopRoute
   AdminNetworkRoute: typeof AdminNetworkRoute
+  AdminPromptRoute: typeof AdminPromptRoute
   AdminRequestRoute: typeof AdminRequestRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -799,6 +824,7 @@ export interface RootRouteChildren {
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
   TechnicianProfileRoute: typeof TechnicianProfileRoute
+  TechnicianPromptRoute: typeof TechnicianPromptRoute
   TechnicianRepairRoute: typeof TechnicianRepairRoute
   TechnicianReportRoute: typeof TechnicianReportRoute
   TechnicianRequestAssetsRoute: typeof TechnicianRequestAssetsRoute
@@ -933,6 +959,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianRepairRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technician/prompt': {
+      id: '/technician/prompt'
+      path: '/technician/prompt'
+      fullPath: '/technician/prompt'
+      preLoaderRoute: typeof TechnicianPromptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technician/profile': {
       id: '/technician/profile'
       path: '/technician/profile'
@@ -1029,6 +1062,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/request'
       fullPath: '/admin/request'
       preLoaderRoute: typeof AdminRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/prompt': {
+      id: '/admin/prompt'
+      path: '/admin/prompt'
+      fullPath: '/admin/prompt'
+      preLoaderRoute: typeof AdminPromptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/network': {
@@ -1300,6 +1340,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminExportRoute: AdminExportRoute,
   AdminLaptopRoute: AdminLaptopRoute,
   AdminNetworkRoute: AdminNetworkRoute,
+  AdminPromptRoute: AdminPromptRoute,
   AdminRequestRoute: AdminRequestRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
@@ -1314,6 +1355,7 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
   TechnicianProfileRoute: TechnicianProfileRoute,
+  TechnicianPromptRoute: TechnicianPromptRoute,
   TechnicianRepairRoute: TechnicianRepairRoute,
   TechnicianReportRoute: TechnicianReportRoute,
   TechnicianRequestAssetsRoute: TechnicianRequestAssetsRoute,
