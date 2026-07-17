@@ -191,7 +191,16 @@ export default defineConfig(({ mode }) => {
   }
 
   // Server-side OAuth / DB (not exposed to client bundle)
-  const serverEnv = loadEnv(mode, process.cwd(), ["AZURE_", "MYSQL_", "SMTP_", "CRON_", "OVERDUE_"]);
+  const serverEnv = loadEnv(mode, process.cwd(), [
+    "AZURE_",
+    "MYSQL_",
+    "SMTP_",
+    "CRON_",
+    "OVERDUE_",
+    "DATABASE_",
+    "OPENROUTER_",
+    "API_JWT_",
+  ]);
   for (const [key, value] of Object.entries(serverEnv)) {
     if (process.env[key] === undefined) {
       process.env[key] = value;

@@ -1,3 +1,5 @@
+import { loadServerEnv } from '@/server/env.server';
+
 /** Server-only Microsoft Entra ID (Azure AD) OAuth settings. */
 
 export type MicrosoftAuthConfig = {
@@ -11,6 +13,7 @@ export type MicrosoftAuthConfig = {
 };
 
 export function getMicrosoftAuthConfig(): MicrosoftAuthConfig | null {
+  loadServerEnv();
   const tenantId = process.env.AZURE_TENANT_ID?.trim();
   const clientId = process.env.AZURE_CLIENT_ID?.trim();
   const clientSecret = process.env.AZURE_CLIENT_SECRET?.trim();

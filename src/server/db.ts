@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import type { Pool, PoolConnection, PoolOptions } from 'mysql2/promise';
-import '@/server/env.server';
+import { loadServerEnv } from '@/server/env.server';
 
 type MysqlPromise = typeof import('mysql2/promise');
 
@@ -68,6 +68,7 @@ function mysqlPoolOptions(): PoolOptions {
 }
 
 export function getDbPool(): Pool {
+  loadServerEnv();
   if (!pool) {
     const mysql = loadMysql();
     const databaseUrl = process.env.DATABASE_URL?.trim();

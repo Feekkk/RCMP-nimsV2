@@ -1,3 +1,5 @@
+import { loadServerEnv } from '@/server/env.server';
+
 /** Server-only SMTP settings for notification mail (M365 or local Mailpit). Not stored in DB. */
 
 export type MicrosoftEmailConfig = {
@@ -30,6 +32,7 @@ export function isEmailConfigured(): boolean {
 }
 
 export function getMicrosoftEmailConfig(): MicrosoftEmailConfig | null {
+  loadServerEnv();
   const mailpit = isMailpitMode();
   const user = process.env.SMTP_USER?.trim();
   const password = process.env.SMTP_PASSWORD?.trim();
