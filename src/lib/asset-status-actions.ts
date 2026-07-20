@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { ClipboardCheck, Reply, Trash2, Truck } from 'lucide-react';
+import { Reply, Trash2, Truck } from 'lucide-react';
 import type { AssetKind, StatusId } from '@/lib/inventory-schema';
 
 /** status_id values from database/schema.sql */
@@ -20,7 +20,7 @@ export type AssetStatusAction = {
   icon: LucideIcon;
   /** Tailwind classes for icon button (outline-style, semantic color). */
   buttonClassName: string;
-  /** Direct status update (assign). */
+  /** Direct status update without navigation. */
   mode: 'status';
   targetStatusId: StatusId;
 } | {
@@ -38,15 +38,6 @@ export type AssetStatusAction = {
 
 const actionBtn =
   'border shadow-sm hover:opacity-90 disabled:opacity-50';
-
-const ASSIGN_ACTION: AssetStatusAction = {
-  key: 'assign',
-  label: 'Assign',
-  mode: 'status',
-  targetStatusId: STATUS_ID.ASSIGN,
-  icon: ClipboardCheck,
-  buttonClassName: `${actionBtn} border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 dark:hover:bg-indigo-900`,
-};
 
 const DEPLOY_ACTION: AssetStatusAction = {
   key: 'deploy',
@@ -77,10 +68,10 @@ const DISPOSE_ACTION: AssetStatusAction = {
 
 /** Unified asset lifecycle — see status.md (applies to laptop, av, network) */
 const LIFECYCLE_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
-  [STATUS_ID.NEW]: [ASSIGN_ACTION, DEPLOY_ACTION],
+  [STATUS_ID.NEW]: [DEPLOY_ACTION],
   [STATUS_ID.ASSIGN]: [DEPLOY_ACTION],
   [STATUS_ID.DEPLOY]: [RETURN_ACTION],
-  [STATUS_ID.RETURN]: [ASSIGN_ACTION, DISPOSE_ACTION],
+  [STATUS_ID.RETURN]: [DEPLOY_ACTION, DISPOSE_ACTION],
 };
 
 export function getAssetStatusActions(_kind: AssetKind, statusId: number): AssetStatusAction[] {

@@ -33,3 +33,15 @@ export type UpdateStaffInput = {
   phone?: string | null;
   remarks?: string | null;
 };
+
+export type StaffHandoverAsset = {
+  assetId: number;
+  brand: string | null;
+  model: string | null;
+  category: string | null;
+  serialNum: string | null;
+  statusId: number;
+  handoverId: number;
+  handoverDate: string;
+  handoverRemarks: string | null;
+};

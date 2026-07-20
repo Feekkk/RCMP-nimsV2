@@ -19,3 +19,10 @@ export const updateStaffFn = createServerFn({ method: 'POST' })
     const { updateStaff } = await import('@/server/staff-repo.server');
     return updateStaff(data);
   });
+
+export const listStaffHandoverAssetsFn = createServerFn({ method: 'GET' })
+  .inputValidator((employeeNo: string) => employeeNo)
+  .handler(async ({ data: employeeNo }) => {
+    const { listStaffHandoverAssets } = await import('@/server/staff-repo.server');
+    return listStaffHandoverAssets(employeeNo);
+  });

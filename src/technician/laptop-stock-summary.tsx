@@ -2,7 +2,7 @@ import type { ElementType } from 'react';
 import { Laptop as LaptopIcon, Monitor } from 'lucide-react';
 import { isDesktopCategory, isNotebookCategory } from '@/hooks/assetid-generator';
 import { formatStatusLabel, type LaptopAsset } from '@/lib/inventory-schema';
-import { STAFF_DIVISIONS } from '@/lib/staff-schema';
+import { STAFF_DIVISIONS, type StaffDivision } from '@/lib/staff-schema';
 import { cn } from '@/lib/utils';
 
 export type LaptopFormFactorFilter = 'all' | 'laptop' | 'desktop';
@@ -60,18 +60,43 @@ function StatusMetricGrid({
   );
 }
 
-function DivisionSplit({ rows }: { rows: LabelCount[] }) {
+function DivisionSplit({
+  rows,
+  formFactor,
+  divisionFilter,
+  formFactorFilter,
+  onDivisionClick,
+}: {
+  rows: LabelCount[];
+  formFactor: 'laptop' | 'desktop';
+  divisionFilter: StaffDivision | null;
+  formFactorFilter: LaptopFormFactorFilter;
+  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: StaffDivision) => void;
+}) {
   return (
     <div className="grid grid-cols-2 gap-2">
-      {rows.map(({ label, count }) => (
-        <div
-          key={label}
-          className="flex items-center justify-between gap-2 rounded-[10px] bg-background/80 px-3 py-2.5 ring-1 ring-border/50"
-        >
-          <span className="text-xs font-medium capitalize text-muted-foreground">{label}</span>
-          <span className="text-lg font-bold tabular-nums text-foreground">{count}</span>
-        </div>
-      ))}
+      {rows.map(({ label, count }) => {
+        const division = label as StaffDivision;
+        const isActive = divisionFilter === division && formFactorFilter === formFactor;
+
+        return (
+          <button
+            key={label}
+            type="button"
+            title={`Filter table by ${label}`}
+            onClick={() => onDivisionClick(formFactor, division)}
+            className={cn(
+              'flex items-center justify-between gap-2 rounded-[10px] bg-background/80 px-3 py-2.5 text-left ring-1 ring-border/50 transition-colors',
+              'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              isActive && 'bg-primary/10 ring-2 ring-primary/40',
+              count === 0 && 'opacity-60',
+            )}
+          >
+            <span className="text-xs font-medium capitalize text-muted-foreground">{label}</span>
+            <span className="text-lg font-bold tabular-nums text-foreground">{count}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -87,7 +112,9 @@ function FormFactorCard({
   iconTint,
   statusFilter,
   formFactorFilter,
+  divisionFilter,
   onStatusClick,
+  onDivisionClick,
 }: {
   icon: ElementType;
   label: string;
@@ -99,7 +126,9 @@ function FormFactorCard({
   iconTint: string;
   statusFilter: number | null;
   formFactorFilter: LaptopFormFactorFilter;
+  divisionFilter: StaffDivision | null;
   onStatusClick: (formFactor: 'laptop' | 'desktop', statusId: number) => void;
+  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: StaffDivision) => void;
 }) {
   return (
     <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
@@ -131,7 +160,13 @@ function FormFactorCard({
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Academic / Services
           </p>
-          <DivisionSplit rows={divisionRows} />
+          <DivisionSplit
+            rows={divisionRows}
+            formFactor={formFactor}
+            divisionFilter={divisionFilter}
+            formFactorFilter={formFactorFilter}
+            onDivisionClick={onDivisionClick}
+          />
         </div>
       </div>
     </div>
@@ -161,14 +196,18 @@ type LaptopAssetStockSummaryProps = {
   items: LaptopAsset[];
   statusFilter: number | null;
   formFactorFilter: LaptopFormFactorFilter;
+  divisionFilter: StaffDivision | null;
   onStatusClick: (formFactor: 'laptop' | 'desktop', statusId: number) => void;
+  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: StaffDivision) => void;
 };
 
 export function LaptopAssetStockSummary({
   items,
   statusFilter,
   formFactorFilter,
+  divisionFilter,
   onStatusClick,
+  onDivisionClick,
 }: LaptopAssetStockSummaryProps) {
   const laptopItems = items.filter((item) => isNotebookCategory(item.category));
   const desktopItems = items.filter((item) => isDesktopCategory(item.category));
@@ -186,7 +225,9 @@ export function LaptopAssetStockSummary({
         iconTint="bg-sky-500/15 text-sky-700 dark:text-sky-300"
         statusFilter={statusFilter}
         formFactorFilter={formFactorFilter}
+        divisionFilter={divisionFilter}
         onStatusClick={onStatusClick}
+        onDivisionClick={onDivisionClick}
       />
       <FormFactorCard
         icon={Monitor}
@@ -199,7 +240,9 @@ export function LaptopAssetStockSummary({
         iconTint="bg-violet-500/15 text-violet-700 dark:text-violet-300"
         statusFilter={statusFilter}
         formFactorFilter={formFactorFilter}
+        divisionFilter={divisionFilter}
         onStatusClick={onStatusClick}
+        onDivisionClick={onDivisionClick}
       />
     </div>
   );

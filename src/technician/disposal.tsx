@@ -1,4 +1,4 @@
-import { useMemo, useState, type ElementType } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Laptop, Network, Search, Trash2, Tv } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,7 +27,6 @@ import { createDisposalFn } from '@/server/disposal.functions';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { cn } from '@/lib/utils';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 
 type EligibleRow = {
@@ -55,61 +54,6 @@ function KindCell({ kind }: { kind: AssetKind }) {
       <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       {ASSET_KIND_LABEL[kind]}
     </span>
-  );
-}
-
-const KIND_COUNT_META: Record<
-  AssetKind,
-  { icon: ElementType; label: string; tint: string }
-> = {
-  laptop: {
-    icon: Laptop,
-    label: ASSET_KIND_LABEL.laptop,
-    tint: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
-  },
-  av: {
-    icon: Tv,
-    label: ASSET_KIND_LABEL.av,
-    tint: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
-  },
-  network: {
-    icon: Network,
-    label: ASSET_KIND_LABEL.network,
-    tint: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
-  },
-};
-
-function KindCountCard({
-  kind,
-  count,
-  active,
-  onClick,
-}: {
-  kind: AssetKind;
-  count: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  const { icon: Icon, label, tint } = KIND_COUNT_META[kind];
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-3 rounded-[12px] border border-border bg-card px-4 py-3 text-left transition-colors',
-        'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        active && 'border-primary/40 bg-primary/5 ring-1 ring-primary/30',
-        count === 0 && 'opacity-70',
-      )}
-    >
-      <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px]', tint)}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-xl font-bold tabular-nums leading-tight text-foreground">{count}</p>
-      </div>
-    </button>
   );
 }
 
@@ -169,12 +113,6 @@ export function TechnicianDisposalPage() {
     }
     return rows.sort((a, b) => a.assetId - b.assetId);
   }, [laptop.items, av.items, network.items]);
-
-  const eligibleByKind = useMemo(() => {
-    const counts: Record<AssetKind, number> = { laptop: 0, av: 0, network: 0 };
-    for (const row of eligible) counts[row.kind]++;
-    return counts;
-  }, [eligible]);
 
   const filtered = useMemo(() => {
     let list = eligible;
@@ -280,18 +218,6 @@ export function TechnicianDisposalPage() {
       )}
 
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {(['laptop', 'av', 'network'] as const).map((kind) => (
-            <KindCountCard
-              key={kind}
-              kind={kind}
-              count={eligibleByKind[kind]}
-              active={kindFilter === kind}
-              onClick={() => setKindFilter((prev) => (prev === kind ? 'all' : kind))}
-            />
-          ))}
-        </div>
-
         <div className="rounded-[12px] border border-border/70 bg-card/40 p-4 sm:p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <DatePickerField

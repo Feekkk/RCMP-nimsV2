@@ -110,6 +110,11 @@ function formatTrailWhen(at: string): string {
   return Number.isNaN(d.getTime()) ? at : d.toLocaleString();
 }
 
+function assetHeaderSubtitle(asset: AssetDetail): string {
+  const parts = [asset.category?.trim(), asset.model?.trim(), asset.brand?.trim()].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : '—';
+}
+
 function AssetSpecs({ asset }: { asset: AssetDetail }) {
   if (asset.kind === 'laptop') {
     return (
@@ -140,6 +145,7 @@ function AssetSpecs({ asset }: { asset: AssetDetail }) {
   }
   return (
     <>
+      <DetailItem label="Category" value={asset.category} />
       <DetailItem label="Brand" value={asset.brand} />
       <DetailItem label="Model" value={asset.model} />
       <DetailItem label="Serial" value={asset.serialNum} />
@@ -355,10 +361,7 @@ export function AssetViewContent({
               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
                 Asset <code className="text-lg">#{asset.assetId}</code>
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {asset.model ?? '—'}
-                {asset.brand ? ` · ${asset.brand}` : ''}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{assetHeaderSubtitle(asset)}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {assetAge && <p className="text-sm text-muted-foreground">{assetAge}</p>}

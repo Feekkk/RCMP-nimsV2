@@ -113,7 +113,14 @@ export function useAssets<K extends AssetKind>(kind: K) {
 }
 
 export function filterBySearch<
-  T extends { model: string | null; assetId: number; serialNum?: string | null; brand?: string | null; remarks?: string | null },
+  T extends {
+    model: string | null;
+    assetId: number;
+    serialNum?: string | null;
+    brand?: string | null;
+    remarks?: string | null;
+    category?: string | null;
+  },
 >(items: T[], query: string, extra?: (item: T) => string): T[] {
   const q = query.trim().toLowerCase();
   if (!q) return items;
@@ -123,6 +130,7 @@ export function filterBySearch<
       String(item.assetId),
       item.serialNum,
       item.brand,
+      item.category,
       item.remarks,
       extra?.(item) ?? '',
     ]

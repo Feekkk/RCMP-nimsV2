@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ClipboardList, Laptop, Network, Tv } from 'lucide-react';
+import { Laptop, Network, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DASHBOARD_REQUEST_WORKFLOW_KEYS,
@@ -91,7 +91,10 @@ export function TechnicianDashboardPage() {
           tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
           href="/technician/network"
         />
-        <TotalRequestStatCard stats={stats?.totalRequest ?? EMPTY_REQUEST_STATS} href="/technician/requests" />
+        <TotalRequestStatCard
+          stats={stats?.totalRequest ?? EMPTY_REQUEST_STATS}
+          href="/technician/requests"
+        />
       </div>
 
       <div className="mb-6">

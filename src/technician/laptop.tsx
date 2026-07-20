@@ -24,6 +24,7 @@ import {
 	normalizeCategory,
 } from '@/hooks/assetid-generator';
 import { usePagination } from '@/hooks/use-pagination';
+import type { StaffDivision } from '@/lib/staff-schema';
 import {
 	LaptopAssetStockSummary,
 	type LaptopFormFactorFilter,
@@ -62,6 +63,7 @@ export function TechnicianLaptopPage() {
 	const [search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<number | null>(null);
 	const [formFactorFilter, setFormFactorFilter] = useState<LaptopFormFactorFilter>('all');
+	const [divisionFilter, setDivisionFilter] = useState<StaffDivision | null>(null);
 	const [categoryView, setCategoryView] = useState<LaptopCategoryView>('all');
 	const { items, isLoading, error, updateStatus } = useAssets('laptop');
 
@@ -75,15 +77,29 @@ export function TechnicianLaptopPage() {
 		setStatusFilter(statusId);
 	};
 
+	const handleDivisionMetricClick = (formFactor: 'laptop' | 'desktop', division: StaffDivision) => {
+		if (divisionFilter === division && formFactorFilter === formFactor) {
+			setDivisionFilter(null);
+			setFormFactorFilter('all');
+			return;
+		}
+		setFormFactorFilter(formFactor);
+		setDivisionFilter(division);
+	};
+
 	const filtered = useMemo(() => {
 		const byFormFactor = items.filter((item) => matchesFormFactor(item.category, formFactorFilter));
-		const byCategory = byFormFactor.filter((item) => matchesLaptopCategory(item.category, categoryView));
+		const byDivision =
+			divisionFilter == null
+				? byFormFactor
+				: byFormFactor.filter((item) => item.recipientDivision === divisionFilter);
+		const byCategory = byDivision.filter((item) => matchesLaptopCategory(item.category, categoryView));
 		const bySearch = filterBySearch(byCategory, search, (c) => c.category ?? '');
 		return filterByStatus(bySearch, statusFilter);
-	}, [items, search, statusFilter, categoryView, formFactorFilter]);
+	}, [items, search, statusFilter, categoryView, formFactorFilter, divisionFilter]);
 
 	const pagination = usePagination(filtered, {
-		resetKey: `${search}|${statusFilter ?? ''}|${categoryView}|${formFactorFilter}`,
+		resetKey: `${search}|${statusFilter ?? ''}|${categoryView}|${formFactorFilter}|${divisionFilter ?? ''}`,
 	});
 
 	const nextCategoryView = nextLaptopCategoryView(categoryView);
@@ -99,7 +115,9 @@ export function TechnicianLaptopPage() {
 				items={items}
 				statusFilter={statusFilter}
 				formFactorFilter={formFactorFilter}
+				divisionFilter={divisionFilter}
 				onStatusClick={handleStatusMetricClick}
+				onDivisionClick={handleDivisionMetricClick}
 			/>
 
 			<div className="mb-4 flex items-center justify-between">
@@ -117,7 +135,10 @@ export function TechnicianLaptopPage() {
 					statusFilter={statusFilter}
 					onStatusFilterChange={(statusId) => {
 						setStatusFilter(statusId);
-						if (statusId == null) setFormFactorFilter('all');
+						if (statusId == null) {
+							setFormFactorFilter('all');
+							setDivisionFilter(null);
+						}
 					}}
 					leading={
 						<Button size="sm" variant="outline" asChild>
@@ -174,7 +195,7 @@ export function TechnicianLaptopPage() {
 								) : filtered.length === 0 ? (
 									<TableRow>
 										<TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-											No assets match your search, status, form factor, or category filter.
+											No assets match your search, status, division, form factor, or category filter.
 										</TableCell>
 									</TableRow>
 								) : (

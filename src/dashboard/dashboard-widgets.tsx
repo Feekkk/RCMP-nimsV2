@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  DASHBOARD_ASSET_STATUS_IDS,
+  DASHBOARD_ASSET_DEPLOY_STATUS_IDS,
+  DASHBOARD_ASSET_STORE_STATUS_IDS,
   DASHBOARD_REQUEST_STATUS_LABEL,
   DASHBOARD_REQUEST_WORKFLOW_KEYS,
   DASHBOARD_REQUEST_WORKFLOW_LABEL,
@@ -52,6 +53,96 @@ function StatusBreakdown({
         </li>
       ))}
     </ul>
+  );
+}
+
+type InventoryStatView = 'store' | 'deploy';
+
+const INVENTORY_VIEW_STATUS_IDS: Record<InventoryStatView, readonly number[]> = {
+  store: DASHBOARD_ASSET_STORE_STATUS_IDS,
+  deploy: DASHBOARD_ASSET_DEPLOY_STATUS_IDS,
+};
+
+function StatCardShell({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
+      {children}
+    </div>
+  );
+}
+
+export function InventoryStatCard({
+  icon: Icon,
+  label,
+  stats,
+  tint,
+  href,
+}: {
+  icon: ElementType;
+  label: string;
+  stats: DashboardAssetKindStats;
+  tint: string;
+  href?: string;
+}) {
+  const [view, setView] = useState<InventoryStatView>('store');
+
+  const header = (
+    <div className="flex items-center gap-3">
+      <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-[11px] text-muted-foreground">{stats.total} total assets</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <StatCardShell>
+      {href ? (
+        <Link
+          to={href}
+          className="-m-1 block rounded-xl p-1 outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {header}
+        </Link>
+      ) : (
+        header
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        {(['store', 'deploy'] as const).map((key) => {
+          const count = key === 'store' ? stats.store : stats.deploy;
+          const isActive = view === key;
+
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setView(key)}
+              className={cn(
+                'rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                isActive
+                  ? 'border-[oklch(0.55_0.14_290)]/40 bg-lavender/10 shadow-sm'
+                  : 'border-border/70 bg-muted/30 hover:bg-muted/50',
+              )}
+            >
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                {key === 'store' ? 'Store' : 'Deploy'}
+              </p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{count}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      <StatusBreakdown items={stats.byStatus} statusIds={INVENTORY_VIEW_STATUS_IDS[view]} />
+    </StatCardShell>
   );
 }
 
@@ -109,68 +200,6 @@ function KindBreakdown({
   );
 }
 
-function StatCardShell({
-  href,
-  children,
-}: {
-  href?: string;
-  children: ReactNode;
-}) {
-  const className =
-    'flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm';
-
-  if (href) {
-    return (
-      <Link to={href} className="block outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl">
-        <div className={className}>{children}</div>
-      </Link>
-    );
-  }
-
-  return <div className={className}>{children}</div>;
-}
-
-export function InventoryStatCard({
-  icon: Icon,
-  label,
-  stats,
-  tint,
-  href,
-}: {
-  icon: ElementType;
-  label: string;
-  stats: DashboardAssetKindStats;
-  tint: string;
-  href?: string;
-}) {
-  return (
-    <StatCardShell href={href}>
-      <div className="flex items-center gap-3">
-        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className="text-[11px] text-muted-foreground">{stats.total} total assets</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Store</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{stats.store}</p>
-        </div>
-        <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Deploy</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{stats.deploy}</p>
-        </div>
-      </div>
-
-      <StatusBreakdown items={stats.byStatus} statusIds={DASHBOARD_ASSET_STATUS_IDS} />
-    </StatCardShell>
-  );
-}
-
 export function TotalRequestStatCard({
   stats,
   href,
@@ -178,17 +207,30 @@ export function TotalRequestStatCard({
   stats: DashboardRequestStats;
   href?: string;
 }) {
-  return (
-    <StatCardShell href={href}>
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-lavender/15 text-[oklch(0.45_0.12_290)]">
-          <ClipboardList className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total request</p>
-          <p className="text-[11px] text-muted-foreground">Equipment requests</p>
-        </div>
+  const header = (
+    <div className="flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-lavender/15 text-[oklch(0.45_0.12_290)]">
+        <ClipboardList className="h-5 w-5" />
       </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total request</p>
+        <p className="text-[11px] text-muted-foreground">Equipment requests</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <StatCardShell>
+      {href ? (
+        <Link
+          to={href}
+          className="-m-1 block rounded-xl p-1 outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {header}
+        </Link>
+      ) : (
+        header
+      )}
 
       <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Open requests</p>

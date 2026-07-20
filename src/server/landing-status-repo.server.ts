@@ -79,7 +79,7 @@ async function loadSampleAssets(): Promise<LandingSampleAsset[]> {
       FROM av a INNER JOIN status s ON s.status_id = a.status_id
       ORDER BY a.asset_id DESC LIMIT 1)
      UNION ALL
-     (SELECT 'network' AS kind, n.asset_id, n.brand, n.model, n.serial_num, NULL AS category, n.status_id, s.name AS status_name
+     (SELECT 'network' AS kind, n.asset_id, n.brand, n.model, n.serial_num, n.category, n.status_id, s.name AS status_name
       FROM network n INNER JOIN status s ON s.status_id = n.status_id
       ORDER BY n.asset_id DESC LIMIT 1)`,
   );
@@ -93,7 +93,7 @@ async function loadSampleAssets(): Promise<LandingSampleAsset[]> {
         ? [brand, model].filter(Boolean).join(' ') || model
         : kind === 'av'
           ? r.category?.trim() || model
-          : model;
+          : r.category?.trim() || model;
     const detail =
       kind === 'network'
         ? `Asset #${r.asset_id}`

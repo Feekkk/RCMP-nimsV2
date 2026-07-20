@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Plus, Search, Users } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { Laptop, Loader2, Plus, Search, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,12 +30,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { usePagination } from '@/hooks/use-pagination';
-import type { StaffDirectoryRow, StaffDivision } from '@/lib/staff-schema';
+import type { StaffDirectoryRow, StaffDivision, StaffHandoverAsset } from '@/lib/staff-schema';
 import { STAFF_DIVISIONS } from '@/lib/staff-schema';
+import { formatDateLabel } from '@/lib/date-format';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
+import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { createStaffFn, listStaffDirectoryFn, updateStaffFn } from '@/server/staff.functions';
+import { createStaffFn, listStaffDirectoryFn, listStaffHandoverAssetsFn, updateStaffFn } from '@/server/staff.functions';
 
 type StaffFormState = {
   employeeNo: string;
@@ -94,6 +97,8 @@ export function TechnicianHandoverStaffPage() {
   const [editing, setEditing] = useState<StaffDirectoryRow | null>(null);
   const [form, setForm] = useState<StaffFormState>(EMPTY_STAFF_FORM);
   const [saving, setSaving] = useState(false);
+  const [handoverAssets, setHandoverAssets] = useState<StaffHandoverAsset[]>([]);
+  const [handoverAssetsLoading, setHandoverAssetsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,18 +125,43 @@ export function TechnicianHandoverStaffPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_STAFF_FORM);
+    setHandoverAssets([]);
     setDialogOpen(true);
   };
 
   const openEdit = (row: StaffDirectoryRow) => {
     setEditing(row);
     setForm(staffToForm(row));
+    setHandoverAssets([]);
     setDialogOpen(true);
   };
 
+  const loadHandoverAssets = useCallback(async (employeeNo: string) => {
+    setHandoverAssetsLoading(true);
+    try {
+      setHandoverAssets(await listStaffHandoverAssetsFn({ data: employeeNo }));
+    } catch (e) {
+      setHandoverAssets([]);
+      toast.error(e instanceof Error ? e.message : 'Failed to load handed-over assets');
+    } finally {
+      setHandoverAssetsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!dialogOpen || !editing) {
+      setHandoverAssets([]);
+      return;
+    }
+    void loadHandoverAssets(editing.employeeNo);
+  }, [dialogOpen, editing, loadHandoverAssets]);
+
   const handleDialogOpenChange = (open: boolean) => {
     setDialogOpen(open);
-    if (!open) setEditing(null);
+    if (!open) {
+      setEditing(null);
+      setHandoverAssets([]);
+    }
   };
 
   const handleSave = async () => {
@@ -275,12 +305,12 @@ export function TechnicianHandoverStaffPage() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-md rounded-[14px]">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-[14px]">
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit staff' : 'Add staff'}</DialogTitle>
             <DialogDescription>
               {editing
-                ? 'Update staff details in the handover directory. Employee number, full name, and division are required.'
+                ? 'Update staff details and view laptops currently handed over to this person.'
                 : 'Add a staff member to the handover directory. Employee number, full name, and division are required.'}
             </DialogDescription>
           </DialogHeader>
@@ -352,6 +382,69 @@ export function TechnicianHandoverStaffPage() {
               />
             </FormField>
           </div>
+          {editing ? (
+            <div className="space-y-3 border-t border-border pt-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Handed-over assets</h3>
+                <p className="text-xs text-muted-foreground">
+                  Laptops currently assigned to this staff member (not yet returned).
+                </p>
+              </div>
+              <div className="overflow-x-auto rounded-[10px] border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
+                      <TableHead className="whitespace-nowrap font-semibold">Asset ID</TableHead>
+                      <TableHead className="min-w-[120px] font-semibold">Model</TableHead>
+                      <TableHead className="whitespace-nowrap font-semibold">Brand</TableHead>
+                      <TableHead className="whitespace-nowrap font-semibold">Serial</TableHead>
+                      <TableHead className="whitespace-nowrap font-semibold">Handover date</TableHead>
+                      <TableHead className="whitespace-nowrap font-semibold">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {handoverAssetsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                          Loading assets…
+                        </TableCell>
+                      </TableRow>
+                    ) : handoverAssets.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                          No laptops currently handed over to this staff member.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      handoverAssets.map((asset) => (
+                        <TableRow key={asset.handoverId} className="hover:bg-muted/50">
+                          <TableCell>
+                            <Link
+                              to="/technician/asset/$kind/$assetId"
+                              params={{ kind: 'laptop', assetId: asset.assetId }}
+                              className="inline-flex items-center gap-1.5 text-primary underline-offset-2 hover:underline"
+                            >
+                              <Laptop className="h-3.5 w-3.5 text-muted-foreground" />
+                              <code className="text-xs">{asset.assetId}</code>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground">{asset.model ?? '—'}</TableCell>
+                          <TableCell className="text-muted-foreground">{asset.brand ?? '—'}</TableCell>
+                          <TableCell className="text-muted-foreground">{asset.serialNum ?? '—'}</TableCell>
+                          <TableCell className="whitespace-nowrap text-muted-foreground">
+                            {formatDateLabel(asset.handoverDate)}
+                          </TableCell>
+                          <TableCell>
+                            <AssetStatusBadge statusId={asset.statusId} />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : null}
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" className="rounded-[8px]" onClick={() => handleDialogOpenChange(false)}>
               Cancel

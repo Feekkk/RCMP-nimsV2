@@ -70,9 +70,9 @@ const MOCK_CSV: Record<AssetKind, string> = {
   av: `asset_id,asset_id_old,category,brand,model,serial_num,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
 ,AV-LEG-001,display,Samsung,QM65C,SM-QM65-100,1/6/23,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx),,,,,,
 ,AV-DEPLOY-01,AV-DEP-88,projector,Epson,EB-L200F,EPS-L200F-99,,,,,,,,3,Training room,tech@example.com,Main,-,-,15/1/26,Installed in room`,
-  network: `asset_id,serial_num,brand,model,mac_address,ip_address,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
-,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,10/3/23,PO-NET-55,1/4/23,DO-N-12,,,4500.00,7,Rack 2 (auto 24-xx-xxx),,,,,,
-,SW-DEPLOY-01,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,,,,,,,,3,IDF East,tech@example.com,Annex,-,-,1/2/26,East wing`,
+  network: `asset_id,category,serial_num,brand,model,mac_address,ip_address,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
+,switch,CS-9200-24P,Cisco,C9200-24P,00:11:22:33:44:55,10.10.1.20,10/3/23,PO-NET-55,1/4/23,DO-N-12,,,4500.00,7,Rack 2 (auto 24-xx-xxx),,,,,,
+,AP,SW-DEPLOY-01,Aruba,AP-505,00:aa:bb:cc:dd:ee,10.10.2.60,,,,,,,,3,IDF East,tech@example.com,Annex,-,-,1/2/26,East wing`,
 };
 
 function normalizeHeader(h: string) {
@@ -423,6 +423,7 @@ function parseNetworkRows(headers: string[], rows: string[][]) {
 
     networkRows.push({
       ...(assetId !== undefined ? { assetId } : {}),
+      category: optionalCell(row, col.get('category')!),
       serialNum: optionalCell(row, col.get('serial_num')!),
       brand: optionalCell(row, col.get('brand')!),
       model: optionalCell(row, col.get('model')!),

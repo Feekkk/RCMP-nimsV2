@@ -109,6 +109,7 @@ export type AvAsset = {
 export type NetworkAsset = {
   kind: 'network';
   assetId: number;
+  category: string | null;
   serialNum: string | null;
   brand: string | null;
   model: string | null;
@@ -150,6 +151,7 @@ export type CreateAvInput = {
 
 export type CreateNetworkInput = {
   assetId: number;
+  category?: string | null;
   serialNum?: string | null;
   brand?: string | null;
   model?: string | null;
@@ -266,6 +268,7 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
   ],
   network: [
     'asset_id',
+    'category',
     'serial_num',
     'brand',
     'model',

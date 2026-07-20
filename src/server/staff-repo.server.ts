@@ -1,5 +1,11 @@
 import type { RowDataPacket } from 'mysql2';
-import type { CreateStaffInput, StaffDirectoryRow, StaffDivision, UpdateStaffInput } from '@/lib/staff-schema';
+import type {
+  CreateStaffInput,
+  StaffDirectoryRow,
+  StaffDivision,
+  StaffHandoverAsset,
+  UpdateStaffInput,
+} from '@/lib/staff-schema';
 import { STAFF_DIVISIONS } from '@/lib/staff-schema';
 import { getDbPool } from '@/server/db';
 
@@ -128,4 +134,51 @@ export async function updateStaff(input: UpdateStaffInput): Promise<StaffDirecto
     throw new Error('Staff could not be updated. Try again.');
   }
   return updated;
+}
+
+function formatDateOnly(val: Date | string): string {
+  if (val instanceof Date) return val.toISOString().slice(0, 10);
+  return String(val).slice(0, 10);
+}
+
+export async function listStaffHandoverAssets(employeeNo: string): Promise<StaffHandoverAsset[]> {
+  const trimmed = employeeNo.trim();
+  if (!trimmed) return [];
+
+  const pool = getDbPool();
+  const [rows] = await pool.query<
+    (RowDataPacket & {
+      asset_id: number;
+      brand: string | null;
+      model: string | null;
+      category: string | null;
+      serial_num: string | null;
+      status_id: number;
+      handover_id: number;
+      handover_date: Date | string;
+      handover_remarks: string | null;
+    })[]
+  >(
+    `SELECT l.asset_id, l.brand, l.model, l.category, l.serial_num, l.status_id,
+            h.handover_id, h.handover_date, h.handover_remarks
+     FROM handover h
+     INNER JOIN handover_staff hs ON hs.handover_id = h.handover_id
+     INNER JOIN laptop l ON l.asset_id = h.asset_id
+     LEFT JOIN handover_return hr ON hr.handover_staff_id = hs.handover_staff_id
+     WHERE hs.employee_no = ? AND hr.return_id IS NULL
+     ORDER BY h.handover_date DESC, h.handover_id DESC`,
+    [trimmed],
+  );
+
+  return rows.map((r) => ({
+    assetId: r.asset_id,
+    brand: r.brand,
+    model: r.model,
+    category: r.category,
+    serialNum: r.serial_num,
+    statusId: r.status_id,
+    handoverId: r.handover_id,
+    handoverDate: formatDateOnly(r.handover_date),
+    handoverRemarks: r.handover_remarks,
+  }));
 }

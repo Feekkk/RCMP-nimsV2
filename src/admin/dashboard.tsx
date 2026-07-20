@@ -2,9 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Laptop, Network, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  DASHBOARD_REQUEST_WORKFLOW_KEYS,
   type DashboardAssetKindStats,
-  type DashboardRequestStats,
   type TechnicianDashboardData,
 } from '@/lib/dashboard-schema';
 import { ASSET_KIND_LABEL } from '@/lib/inventory-schema';
@@ -13,7 +11,6 @@ import { AdminShell } from '@/admin/admin-shell';
 import {
   InventoryStatCard,
   RequestTimetable,
-  TotalRequestStatCard,
   useDashboardMonthState,
 } from '@/dashboard/dashboard-widgets';
 
@@ -23,12 +20,6 @@ const EMPTY_ASSET_STATS: DashboardAssetKindStats = {
   total: 0,
   registeredTotal: 0,
   byStatus: [],
-};
-
-const EMPTY_REQUEST_STATS: DashboardRequestStats = {
-  total: 0,
-  byWorkflow: DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => ({ key, count: 0 })),
-  poolByKind: [],
 };
 
 export function AdminDashboardPage() {
@@ -69,7 +60,7 @@ export function AdminDashboardPage() {
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <InventoryStatCard
           icon={Laptop}
           label={ASSET_KIND_LABEL.laptop}
@@ -91,7 +82,6 @@ export function AdminDashboardPage() {
           tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
           href="/admin/network"
         />
-        <TotalRequestStatCard stats={stats?.totalRequest ?? EMPTY_REQUEST_STATS} href="/admin/request" />
       </div>
 
       <div className="mb-6">

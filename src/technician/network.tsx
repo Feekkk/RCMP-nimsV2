@@ -33,7 +33,9 @@ export function TechnicianNetworkPage() {
   const { items, isLoading, error, updateStatus } = useAssets('network');
 
   const filtered = useMemo(() => {
-    const bySearch = filterBySearch(items, search, (item) => item.ipAddress ?? '');
+    const bySearch = filterBySearch(items, search, (item) =>
+      [item.category ?? '', item.ipAddress ?? ''].join(' '),
+    );
     return filterByStatus(bySearch, statusFilter);
   }, [items, search, statusFilter]);
 
@@ -54,7 +56,7 @@ export function TechnicianNetworkPage() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search asset ID, model, IP, MAC…"
+            placeholder="Search asset ID, category, model, IP, MAC…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-10 rounded-[10px] pl-9"
@@ -76,6 +78,7 @@ export function TechnicianNetworkPage() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
                   <TableHead className="whitespace-nowrap font-semibold">ID</TableHead>
+                  <TableHead className="whitespace-nowrap font-semibold">Category</TableHead>
                   <TableHead className="min-w-[180px] font-semibold">Model</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Brand</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">IP</TableHead>
@@ -88,13 +91,13 @@ export function TechnicianNetworkPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
                       No assets match your search or status filter.
                     </TableCell>
                   </TableRow>
@@ -120,6 +123,7 @@ export function TechnicianNetworkPage() {
                           <code className="text-xs">{item.assetId}</code>
                         </Link>
                       </TableCell>
+                      <TableCell className="text-muted-foreground">{item.category ?? '—'}</TableCell>
                       <TableCell className="font-medium text-foreground">
                         <span className="inline-flex items-center gap-1.5">
                           <Server className="h-4 w-4 text-[oklch(0.45_0.12_290)]" />

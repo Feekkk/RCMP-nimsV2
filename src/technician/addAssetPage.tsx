@@ -166,6 +166,7 @@ function AssetForm({
 
   const [macAddress, setMacAddress] = useState('');
   const [ipAddress, setIpAddress] = useState('');
+  const [networkCategory, setNetworkCategory] = useState('');
 
   const [laptopDeployMode, setLaptopDeployMode] = useState<LaptopDeployMode>('staff');
   const [deployRecipient, setDeployRecipient] = useState<StaffRecipient | null>(null);
@@ -338,6 +339,7 @@ function AssetForm({
       } else {
         const networkInput = {
           assetId: id,
+          category: networkCategory.trim() || null,
           serialNum: serialNum.trim() || null,
           brand: brand.trim() || null,
           model: model.trim() || null,
@@ -539,6 +541,14 @@ function AssetForm({
               <section className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Network</p>
                 <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Category">
+                    <Input
+                      value={networkCategory}
+                      onChange={(e) => setNetworkCategory(e.target.value)}
+                      placeholder="switch, router, AP…"
+                      className="rounded-[8px]"
+                    />
+                  </Field>
                   <Field label="MAC address">
                     <Input value={macAddress} onChange={(e) => setMacAddress(e.target.value)} className="rounded-[8px]" />
                   </Field>

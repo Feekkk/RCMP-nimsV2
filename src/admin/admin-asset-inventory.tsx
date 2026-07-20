@@ -1,10 +1,21 @@
 import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
-import { ArrowLeft, Building2, GraduationCap, Laptop as LaptopIcon, Layers, Loader2, Monitor, Package, Briefcase, Truck } from 'lucide-react';
+import { ArrowLeft, Building2, GraduationCap, Laptop as LaptopIcon, Layers, Loader2, Monitor, Package, Briefcase, Search, Truck, Users } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { AdminShell } from '@/admin/admin-shell';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useAssets } from '@/hooks/assets';
 import { isDesktopCategory, isNotebookCategory } from '@/hooks/assetid-generator';
 import {
@@ -20,13 +31,59 @@ import {
   type NetworkAsset,
 } from '@/lib/inventory-schema';
 import { ACTIVITY_CATEGORY_LABEL, type ActivityLogEntry } from '@/lib/activity-log-schema';
-import type { LaptopDepartmentCount } from '@/lib/admin-laptop-insights-schema';
-import { STAFF_DIVISIONS } from '@/lib/staff-schema';
-import { getLaptopTopDepartmentsFn } from '@/server/admin-laptop-insights.functions';
+import type {
+  LaptopDepartmentHandover,
+  LaptopDepartmentStaffHandover,
+} from '@/lib/admin-laptop-insights-schema';
+import { STAFF_DIVISIONS, type StaffDivision } from '@/lib/staff-schema';
+import { getLaptopDepartmentHandoversFn } from '@/server/admin-laptop-insights.functions';
 import { listActivityLogFn } from '@/server/activity-log.functions';
 import { cn } from '@/lib/utils';
 
 const DASHBOARD_STATUS_IDS = [1, 2, 3, 4, 5] as const;
+
+type HandoverInsightFilter = {
+  division: StaffDivision;
+  formFactor: 'laptop' | 'desktop';
+};
+
+function isSameHandoverFilter(a: HandoverInsightFilter | null, b: HandoverInsightFilter | null) {
+  if (!a || !b) return false;
+  return a.division === b.division && a.formFactor === b.formFactor;
+}
+
+function getHandoverAssetIds(
+  items: LaptopAsset[],
+  filter: HandoverInsightFilter,
+): Set<number> {
+  return new Set(
+    items
+      .filter((item) => {
+        if (item.recipientDivision !== filter.division) return false;
+        return filter.formFactor === 'laptop'
+          ? isNotebookCategory(item.category)
+          : isDesktopCategory(item.category);
+      })
+      .map((item) => item.assetId),
+  );
+}
+
+function filterDepartmentsByAssetIds(
+  departments: LaptopDepartmentHandover[],
+  assetIds: Set<number>,
+): LaptopDepartmentHandover[] {
+  return departments
+    .map((department) => ({
+      department: department.department,
+      staff: department.staff
+        .map((member) => ({
+          ...member,
+          assetIds: member.assetIds.filter((assetId) => assetIds.has(assetId)),
+        }))
+        .filter((member) => member.assetIds.length > 0),
+    }))
+    .filter((department) => department.staff.length > 0);
+}
 
 type PlaceAsset = AvAsset | NetworkAsset;
 
@@ -215,7 +272,15 @@ function formatActivityWhen(at: string): string {
   });
 }
 
-function LaptopHandoverSummary({ items }: { items: LaptopAsset[] }) {
+function LaptopHandoverSummary({
+  items,
+  selectedFilter,
+  onSelectFilter,
+}: {
+  items: LaptopAsset[];
+  selectedFilter: HandoverInsightFilter | null;
+  onSelectFilter: (filter: HandoverInsightFilter | null) => void;
+}) {
   const laptopItems = useMemo(
     () => items.filter((item) => isNotebookCategory(item.category)),
     [items],
@@ -278,14 +343,32 @@ function LaptopHandoverSummary({ items }: { items: LaptopAsset[] }) {
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/60 pt-3">
-                  <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Laptop</p>
-                    <p className="mt-0.5 text-lg font-bold tabular-nums">{laptop}</p>
-                  </div>
-                  <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Desktop</p>
-                    <p className="mt-0.5 text-lg font-bold tabular-nums">{desktop}</p>
-                  </div>
+                  {(['laptop', 'desktop'] as const).map((formFactor) => {
+                    const count = formFactor === 'laptop' ? laptop : desktop;
+                    const filter = { division, formFactor };
+                    const isSelected = isSameHandoverFilter(selectedFilter, filter);
+                    const label = formFactor === 'laptop' ? 'Laptop' : 'Desktop';
+                    return (
+                      <button
+                        key={formFactor}
+                        type="button"
+                        onClick={() =>
+                          onSelectFilter(isSelected ? null : filter)
+                        }
+                        className={cn(
+                          'rounded-xl border px-3 py-2 text-left transition-colors',
+                          isSelected
+                            ? 'border-sky-300 bg-sky-50 ring-2 ring-sky-200 dark:border-sky-700 dark:bg-sky-950 dark:ring-sky-800'
+                            : 'border-border/70 bg-card hover:bg-muted/40',
+                        )}
+                      >
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {label}
+                        </p>
+                        <p className="mt-0.5 text-lg font-bold tabular-nums">{count}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -296,17 +379,119 @@ function LaptopHandoverSummary({ items }: { items: LaptopAsset[] }) {
   );
 }
 
-function LaptopInsightsSections() {
-  const [activity, setActivity] = useState<ActivityLogEntry[]>([]);
-  const [departments, setDepartments] = useState<LaptopDepartmentCount[]>([]);
+function countDepartmentFormFactors(
+  staff: LaptopDepartmentStaffHandover[],
+  assetCategoryById: Map<number, string | null>,
+) {
+  let laptop = 0;
+  let desktop = 0;
+
+  for (const member of staff) {
+    for (const assetId of member.assetIds) {
+      const category = assetCategoryById.get(assetId) ?? null;
+      if (isNotebookCategory(category)) laptop += 1;
+      else if (isDesktopCategory(category)) desktop += 1;
+    }
+  }
+
+  return { laptop, desktop };
+}
+
+type StaffHandoverRow = LaptopDepartmentStaffHandover & {
+  department: string;
+};
+
+function matchesStaffSearch(row: StaffHandoverRow, query: string) {
+  return (
+    row.fullName.toLowerCase().includes(query) ||
+    row.employeeNo.toLowerCase().includes(query) ||
+    row.department.toLowerCase().includes(query) ||
+    row.assetIds.some((assetId) => String(assetId).includes(query))
+  );
+}
+
+function StaffHandoverAssetBadges({ assetIds }: { assetIds: number[] }) {
+  if (assetIds.length === 0) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {assetIds.map((assetId) => (
+        <span
+          key={assetId}
+          className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground"
+        >
+          #{assetId}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function StaffHandoverTable({
+  rows,
+  showDepartment = false,
+}: {
+  rows: StaffHandoverRow[];
+  showDepartment?: boolean;
+}) {
+  if (rows.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted-foreground">No staff match your search.</p>;
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
+          {showDepartment ? <TableHead className="min-w-[140px] font-semibold">Department</TableHead> : null}
+          <TableHead className="min-w-[180px] font-semibold">Staff</TableHead>
+          <TableHead className="whitespace-nowrap font-semibold">Employee no.</TableHead>
+          <TableHead className="min-w-[160px] font-semibold">Asset IDs</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={`${row.department}-${row.employeeNo}`}>
+            {showDepartment ? (
+              <TableCell className="align-top text-sm text-muted-foreground">{row.department}</TableCell>
+            ) : null}
+            <TableCell className="align-top font-medium text-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                {row.fullName}
+              </span>
+            </TableCell>
+            <TableCell className="align-top">
+              <code className="text-xs text-muted-foreground">{row.employeeNo}</code>
+            </TableCell>
+            <TableCell className="align-top">
+              <StaffHandoverAssetBadges assetIds={row.assetIds} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function LaptopInsightsSections({
+  items,
+  filter,
+  onClearFilter,
+}: {
+  items: LaptopAsset[];
+  filter: HandoverInsightFilter | null;
+  onClearFilter: () => void;
+}) {
+  const [departments, setDepartments] = useState<LaptopDepartmentHandover[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [log, depts] = await Promise.all([listActivityLogFn(), getLaptopTopDepartmentsFn()]);
-      setActivity(log.filter((entry) => entry.assetKind === 'laptop').slice(0, 5));
-      setDepartments(depts);
+      setDepartments(await getLaptopDepartmentHandoversFn());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load laptop insights');
     } finally {
@@ -318,96 +503,160 @@ function LaptopInsightsSections() {
     void load();
   }, [load]);
 
-  const maxDepartmentCount = departments[0]?.count ?? 0;
+  useEffect(() => {
+    setSearch('');
+  }, [filter]);
+
+  const assetCategoryById = useMemo(
+    () => new Map(items.map((item) => [item.assetId, item.category])),
+    [items],
+  );
+
+  const visibleDepartments = useMemo(() => {
+    if (!filter) return departments;
+    return filterDepartmentsByAssetIds(departments, getHandoverAssetIds(items, filter));
+  }, [departments, filter, items]);
+
+  const staffRows = useMemo<StaffHandoverRow[]>(
+    () =>
+      visibleDepartments.flatMap((department) =>
+        department.staff.map((member) => ({
+          department: department.department,
+          ...member,
+        })),
+      ),
+    [visibleDepartments],
+  );
+
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return staffRows;
+    return staffRows.filter((row) => matchesStaffSearch(row, query));
+  }, [staffRows, search]);
+
+  const filteredDepartments = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return visibleDepartments;
+
+    const grouped = new Map<string, LaptopDepartmentStaffHandover[]>();
+    for (const row of filteredRows) {
+      const staff = grouped.get(row.department) ?? [];
+      staff.push({
+        employeeNo: row.employeeNo,
+        fullName: row.fullName,
+        assetIds: row.assetIds,
+      });
+      grouped.set(row.department, staff);
+    }
+
+    return [...grouped.entries()]
+      .map(([department, staff]) => ({ department, staff }))
+      .sort((a, b) => a.department.localeCompare(b.department));
+  }, [visibleDepartments, filteredRows, search]);
+
+  const isSearching = search.trim().length > 0;
+  const filterLabel = filter
+    ? `${filter.division} · ${filter.formFactor === 'laptop' ? 'Laptop' : 'Desktop'}`
+    : null;
+  const emptyMessage = filter
+    ? `No handovers for ${filterLabel}.`
+    : 'No department handover data yet.';
 
   return (
-    <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="mt-4">
       <Card className="rounded-2xl border-border shadow-sm">
         <CardContent className="p-4 sm:p-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold text-foreground">Recent activity</h2>
-            <p className="text-xs text-muted-foreground">Latest laptop events</p>
-          </div>
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading…
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-2">
+              <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Departments</h2>
+                <p className="text-xs text-muted-foreground">
+                  {filterLabel
+                    ? `${filterLabel} handovers by department and staff`
+                    : 'All laptop handovers by department and staff'}
+                </p>
+              </div>
             </div>
-          ) : activity.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No recent laptop activity.</p>
-          ) : (
-            <ul className="space-y-3">
-              {activity.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="rounded-xl border border-border/70 bg-muted/20 px-3 py-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">{entry.title}</p>
-                      {entry.detail ? (
-                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{entry.detail}</p>
-                      ) : null}
-                    </div>
-                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-                      {formatActivityWhen(entry.at)}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-                    <span className="rounded-full bg-card px-2 py-0.5 font-medium capitalize ring-1 ring-border/60">
-                      {ACTIVITY_CATEGORY_LABEL[entry.category]}
-                    </span>
-                    {entry.assetId != null ? (
-                      <span className="font-mono">#{entry.assetId}</span>
-                    ) : null}
-                    {entry.actor ? <span className="truncate">{entry.actor}</span> : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+            {filter ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 rounded-[8px]"
+                onClick={onClearFilter}
+              >
+                Clear filter
+              </Button>
+            ) : null}
+          </div>
 
-      <Card className="rounded-2xl border-border shadow-sm">
-        <CardContent className="p-4 sm:p-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold text-foreground">Top 5 department</h2>
-            <p className="text-xs text-muted-foreground">By handover volume</p>
-          </div>
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading…
+          {!loading && visibleDepartments.length > 0 ? (
+            <div className="relative mb-4 w-full sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search staff, employee no., department, asset ID…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-10 rounded-[10px] pl-9"
+              />
             </div>
-          ) : departments.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No department handover data yet.</p>
+          ) : null}
+
+          {loading ? (
+            <InsightsLoading />
+          ) : visibleDepartments.length === 0 ? (
+            <InsightsEmpty message={emptyMessage} />
+          ) : isSearching ? (
+            <div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                {filteredRows.length} result{filteredRows.length === 1 ? '' : 's'}
+              </p>
+              <ScrollArea className="h-[min(520px,60vh)] rounded-xl border border-border/70">
+                <div className="overflow-x-auto p-1">
+                  <StaffHandoverTable rows={filteredRows} showDepartment />
+                </div>
+              </ScrollArea>
+            </div>
           ) : (
-            <ul className="space-y-3">
-              {departments.map((row, index) => {
-                const width =
-                  maxDepartmentCount > 0 ? Math.max(8, (row.count / maxDepartmentCount) * 100) : 0;
-                return (
-                  <li key={row.department}>
-                    <div className="mb-1.5 flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lavender/15 text-[11px] font-bold tabular-nums text-[oklch(0.45_0.12_290)]">
-                          {index + 1}
-                        </span>
-                        <span className="truncate text-sm font-medium text-foreground">{row.department}</span>
-                      </div>
-                      <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">{row.count}</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-[oklch(0.55_0.14_290)]"
-                        style={{ width: `${width}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <ScrollArea className="h-[min(520px,60vh)] rounded-xl border border-border/70">
+              <Accordion type="multiple" className="p-2">
+                {filteredDepartments.map((department) => {
+                  const { laptop, desktop } = countDepartmentFormFactors(
+                    department.staff,
+                    assetCategoryById,
+                  );
+                  return (
+                    <AccordionItem
+                      key={department.department}
+                      value={department.department}
+                      className="mb-2 overflow-hidden rounded-xl border border-border/70 px-3 last:mb-0"
+                    >
+                      <AccordionTrigger className="py-3 hover:no-underline">
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3 pr-2 text-left">
+                          <span className="truncate text-sm font-semibold text-foreground">
+                            {department.department}
+                          </span>
+                          <span className="shrink-0 text-[11px] font-medium tabular-nums text-muted-foreground">
+                            Laptop: {laptop} · Desktop: {desktop}
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-3">
+                        <div className="overflow-x-auto rounded-lg border border-border/60">
+                          <StaffHandoverTable
+                            rows={department.staff.map((member) => ({
+                              department: department.department,
+                              ...member,
+                            }))}
+                          />
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </ScrollArea>
           )}
         </CardContent>
       </Card>
@@ -437,16 +686,13 @@ function AvNetworkInsightsSections({
   const categoryCounts = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of items) {
-      const label =
-        kind === 'av'
-          ? (item as AvAsset).category?.trim() || 'Uncategorized'
-          : (item as NetworkAsset).brand?.trim() || 'Uncategorized';
+      const label = item.category?.trim() || 'Uncategorized';
       map.set(label, (map.get(label) ?? 0) + 1);
     }
     return [...map.entries()]
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => b.count - a.count);
-  }, [items, kind]);
+  }, [items]);
 
   const maxCategoryCount = categoryCounts[0]?.count ?? 0;
 
@@ -655,6 +901,8 @@ export function AdminAssetInventoryPage({
   icon: ElementType;
 }) {
   const { items, error } = useAssets(kind);
+  const [handoverFilter, setHandoverFilter] = useState<HandoverInsightFilter | null>(null);
+  const laptopItems = items as LaptopAsset[];
 
   return (
     <AdminShell>
@@ -688,8 +936,16 @@ export function AdminAssetInventoryPage({
 
       {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
 
-      <LaptopHandoverSummary items={items as LaptopAsset[]} />
-      <LaptopInsightsSections />
+      <LaptopHandoverSummary
+        items={laptopItems}
+        selectedFilter={handoverFilter}
+        onSelectFilter={setHandoverFilter}
+      />
+      <LaptopInsightsSections
+        items={laptopItems}
+        filter={handoverFilter}
+        onClearFilter={() => setHandoverFilter(null)}
+      />
     </AdminShell>
   );
 }

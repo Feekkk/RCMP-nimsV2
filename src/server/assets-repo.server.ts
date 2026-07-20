@@ -218,6 +218,7 @@ type AvRow = RowDataPacket &
 type NetworkRow = RowDataPacket &
   PurchaseRow & {
     asset_id: number;
+    category: string | null;
     serial_num: string | null;
     brand: string | null;
     model: string | null;
@@ -289,6 +290,7 @@ function mapNetwork(row: NetworkRow): NetworkAsset {
   return {
     kind: 'network',
     assetId: row.asset_id,
+    category: row.category,
     serialNum: row.serial_num,
     brand: row.brand,
     model: row.model,
@@ -365,10 +367,10 @@ const AV_INSERT = `INSERT INTO av (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 const NETWORK_INSERT = `INSERT INTO network (
-  asset_id, serial_num, brand, model, mac_address, ip_address,
+  asset_id, category, serial_num, brand, model, mac_address, ip_address,
   PO_DATE, PO_NUM, DO_DATE, DO_NUM, INVOICE_DATE, INVOICE_NUM, PURCHASE_COST,
   status_id, remarks
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function laptopParams(input: CreateLaptopInput) {
   return [
@@ -406,6 +408,7 @@ function avParams(input: CreateAvInput) {
 function networkParams(input: CreateNetworkInput) {
   return [
     input.assetId,
+    input.category ?? null,
     input.serialNum ?? null,
     input.brand ?? null,
     input.model ?? null,
