@@ -2,7 +2,15 @@ import type { RowDataPacket } from 'mysql2';
 import { attachDisplayNames, getDirectoryUsersByOids } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
-export type AdminExportKind = 'users' | 'requests' | 'laptop' | 'av' | 'network' | 'staff';
+export type AdminExportKind =
+  | 'users'
+  | 'requests'
+  | 'laptop'
+  | 'av'
+  | 'network'
+  | 'staff'
+  | 'handovers'
+  | 'deployments';
 
 export type AdminExportResult = {
   filename: string;
@@ -143,6 +151,125 @@ export async function exportAdminCsv(kind: AdminExportKind): Promise<AdminExport
       body: toCsv(
         ['employee_no', 'full_name', 'department', 'email', 'phone', 'remarks'],
         rows.map((r) => [r.employee_no, r.full_name, r.department, r.email, r.phone, r.remarks]),
+      ),
+    };
+  }
+
+  if (kind === 'handovers') {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT h.handover_id, h.asset_id, l.category, l.brand, l.model, l.serial_num,
+              h.handover_date, COALESCE(h.handled_by_name, u.email) AS handled_by,
+              hs.employee_no, s.full_name AS recipient, s.department,
+              h.building, h.level, h.zone, h.handler, h.handover_remarks,
+              CASE WHEN hr.return_id IS NULL THEN 'deployed' ELSE 'returned' END AS handover_status,
+              hr.return_date, hr.return_time, hr.return_place, hr.\`condition\` AS return_condition,
+              hr.return_remarks, COALESCE(hr.returned_by_name, ru.email) AS returned_by,
+              h.created_at, h.updated_at
+       FROM handover h
+       INNER JOIN laptop l ON l.asset_id = h.asset_id
+       INNER JOIN users u ON u.id = h.user_id
+       LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
+       LEFT JOIN staff s ON s.employee_no = hs.employee_no
+       LEFT JOIN handover_return hr
+         ON hr.handover_staff_id = hs.handover_staff_id
+         OR (hs.handover_staff_id IS NULL AND hr.handover_id = h.handover_id)
+       LEFT JOIN users ru ON ru.id = hr.returned_by
+       ORDER BY h.handover_date DESC, h.handover_id DESC`,
+    );
+    const headers = [
+      'handover_id',
+      'asset_id',
+      'category',
+      'brand',
+      'model',
+      'serial_num',
+      'handover_date',
+      'handled_by',
+      'employee_no',
+      'recipient',
+      'department',
+      'building',
+      'level',
+      'zone',
+      'handler',
+      'handover_remarks',
+      'handover_status',
+      'return_date',
+      'return_time',
+      'return_place',
+      'return_condition',
+      'return_remarks',
+      'returned_by',
+      'created_at',
+      'updated_at',
+    ];
+    return {
+      filename: `nims-handovers-${stamp}.csv`,
+      contentType: 'text/csv;charset=utf-8',
+      body: toCsv(
+        headers,
+        rows.map((row) => headers.map((header) => row[header])),
+      ),
+    };
+  }
+
+  if (kind === 'deployments') {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT 'av' AS asset_type, d.deployment_id, d.asset_id, a.category, a.brand, a.model,
+              a.serial_num, d.building, d.level, d.zone, d.deployment_date,
+              d.deployment_remarks, u.email AS deployed_by,
+              CASE WHEN r.return_id IS NULL THEN 'deployed' ELSE 'returned' END AS deployment_status,
+              r.return_date, r.return_time, r.return_place, r.\`condition\` AS return_condition,
+              r.return_remarks, ru.email AS returned_by, d.created_at, d.updated_at
+       FROM av_deployment d
+       INNER JOIN av a ON a.asset_id = d.asset_id
+       INNER JOIN users u ON u.id = d.user_id
+       LEFT JOIN av_return r ON r.deployment_id = d.deployment_id
+       LEFT JOIN users ru ON ru.id = r.returned_by
+       UNION ALL
+       SELECT 'network' AS asset_type, d.deployment_id, d.asset_id, NULL AS category, a.brand,
+              a.model, a.serial_num, d.building, d.level, d.zone, d.deployment_date,
+              d.deployment_remarks, u.email AS deployed_by,
+              CASE WHEN r.return_id IS NULL THEN 'deployed' ELSE 'returned' END AS deployment_status,
+              r.return_date, r.return_time, r.return_place, r.\`condition\` AS return_condition,
+              r.return_remarks, ru.email AS returned_by, d.created_at, d.updated_at
+       FROM network_deployment d
+       INNER JOIN network a ON a.asset_id = d.asset_id
+       INNER JOIN users u ON u.id = d.user_id
+       LEFT JOIN network_return r ON r.deployment_id = d.deployment_id
+       LEFT JOIN users ru ON ru.id = r.returned_by
+       ORDER BY deployment_date DESC, deployment_id DESC`,
+    );
+    const headers = [
+      'asset_type',
+      'deployment_id',
+      'asset_id',
+      'category',
+      'brand',
+      'model',
+      'serial_num',
+      'building',
+      'level',
+      'zone',
+      'deployment_date',
+      'deployment_remarks',
+      'deployed_by',
+      'deployment_status',
+      'return_date',
+      'return_time',
+      'return_place',
+      'return_condition',
+      'return_remarks',
+      'returned_by',
+      'created_at',
+      'updated_at',
+    ];
+    return {
+      filename: `nims-deployments-${stamp}.csv`,
+      contentType: 'text/csv;charset=utf-8',
+      body: toCsv(
+        headers,
+        rows.map((row) => headers.map((header) => row[header])),
       ),
     };
   }
