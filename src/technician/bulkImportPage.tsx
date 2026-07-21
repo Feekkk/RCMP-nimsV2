@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { IMPORT_DATE_FORMAT_HINT, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
-import { formatStatusLabel } from '@/lib/inventory-schema';
+import { INVENTORY_STATUSES, formatStatusLabel } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, type AssetKind } from '@/hooks/assets';
 import {
   BULK_IMPORT_REQUIRED,
@@ -118,6 +118,7 @@ function BulkImportWorkspace({
   const fileRef = useRef<HTMLInputElement>(null);
   const [csvText, setCsvText] = useState('');
   const [importing, setImporting] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const { preview, isParsing, parseText, loadMockSample, clearPreview, commit, getTemplate, getMockCsv, columns } =
     useBulkImport();
   const requiredSet = new Set(BULK_IMPORT_REQUIRED[kind]);
@@ -162,6 +163,17 @@ function BulkImportWorkspace({
         ? preview?.avRows
         : preview?.networkRows;
 
+  const loadFile = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+      toast.error('Only .csv files are supported.');
+      return;
+    }
+    const text = await file.text();
+    setCsvText(text);
+    clearPreview();
+    toast.message('File loaded — click Parse preview');
+  };
+
   return (
     <>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -182,94 +194,120 @@ function BulkImportWorkspace({
         </Button>
       </div>
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-2">
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1.35fr_1fr]">
         <Card className="rounded-[14px] border-border shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">CSV template</CardTitle>
-            <CardDescription className="space-y-1">
-              <span className="block">
-                Headers with (<span className="text-destructive">*</span>) are required. Leave{' '}
-                <code className="text-[11px]">asset_id</code> blank to auto-generate from category.
-              </span>
-              {kind === 'laptop' && (
-                <span className="block text-muted-foreground">
-                  When <code className="text-[11px]">status_id</code> is{' '}
-                  <code className="text-[11px]">{BULK_IMPORT_STATUS_DEPLOY}</code> (deploy),{' '}
-                  <code className="text-[11px]">handover_staff_id</code> must be the technician&apos;s
-                  user email and <code className="text-[11px]">handover_date</code> is required.
-                  Dates use {IMPORT_DATE_FORMAT_HINT}.
+          <CardHeader className="pb-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
+                  1
                 </span>
-              )}
-              {(kind === 'av' || kind === 'network') && (
-                <span className="block text-muted-foreground">
-                  When <code className="text-[11px]">status_id</code> is{' '}
-                  <code className="text-[11px]">{BULK_IMPORT_STATUS_DEPLOY}</code> (deploy),{' '}
-                  <code className="text-[11px]">deployment_staff_id</code> must be the
-                  technician&apos;s user email and <code className="text-[11px]">building</code> is
-                  required. level, zone, and deployment_date default to &quot;-&quot; / today if
-                  omitted. Dates use {IMPORT_DATE_FORMAT_HINT}.
-                </span>
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap gap-1.5">
-              {columns[kind].map((col) => (
-                <Badge
-                  key={col}
-                  variant={
-                    requiredSet.has(col)
-                      ? 'default'
-                      : deployRequiredSet.has(col)
-                        ? 'outline'
-                        : 'secondary'
-                  }
-                  className="rounded-[6px] font-mono text-[10px]"
+                <div className="space-y-1">
+                  <CardTitle className="text-base">Prepare your CSV</CardTitle>
+                  <CardDescription>
+                    Leave <code className="text-[11px]">asset_id</code> blank to auto-generate from
+                    category.
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-[8px] gap-1.5"
+                  onClick={() => downloadCsvFile(`${kind}-template.csv`, getTemplate(kind))}
                 >
-                  {col}
-                  {requiredSet.has(col) ? ' *' : deployRequiredSet.has(col) ? ' †' : ''}
-                </Badge>
-              ))}
+                  <Download className="h-3.5 w-3.5" />
+                  Template
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-[8px] gap-1.5"
+                  onClick={() => {
+                    const sample = getMockCsv(kind);
+                    setCsvText(sample);
+                    clearPreview();
+                    toast.message('Sample CSV loaded — click Parse preview');
+                  }}
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  Sample
+                </Button>
+              </div>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              * Always required · † Required when status_id is {BULK_IMPORT_STATUS_DEPLOY}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-[8px] gap-1.5"
-                onClick={() => downloadCsvFile(`${kind}-template.csv`, getTemplate(kind))}
-              >
-                <Download className="h-4 w-4" />
-                Download headers
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-[8px] gap-1.5"
-                onClick={() => {
-                  const sample = getMockCsv(kind);
-                  setCsvText(sample);
-                  clearPreview();
-                  toast.message('Sample CSV loaded — click Parse preview');
-                }}
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                Load sample CSV
-              </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 rounded-[10px] border border-border/70 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Columns
+                </p>
+                <div className="flex gap-3 text-[11px] text-muted-foreground">
+                  <span>
+                    <span className="font-semibold text-foreground">*</span> required
+                  </span>
+                  <span>
+                    <span className="font-semibold text-foreground">†</span> required for deploy
+                    (status {BULK_IMPORT_STATUS_DEPLOY})
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {columns[kind].map((col) => (
+                  <Badge
+                    key={col}
+                    variant={
+                      requiredSet.has(col)
+                        ? 'default'
+                        : deployRequiredSet.has(col)
+                          ? 'outline'
+                          : 'secondary'
+                    }
+                    className="rounded-[6px] font-mono text-[10px]"
+                  >
+                    {col}
+                    {requiredSet.has(col) ? ' *' : deployRequiredSet.has(col) ? ' †' : ''}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-[10px] border border-border/70 bg-muted/40 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                status_id values
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+                {INVENTORY_STATUSES.map((status) => (
+                  <div key={status.statusId} className="flex items-center gap-2 text-xs">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-foreground font-mono text-[10px] font-semibold text-background">
+                      {status.statusId}
+                    </span>
+                    <span className="capitalize text-foreground">
+                      {formatStatusLabel(status.statusId)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-[14px] border-border shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Upload file</CardTitle>
-            <CardDescription>.csv files only</CardDescription>
+        <Card className="flex flex-col rounded-[14px] border-border shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
+                2
+              </span>
+              <div className="space-y-1">
+                <CardTitle className="text-base">Upload your file</CardTitle>
+                <CardDescription>Drop a .csv file or browse from your computer.</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="flex flex-1 flex-col">
             <input
               ref={fileRef}
               type="file"
@@ -277,37 +315,62 @@ function BulkImportWorkspace({
               className="hidden"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (!file) return;
-                const text = await file.text();
-                setCsvText(text);
-                clearPreview();
-                toast.message('File loaded — click Parse preview');
+                if (file) await loadFile(file);
                 e.target.value = '';
               }}
             />
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className="w-full gap-2 rounded-[8px]"
               onClick={() => fileRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={async (e) => {
+                e.preventDefault();
+                setDragActive(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) await loadFile(file);
+              }}
+              className={`flex min-h-[160px] flex-1 flex-col items-center justify-center gap-2 rounded-[10px] border-2 border-dashed p-6 text-center transition-colors ${
+                dragActive
+                  ? 'border-foreground bg-muted/70'
+                  : 'border-border bg-muted/30 hover:border-foreground/40 hover:bg-muted/50'
+              }`}
             >
-              <Upload className="h-4 w-4" />
-              Choose CSV file
-            </Button>
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-background shadow-sm">
+                <Upload className="h-5 w-5 text-muted-foreground" />
+              </span>
+              <span className="text-sm font-medium text-foreground">
+                Drag &amp; drop your CSV here
+              </span>
+              <span className="text-xs text-muted-foreground">
+                or <span className="font-medium underline underline-offset-2">click to browse</span>{' '}
+                · .csv only
+              </span>
+            </button>
           </CardContent>
         </Card>
       </div>
 
       <Card className="mb-4 rounded-[14px] border-border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">CSV data</CardTitle>
-          <CardDescription>
-            Paste rows below, then parse to validate. Dates: {IMPORT_DATE_FORMAT_HINT} (
-            {kind === 'laptop'
-              ? `${PURCHASE_DATE_COLUMNS.join(', ')}, handover_date, warranty_start_date, warranty_end_date`
-              : `${PURCHASE_DATE_COLUMNS.join(', ')}, deployment_date, warranty_start_date, warranty_end_date`}
-            ).
-          </CardDescription>
+          <div className="flex items-start gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
+              3
+            </span>
+            <div className="space-y-1">
+              <CardTitle className="text-base">Review &amp; parse</CardTitle>
+              <CardDescription>
+                Paste rows below, then parse to validate. Dates: {IMPORT_DATE_FORMAT_HINT} (
+                {kind === 'laptop'
+                  ? `${PURCHASE_DATE_COLUMNS.join(', ')}, handover_date, warranty_start_date, warranty_end_date`
+                  : `${PURCHASE_DATE_COLUMNS.join(', ')}, deployment_date, warranty_start_date, warranty_end_date`}
+                ).
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2">

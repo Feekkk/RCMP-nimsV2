@@ -44,6 +44,7 @@ import type {
 import { STAFF_DIVISIONS, type StaffDivision } from '@/lib/staff-schema';
 import { getLaptopDepartmentHandoversFn } from '@/server/admin-laptop-insights.functions';
 import { listActivityLogFn } from '@/server/activity-log.functions';
+import { STATUS_ID } from '@/lib/asset-status-actions';
 import { cn } from '@/lib/utils';
 
 const DASHBOARD_STATUS_IDS = [1, 2, 3, 4, 5] as const;
@@ -119,10 +120,12 @@ function AssetBucketSummaryCard({
     for (const item of bucketItems) {
       map.set(item.statusId, (map.get(item.statusId) ?? 0) + 1);
     }
-    return statusIds.map((statusId) => ({
-      statusId,
-      count: map.get(statusId) ?? 0,
-    }));
+    return statusIds
+      .filter((statusId) => statusId !== STATUS_ID.ASSIGN)
+      .map((statusId) => ({
+        statusId,
+        count: map.get(statusId) ?? 0,
+      }));
   }, [bucketItems, statusIds]);
 
   return (
@@ -302,10 +305,12 @@ function FormFactorSummaryCard({
     for (const item of items) {
       map.set(item.statusId, (map.get(item.statusId) ?? 0) + 1);
     }
-    return DASHBOARD_STATUS_IDS.map((statusId) => ({
-      statusId,
-      count: map.get(statusId) ?? 0,
-    }));
+    return DASHBOARD_STATUS_IDS.filter((statusId) => statusId !== STATUS_ID.ASSIGN).map(
+      (statusId) => ({
+        statusId,
+        count: map.get(statusId) ?? 0,
+      }),
+    );
   }, [items]);
 
   return (
