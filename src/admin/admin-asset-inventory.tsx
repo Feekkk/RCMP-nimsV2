@@ -22,7 +22,6 @@ import {
   DASHBOARD_ASSET_DEPLOY_STATUS_IDS,
   DASHBOARD_ASSET_STORE_STATUS_IDS,
 } from '@/lib/dashboard-schema';
-import { CAMPUS_BUILDINGS } from '@/lib/deploy-return-schema';
 import {
   ASSET_KIND_LABEL,
   formatStatusLabel,
@@ -676,13 +675,14 @@ function AvNetworkInsightsSections({
 
   const buildingCounts = useMemo(() => {
     const map = new Map<string, number>();
-    for (const building of CAMPUS_BUILDINGS) map.set(building, 0);
     for (const item of items) {
       const building = item.building?.trim();
       if (!building) continue;
       map.set(building, (map.get(building) ?? 0) + 1);
     }
-    return [...map.entries()].map(([building, count]) => ({ building, count }));
+    return [...map.entries()]
+      .map(([building, count]) => ({ building, count }))
+      .sort((a, b) => b.count - a.count || a.building.localeCompare(b.building));
   }, [items]);
 
   const totalDeployed = useMemo(
@@ -786,13 +786,18 @@ function AvNetworkInsightsSections({
             <div className="flex flex-1 items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-foreground">Building</h2>
-                <p className="text-xs text-muted-foreground">Deployed assets by campus building</p>
+                <p className="text-xs text-muted-foreground">
+                  Deployed {kind === 'av' ? 'AV' : 'Network'} assets by building
+                </p>
               </div>
               <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-bold tabular-nums text-foreground">
                 Total: {totalDeployed}
               </span>
             </div>
           </div>
+          {buildingCounts.length === 0 ? (
+            <InsightsEmpty message={`No deployed ${kind === 'av' ? 'AV' : 'Network'} assets yet.`} />
+          ) : (
           <div className="grid grid-cols-1 gap-3">
             {buildingCounts.map(({ building, count }) => (
               <div
@@ -814,6 +819,7 @@ function AvNetworkInsightsSections({
               </div>
             ))}
           </div>
+          )}
         </CardContent>
       </Card>
 
