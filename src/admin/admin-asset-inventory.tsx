@@ -674,13 +674,20 @@ function AvNetworkInsightsSections({
   const [activity, setActivity] = useState<ActivityLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const buildingCounts = useMemo(
-    () =>
-      CAMPUS_BUILDINGS.map((building) => ({
-        building,
-        count: items.filter((item) => item.building?.trim() === building).length,
-      })),
-    [items],
+  const buildingCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const building of CAMPUS_BUILDINGS) map.set(building, 0);
+    for (const item of items) {
+      const building = item.building?.trim();
+      if (!building) continue;
+      map.set(building, (map.get(building) ?? 0) + 1);
+    }
+    return [...map.entries()].map(([building, count]) => ({ building, count }));
+  }, [items]);
+
+  const totalDeployed = useMemo(
+    () => buildingCounts.reduce((sum, { count }) => sum + count, 0),
+    [buildingCounts],
   );
 
   const categoryCounts = useMemo(() => {
@@ -696,11 +703,12 @@ function AvNetworkInsightsSections({
 
   const maxCategoryCount = categoryCounts[0]?.count ?? 0;
 
-  const buildingTint = {
+  const buildingTint: Record<string, string> = {
     'Al Razi': 'bg-violet-50 text-violet-800 dark:bg-violet-950 dark:text-violet-200',
     Avicenna: 'bg-sky-50 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
     'Al Zahrawi': 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
-  } as const;
+  };
+  const fallbackTint = 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200';
 
   useEffect(() => {
     let cancelled = false;
@@ -775,9 +783,14 @@ function AvNetworkInsightsSections({
         <CardContent className="p-4 sm:p-5">
           <div className="mb-4 flex items-center gap-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <h2 className="text-base font-semibold text-foreground">Building</h2>
-              <p className="text-xs text-muted-foreground">Deployed assets by campus building</p>
+            <div className="flex flex-1 items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Building</h2>
+                <p className="text-xs text-muted-foreground">Deployed assets by campus building</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-bold tabular-nums text-foreground">
+                Total: {totalDeployed}
+              </span>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3">
@@ -790,12 +803,12 @@ function AvNetworkInsightsSections({
                   <div
                     className={cn(
                       'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]',
-                      buildingTint[building],
+                      buildingTint[building] ?? fallbackTint,
                     )}
                   >
                     <Building2 className="h-4 w-4" />
                   </div>
-                  <span className="text-sm font-medium text-foreground">{building}</span>
+                  <span className="truncate text-sm font-medium text-foreground">{building}</span>
                 </div>
                 <span className="text-xl font-bold tabular-nums text-foreground">{count}</span>
               </div>
