@@ -45,12 +45,24 @@ export type DashboardStatusCount = {
   count: number;
 };
 
+export type DashboardDivisionCount = {
+  division: string;
+  count: number;
+};
+
+export type DashboardBuildingCount = {
+  building: string;
+  count: number;
+};
+
 export type DashboardAssetKindStats = {
   store: number;
   deploy: number;
   total: number;
   registeredTotal: number;
   byStatus: DashboardStatusCount[];
+  deployByDivision?: DashboardDivisionCount[];
+  deployByBuilding?: DashboardBuildingCount[];
 };
 
 export type DashboardRequestWorkflowCount = {

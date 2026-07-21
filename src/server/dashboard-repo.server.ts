@@ -15,6 +15,7 @@ import {
 } from '@/lib/dashboard-schema';
 import type { RequestItemRow } from '@/lib/request-schema';
 import { REQUEST_STATUS_ACTIVE } from '@/lib/request-schema';
+import { STAFF_DIVISIONS } from '@/lib/staff-schema';
 import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
@@ -90,6 +91,78 @@ function computeRequestStatus(
 const ASSET_STORE_STATUS_IDS = new Set<number>(DASHBOARD_ASSET_STORE_STATUS_IDS);
 const ASSET_DEPLOY_STATUS_IDS = new Set<number>(DASHBOARD_ASSET_DEPLOY_STATUS_IDS);
 const REQUEST_STATUS_IDS = new Set<number>(DASHBOARD_REQUEST_STATUS_IDS);
+
+async function loadLaptopDeployDivisionCounts(
+  pool: ReturnType<typeof getDbPool>,
+): Promise<{ division: string; count: number }[]> {
+  const [rows] = await pool.query<(RowDataPacket & { division: string | null; cnt: number })[]>(
+    `SELECT ho.recipient_division AS division, COUNT(*) AS cnt
+     FROM laptop l
+     INNER JOIN (
+       SELECT h.asset_id, s.division AS recipient_division
+       FROM handover h
+       INNER JOIN handover_staff hs ON hs.handover_id = h.handover_id
+       INNER JOIN staff s ON s.employee_no = hs.employee_no
+       LEFT JOIN handover_return hr ON hr.handover_staff_id = hs.handover_staff_id
+       INNER JOIN (
+         SELECT h2.asset_id, MAX(h2.handover_id) AS handover_id
+         FROM handover h2
+         INNER JOIN handover_staff hs2 ON hs2.handover_id = h2.handover_id
+         LEFT JOIN handover_return hr2 ON hr2.handover_staff_id = hs2.handover_staff_id
+         WHERE hr2.return_id IS NULL
+         GROUP BY h2.asset_id
+       ) open_h ON open_h.handover_id = h.handover_id AND open_h.asset_id = h.asset_id
+       WHERE hr.return_id IS NULL
+     ) ho ON ho.asset_id = l.asset_id
+     WHERE l.status_id IN (${DASHBOARD_ASSET_DEPLOY_STATUS_IDS.join(',')})
+     GROUP BY ho.recipient_division`,
+  );
+
+  const countByDivision = new Map<string, number>();
+  for (const row of rows) {
+    const division = row.division?.trim();
+    if (!division) continue;
+    countByDivision.set(division, (countByDivision.get(division) ?? 0) + Number(row.cnt));
+  }
+
+  return STAFF_DIVISIONS.map((division) => ({
+    division,
+    count: countByDivision.get(division) ?? 0,
+  }));
+}
+
+async function loadPlaceDeployBuildingCounts(
+  pool: ReturnType<typeof getDbPool>,
+  kind: 'av' | 'network',
+): Promise<{ building: string; count: number }[]> {
+  const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
+  const returnTable = kind === 'av' ? 'av_return' : 'network_return';
+
+  const [rows] = await pool.query<(RowDataPacket & { building: string | null; cnt: number })[]>(
+    `SELECT d.building AS building, COUNT(*) AS cnt
+     FROM \`${deployTable}\` d
+     INNER JOIN (
+       SELECT d2.asset_id, MAX(d2.deployment_id) AS deployment_id
+       FROM \`${deployTable}\` d2
+       WHERE NOT EXISTS (
+         SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d2.deployment_id
+       )
+       GROUP BY d2.asset_id
+     ) open_d ON open_d.deployment_id = d.deployment_id
+     GROUP BY d.building`,
+  );
+
+  const countByBuilding = new Map<string, number>();
+  for (const row of rows) {
+    const building = row.building?.trim();
+    if (!building) continue;
+    countByBuilding.set(building, (countByBuilding.get(building) ?? 0) + Number(row.cnt));
+  }
+
+  return [...countByBuilding.entries()]
+    .map(([building, count]) => ({ building, count }))
+    .sort((a, b) => b.count - a.count || a.building.localeCompare(b.building));
+}
 
 async function loadAssetKindStats(
   pool: ReturnType<typeof getDbPool>,
@@ -221,12 +294,26 @@ export async function getTechnicianDashboard(
   const pool = getDbPool();
   const { start: weekStart, end: weekEnd } = monthRange(calendar.year, calendar.month);
 
-  const [laptop, av, network, totalRequest] = await Promise.all([
+  const [
+    laptop,
+    av,
+    network,
+    totalRequest,
+    laptopDeployByDivision,
+    avDeployByBuilding,
+    networkDeployByBuilding,
+  ] = await Promise.all([
     loadAssetKindStats(pool, 'laptop'),
     loadAssetKindStats(pool, 'av'),
     loadAssetKindStats(pool, 'network'),
     loadRequestStats(pool),
+    loadLaptopDeployDivisionCounts(pool),
+    loadPlaceDeployBuildingCounts(pool, 'av'),
+    loadPlaceDeployBuildingCounts(pool, 'network'),
   ]);
+  laptop.deployByDivision = laptopDeployByDivision;
+  av.deployByBuilding = avDeployByBuilding;
+  network.deployByBuilding = networkDeployByBuilding;
   const requestPoolCount =
     (totalRequest.poolByKind.find((item) => item.kind === 'laptop')?.count ?? 0) +
     (totalRequest.poolByKind.find((item) => item.kind === 'av')?.count ?? 0);

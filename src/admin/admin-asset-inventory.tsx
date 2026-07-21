@@ -6,6 +6,13 @@ import { AdminShell } from '@/admin/admin-shell';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -196,6 +203,84 @@ function LaptopFormFactorSummary({ items }: { items: LaptopAsset[] }) {
   );
 }
 
+function StatusAssetsDialog({
+  label,
+  statusId,
+  items,
+  onClose,
+}: {
+  label: string;
+  statusId: number | null;
+  items: LaptopAsset[];
+  onClose: () => void;
+}) {
+  const statusItems = useMemo(
+    () => (statusId == null ? [] : items.filter((item) => item.statusId === statusId)),
+    [items, statusId],
+  );
+
+  return (
+    <Dialog open={statusId != null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle className="capitalize">
+            {label} · {statusId != null ? formatStatusLabel(statusId) : ''}
+          </DialogTitle>
+          <DialogDescription>
+            {statusItems.length} asset{statusItems.length === 1 ? '' : 's'}
+          </DialogDescription>
+        </DialogHeader>
+        {statusItems.length === 0 ? (
+          <InsightsEmpty message="No assets with this status." />
+        ) : (
+          <ScrollArea className="max-h-[min(480px,60vh)] rounded-xl border border-border/70">
+            <div className="overflow-x-auto p-1">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
+                    <TableHead className="whitespace-nowrap font-semibold">Asset ID</TableHead>
+                    <TableHead className="whitespace-nowrap font-semibold">Serial no.</TableHead>
+                    <TableHead className="min-w-[140px] font-semibold">Brand / Model</TableHead>
+                    <TableHead className="min-w-[120px] font-semibold">Category</TableHead>
+                    <TableHead className="min-w-[100px] font-semibold">Division</TableHead>
+                    <TableHead className="min-w-[140px] font-semibold">Remarks</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {statusItems.map((item) => (
+                    <TableRow key={item.assetId}>
+                      <TableCell className="align-top">
+                        <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
+                          #{item.assetId}
+                        </span>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <code className="text-xs text-muted-foreground">{item.serialNum ?? '—'}</code>
+                      </TableCell>
+                      <TableCell className="align-top text-sm font-medium text-foreground">
+                        {[item.brand, item.model].filter(Boolean).join(' ') || '—'}
+                      </TableCell>
+                      <TableCell className="align-top text-sm capitalize text-muted-foreground">
+                        {item.category ?? '—'}
+                      </TableCell>
+                      <TableCell className="align-top text-sm text-muted-foreground">
+                        {item.recipientDivision ?? '—'}
+                      </TableCell>
+                      <TableCell className="align-top text-xs text-muted-foreground">
+                        {item.remarks?.trim() || '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function FormFactorSummaryCard({
   icon: Icon,
   label,
@@ -209,6 +294,8 @@ function FormFactorSummaryCard({
   accent: string;
   iconTint: string;
 }) {
+  const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
+
   const statusCounts = useMemo(() => {
     const map = new Map<number, number>();
     for (const item of items) {
@@ -231,17 +318,26 @@ function FormFactorSummaryCard({
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <ul className="space-y-1.5 border-t border-border/60 px-4 py-3">
+      <ul className="space-y-0.5 border-t border-border/60 px-2.5 py-2">
         {statusCounts.map(({ statusId, count }) => (
-          <li
-            key={statusId}
-            className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
-          >
-            <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
-            <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
+          <li key={statusId}>
+            <button
+              type="button"
+              onClick={() => setSelectedStatusId(statusId)}
+              className="flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            >
+              <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
+              <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
+            </button>
           </li>
         ))}
       </ul>
+      <StatusAssetsDialog
+        label={label}
+        statusId={selectedStatusId}
+        items={items}
+        onClose={() => setSelectedStatusId(null)}
+      />
     </div>
   );
 }
@@ -672,6 +768,7 @@ function AvNetworkInsightsSections({
 }) {
   const [activity, setActivity] = useState<ActivityLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   const buildingCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -702,6 +799,11 @@ function AvNetworkInsightsSections({
   }, [items]);
 
   const maxCategoryCount = categoryCounts[0]?.count ?? 0;
+  const TOP_CATEGORY_LIMIT = 10;
+  const visibleCategories = showAllCategories
+    ? categoryCounts
+    : categoryCounts.slice(0, TOP_CATEGORY_LIMIT);
+  const hiddenCategoryCount = categoryCounts.length - TOP_CATEGORY_LIMIT;
 
   const buildingTint: Record<string, string> = {
     'Al Razi': 'bg-violet-50 text-violet-800 dark:bg-violet-950 dark:text-violet-200',
@@ -837,28 +939,41 @@ function AvNetworkInsightsSections({
           {categoryCounts.length === 0 ? (
             <InsightsEmpty message="No category data available." />
           ) : (
-            <ul className="space-y-3">
-              {categoryCounts.map(({ label, count }) => {
-                const width =
-                  maxCategoryCount > 0 ? Math.max(8, (count / maxCategoryCount) * 100) : 0;
-                return (
-                  <li key={label}>
-                    <div className="mb-1.5 flex items-center justify-between gap-3">
-                      <span className="min-w-0 truncate text-sm font-medium capitalize text-foreground">
-                        {label}
-                      </span>
-                      <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">{count}</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-sky-500"
-                        style={{ width: `${width}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <>
+              <ul className="space-y-3">
+                {visibleCategories.map(({ label, count }) => {
+                  const width =
+                    maxCategoryCount > 0 ? Math.max(8, (count / maxCategoryCount) * 100) : 0;
+                  return (
+                    <li key={label}>
+                      <div className="mb-1.5 flex items-center justify-between gap-3">
+                        <span className="min-w-0 truncate text-sm font-medium capitalize text-foreground">
+                          {label}
+                        </span>
+                        <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">{count}</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-sky-500"
+                          style={{ width: `${width}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {hiddenCategoryCount > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 w-full rounded-[8px]"
+                  onClick={() => setShowAllCategories((prev) => !prev)}
+                >
+                  {showAllCategories ? 'See less' : `See more (${hiddenCategoryCount} more)`}
+                </Button>
+              ) : null}
+            </>
           )}
         </CardContent>
       </Card>

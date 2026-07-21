@@ -28,6 +28,22 @@ import { ASSET_KIND_LABEL, formatStatusLabel } from '@/lib/inventory-schema';
 import { formatDateLabel, localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 
+function BreakdownList({ rows }: { rows: { label: string; count: number }[] }) {
+  return (
+    <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
+      {rows.map(({ label, count }) => (
+        <li
+          key={label}
+          className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+        >
+          <span className="min-w-0 truncate capitalize">{label}</span>
+          <span className="shrink-0 tabular-nums font-medium text-foreground">{count}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function StatusBreakdown({
   items,
   statusIds,
@@ -37,23 +53,11 @@ function StatusBreakdown({
 }) {
   const countByStatus = new Map(items.map((item) => [item.statusId, item.count]));
   const rows = statusIds.map((statusId) => ({
-    statusId,
+    label: formatStatusLabel(statusId),
     count: countByStatus.get(statusId) ?? 0,
   }));
 
-  return (
-    <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
-      {rows.map(({ statusId, count }) => (
-        <li
-          key={statusId}
-          className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
-        >
-          <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
-          <span className="shrink-0 tabular-nums font-medium text-foreground">{count}</span>
-        </li>
-      ))}
-    </ul>
-  );
+  return <BreakdownList rows={rows} />;
 }
 
 type InventoryStatView = 'store' | 'deploy';
@@ -141,7 +145,29 @@ export function InventoryStatCard({
         })}
       </div>
 
-      <StatusBreakdown items={stats.byStatus} statusIds={INVENTORY_VIEW_STATUS_IDS[view]} />
+      {view === 'deploy' && stats.deployByDivision ? (
+        <BreakdownList
+          rows={stats.deployByDivision.map(({ division, count }) => ({
+            label: division,
+            count,
+          }))}
+        />
+      ) : view === 'deploy' && stats.deployByBuilding ? (
+        stats.deployByBuilding.length > 0 ? (
+          <BreakdownList
+            rows={stats.deployByBuilding.map(({ building, count }) => ({
+              label: building,
+              count,
+            }))}
+          />
+        ) : (
+          <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
+            <li className="py-1 text-xs text-muted-foreground">No deployed assets yet.</li>
+          </ul>
+        )
+      ) : (
+        <StatusBreakdown items={stats.byStatus} statusIds={INVENTORY_VIEW_STATUS_IDS[view]} />
+      )}
     </StatCardShell>
   );
 }
