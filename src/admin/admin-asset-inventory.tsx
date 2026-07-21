@@ -50,7 +50,7 @@ const DASHBOARD_STATUS_IDS = [1, 2, 3, 4, 5] as const;
 
 type HandoverInsightFilter = {
   division: StaffDivision;
-  formFactor: 'laptop' | 'desktop';
+  formFactor: 'laptop' | 'desktop' | null;
 };
 
 function isSameHandoverFilter(a: HandoverInsightFilter | null, b: HandoverInsightFilter | null) {
@@ -66,6 +66,7 @@ function getHandoverAssetIds(
     items
       .filter((item) => {
         if (item.recipientDivision !== filter.division) return false;
+        if (filter.formFactor === null) return true;
         return filter.formFactor === 'laptop'
           ? isNotebookCategory(item.category)
           : isDesktopCategory(item.category);
@@ -416,12 +417,25 @@ function LaptopHandoverSummary({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {divisionCounts.map(({ division, total, laptop, desktop }) => {
             const DivisionIcon = divisionIcon[division];
+            const divisionFilter = { division, formFactor: null };
+            const isDivisionSelected = isSameHandoverFilter(selectedFilter, divisionFilter);
             return (
               <div
                 key={division}
                 className="rounded-2xl border border-border bg-muted/20 px-4 py-4"
               >
-                <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onSelectFilter(isDivisionSelected ? null : divisionFilter)
+                  }
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-xl border px-2 py-1.5 text-left transition-colors',
+                    isDivisionSelected
+                      ? 'border-sky-300 bg-sky-50 ring-2 ring-sky-200 dark:border-sky-700 dark:bg-sky-950 dark:ring-sky-800'
+                      : 'border-transparent hover:bg-muted/40',
+                  )}
+                >
                   <div
                     className={cn(
                       'flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]',
@@ -436,7 +450,7 @@ function LaptopHandoverSummary({
                     </p>
                     <p className="text-3xl font-bold tabular-nums text-foreground">{total}</p>
                   </div>
-                </div>
+                </button>
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/60 pt-3">
                   {(['laptop', 'desktop'] as const).map((formFactor) => {
                     const count = formFactor === 'laptop' ? laptop : desktop;
@@ -651,7 +665,9 @@ function LaptopInsightsSections({
 
   const isSearching = search.trim().length > 0;
   const filterLabel = filter
-    ? `${filter.division} · ${filter.formFactor === 'laptop' ? 'Laptop' : 'Desktop'}`
+    ? filter.formFactor === null
+      ? filter.division
+      : `${filter.division} · ${filter.formFactor === 'laptop' ? 'Laptop' : 'Desktop'}`
     : null;
   const emptyMessage = filter
     ? `No handovers for ${filterLabel}.`
