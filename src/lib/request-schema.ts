@@ -126,6 +126,8 @@ export type PendingRequest = {
   requestId: number;
   requestedBy: string;
   requesterName: string;
+  requesterEmail: string;
+  requesterPhone: string | null;
   borrowDate: string;
   returnDate: string;
   programType: string;

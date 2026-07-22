@@ -90,7 +90,14 @@ import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 
 function poolAssetLabel(a: RequestPoolAsset): string {
   const kind = a.kind === 'laptop' ? 'Laptop' : 'AV';
-  const parts = [kind, `#${a.assetId}`, a.model, a.brand, a.category].filter(Boolean);
+  const parts = [
+    kind,
+    `#${a.assetId}`,
+    a.kind === 'av' ? a.assetIdOld : null,
+    a.model,
+    a.brand,
+    a.category,
+  ].filter(Boolean);
   return parts.join(' · ');
 }
 
@@ -260,6 +267,8 @@ function matchesSearch(req: PendingRequest, query: string): boolean {
   return [
     String(req.requestId),
     req.requesterName,
+    req.requesterEmail,
+    req.requesterPhone,
     req.requestedBy,
     req.programType,
     req.usageLocation,
@@ -712,8 +721,8 @@ export function TechnicianRequestPage() {
               )}
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {formatDateLabel(req.borrowDate)} → {formatDateLabel(req.returnDate)} ·{' '}
-              {req.programType} · {req.usageLocation}
+              {req.requesterEmail}
+              {req.requesterPhone ? ` · ${req.requesterPhone}` : ''}
             </p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               {totalCheckedOut}/{totalNeeded} checked out
@@ -762,6 +771,10 @@ export function TechnicianRequestPage() {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border px-4 py-4">
+          <p className="mb-3 text-xs text-muted-foreground">
+            {formatDateLabel(req.borrowDate)} → {formatDateLabel(req.returnDate)} · {req.programType}{' '}
+            · {req.usageLocation}
+          </p>
           {req.remarks && (
             <p className="mb-3 text-sm text-muted-foreground">
               <span className="font-medium text-foreground">Remarks:</span> {req.remarks}

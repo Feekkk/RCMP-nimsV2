@@ -115,24 +115,13 @@ export async function handleDevLogin(request: Request): Promise<Response> {
     const body = await readJsonBody<DevLoginBody>(request);
     if (body instanceof Response) return body;
     const role = body.role ?? 'technician';
-    const { devLoginAsTechnician, devLoginAsAdmin, getAuthUserByStaffId } = await import(
+    const { devLoginAsTechnician, devLoginAsAdmin, devLoginAsUser } = await import(
       '@/server/auth-repo.server'
     );
     let user;
     if (role === 'admin') user = await devLoginAsAdmin();
     else if (role === 'technician') user = await devLoginAsTechnician();
-    else {
-      const { ROLE_USER } = await import('@/lib/auth-session');
-      const pool = (await import('@/server/db')).getDbPool();
-      const [rows] = await pool.query(
-        `SELECT u.id FROM users u WHERE u.role_id = ? ORDER BY u.id ASC LIMIT 1`,
-        [ROLE_USER],
-      );
-      const row = (rows as { id: number }[])[0];
-      if (!row) return apiError('No user account found for dev login.', 404, 'not_found');
-      user = await getAuthUserByStaffId(String(row.id));
-      if (!user) return apiError('No user account found for dev login.', 404, 'not_found');
-    }
+    else user = await devLoginAsUser();
     const tokens = issueTokenPair(user);
     return apiOk({ ...tokens, user: authUserPayload(user) });
   } catch (error) {

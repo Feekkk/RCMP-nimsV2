@@ -877,6 +877,8 @@ type RequestHeaderRow = RowDataPacket & {
   requested_by: string;
   requester_oid: string | null;
   requester_name: string;
+  requester_email: string | null;
+  requester_phone: string | null;
   borrow_date: Date | string;
   return_date: Date | string;
   program_type: string;
@@ -889,6 +891,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
   const pool = getDbPool();
   const [headers] = await pool.query<RequestHeaderRow[]>(
     `SELECT r.request_id, r.requested_by, u.oid AS requester_oid,
+            u.email AS requester_email, u.phone AS requester_phone,
             r.borrow_date, r.return_date, r.program_type, r.usage_location,
             r.remarks, r.created_at
      FROM request r
@@ -897,10 +900,18 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
      ORDER BY r.created_at DESC`,
   );
   await attachDisplayNames(headers, 'requester_oid', 'requester_name');
+  const requesterProfiles = await Promise.all(
+    headers.map((h) =>
+      resolveAccountProfile(h.requester_oid, {
+        email: h.requester_email,
+        phone: h.requester_phone,
+      }),
+    ),
+  );
 
   const results: PendingRequest[] = [];
 
-  for (const h of headers) {
+  for (const [index, h] of headers.entries()) {
     const [items] = await pool.query<
       (RowDataPacket & { request_item_id: number; asset_type: string; quantity: number })[]
     >(
@@ -988,10 +999,14 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
       continue;
     }
 
+    const requesterProfile = requesterProfiles[index];
+
     results.push({
       requestId: h.request_id,
       requestedBy: h.requested_by,
-      requesterName: h.requester_name,
+      requesterName: h.requester_name || requesterProfile.fullName,
+      requesterEmail: requesterProfile.email,
+      requesterPhone: requesterProfile.phone,
       borrowDate: formatDate(h.borrow_date),
       returnDate: formatDate(h.return_date),
       programType: h.program_type,

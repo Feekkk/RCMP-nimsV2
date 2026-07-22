@@ -30,6 +30,12 @@ export const devLoginAsAdminFn = createServerFn({ method: 'POST' }).handler(asyn
   return devLoginAsAdmin();
 });
 
+export const devLoginAsUserFn = createServerFn({ method: 'POST' }).handler(async () => {
+  assertDevLoginAllowed();
+  const { devLoginAsUser } = await import('@/server/auth-repo.server');
+  return devLoginAsUser();
+});
+
 export const getUserProfileFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { staffId: string }) => data)
   .handler(async ({ data }) => {

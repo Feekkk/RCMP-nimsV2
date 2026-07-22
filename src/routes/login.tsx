@@ -9,6 +9,7 @@ import { isAdminRole, persistSession } from '@/lib/auth-session';
 import {
   devLoginAsAdminFn,
   devLoginAsTechnicianFn,
+  devLoginAsUserFn,
   getMicrosoftLoginUrlFn,
 } from '@/server/auth.functions';
 import { getLoginMaintenanceModeFn } from '@/server/system-settings.functions';
@@ -39,7 +40,7 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [devRole, setDevRole] = useState<'technician' | 'admin' | null>(null);
+  const [devRole, setDevRole] = useState<'technician' | 'admin' | 'user' | null>(null);
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
 
@@ -64,17 +65,25 @@ function LoginPage() {
     }
   };
 
-  const handleDevLogin = async (role: 'technician' | 'admin') => {
+  const handleDevLogin = async (role: 'technician' | 'admin' | 'user') => {
     setDevRole(role);
     setIsLoading(true);
 
     try {
       const user =
-        role === 'admin' ? await devLoginAsAdminFn() : await devLoginAsTechnicianFn();
+        role === 'admin'
+          ? await devLoginAsAdminFn()
+          : role === 'technician'
+            ? await devLoginAsTechnicianFn()
+            : await devLoginAsUserFn();
       persistSession(user);
       toast.success(`Dev sign-in as ${user.fullName}`);
       void navigate({
-        to: isAdminRole(user.roleId) ? '/admin/dashboard' : '/technician/dashboard',
+        to: isAdminRole(user.roleId)
+          ? '/admin/dashboard'
+          : role === 'user'
+            ? '/user/request'
+            : '/technician/dashboard',
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Dev sign-in unavailable';
@@ -144,6 +153,15 @@ function LoginPage() {
                   <p className="text-center text-xs font-medium text-muted-foreground">
                     Development only
                   </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full rounded-[8px] border-dashed font-medium"
+                    disabled={isLoading}
+                    onClick={() => void handleDevLogin('user')}
+                  >
+                    {devRole === 'user' && isLoading ? 'Signing in…' : 'Login as User'}
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"

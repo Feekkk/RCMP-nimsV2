@@ -172,6 +172,7 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
 const DEV_ROLE_LABELS: Record<number, string> = {
   [ROLE_TECHNICIAN]: 'technician',
   [ROLE_ADMIN]: 'admin',
+  [ROLE_USER]: 'user',
 };
 
 async function devLoginAsRole(roleId: number): Promise<AuthUserRow> {
@@ -191,6 +192,10 @@ export async function devLoginAsTechnician(): Promise<AuthUserRow> {
 
 export async function devLoginAsAdmin(): Promise<AuthUserRow> {
   return devLoginAsRole(ROLE_ADMIN);
+}
+
+export async function devLoginAsUser(): Promise<AuthUserRow> {
+  return devLoginAsRole(ROLE_USER);
 }
 
 export type UpdateUserProfileInput = {
