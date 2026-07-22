@@ -95,6 +95,84 @@ function filterDepartmentsByAssetIds(
 
 type PlaceAsset = AvAsset | NetworkAsset;
 
+function PlaceStatusAssetsDialog({
+  label,
+  statusId,
+  items,
+  onClose,
+}: {
+  label: string;
+  statusId: number | null;
+  items: PlaceAsset[];
+  onClose: () => void;
+}) {
+  const statusItems = useMemo(
+    () => (statusId == null ? [] : items.filter((item) => item.statusId === statusId)),
+    [items, statusId],
+  );
+
+  return (
+    <Dialog open={statusId != null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle className="capitalize">
+            {label} · {statusId != null ? formatStatusLabel(statusId) : ''}
+          </DialogTitle>
+          <DialogDescription>
+            {statusItems.length} asset{statusItems.length === 1 ? '' : 's'}
+          </DialogDescription>
+        </DialogHeader>
+        {statusItems.length === 0 ? (
+          <InsightsEmpty message="No assets with this status." />
+        ) : (
+          <ScrollArea className="max-h-[min(480px,60vh)] rounded-xl border border-border/70">
+            <div className="overflow-x-auto p-1">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
+                    <TableHead className="whitespace-nowrap font-semibold">Asset ID</TableHead>
+                    <TableHead className="whitespace-nowrap font-semibold">Serial no.</TableHead>
+                    <TableHead className="min-w-[140px] font-semibold">Brand / Model</TableHead>
+                    <TableHead className="min-w-[120px] font-semibold">Category</TableHead>
+                    <TableHead className="min-w-[100px] font-semibold">Building</TableHead>
+                    <TableHead className="min-w-[140px] font-semibold">Remarks</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {statusItems.map((item) => (
+                    <TableRow key={item.assetId}>
+                      <TableCell className="align-top">
+                        <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
+                          #{item.assetId}
+                        </span>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <code className="text-xs text-muted-foreground">{item.serialNum ?? '—'}</code>
+                      </TableCell>
+                      <TableCell className="align-top text-sm font-medium text-foreground">
+                        {[item.brand, item.model].filter(Boolean).join(' ') || '—'}
+                      </TableCell>
+                      <TableCell className="align-top text-sm capitalize text-muted-foreground">
+                        {item.category ?? '—'}
+                      </TableCell>
+                      <TableCell className="align-top text-sm text-muted-foreground">
+                        {item.building ?? '—'}
+                      </TableCell>
+                      <TableCell className="align-top text-xs text-muted-foreground">
+                        {item.remarks?.trim() || '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AssetBucketSummaryCard({
   icon: Icon,
   label,
@@ -105,11 +183,13 @@ function AssetBucketSummaryCard({
 }: {
   icon: ElementType;
   label: string;
-  items: { statusId: number }[];
+  items: PlaceAsset[];
   statusIds: readonly number[];
   accent: string;
   iconTint: string;
 }) {
+  const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
+
   const bucketItems = useMemo(
     () => items.filter((item) => statusIds.includes(item.statusId)),
     [items, statusIds],
@@ -139,22 +219,31 @@ function AssetBucketSummaryCard({
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <ul className="space-y-1.5 border-t border-border/60 px-4 py-3">
+      <ul className="space-y-0.5 border-t border-border/60 px-2.5 py-2">
         {statusCounts.map(({ statusId, count }) => (
-          <li
-            key={statusId}
-            className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
-          >
-            <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
-            <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
+          <li key={statusId}>
+            <button
+              type="button"
+              onClick={() => setSelectedStatusId(statusId)}
+              className="flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            >
+              <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
+              <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
+            </button>
           </li>
         ))}
       </ul>
+      <PlaceStatusAssetsDialog
+        label={label}
+        statusId={selectedStatusId}
+        items={bucketItems}
+        onClose={() => setSelectedStatusId(null)}
+      />
     </div>
   );
 }
 
-function AssetStockDeploySummary({ items }: { items: { statusId: number }[] }) {
+function AssetStockDeploySummary({ items }: { items: PlaceAsset[] }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <AssetBucketSummaryCard
@@ -1038,7 +1127,7 @@ export function AdminPlaceAssetOverviewPage({
           </div>
         </div>
 
-        <AssetStockDeploySummary items={items} />
+        <AssetStockDeploySummary items={items as PlaceAsset[]} />
       </div>
 
       {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
