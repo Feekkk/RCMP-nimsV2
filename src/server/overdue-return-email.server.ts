@@ -226,7 +226,6 @@ export async function sendOverdueReturnEmail(
   const { sendNotificationEmail } = await import('@/server/email.server');
   const result = await sendNotificationEmail({
     to: data.requesterEmail,
-    cc: REQUEST_IT_EMAIL,
     subject: `UNIKL RCMP — Overdue Return Reminder (Request #${data.requestId} — ${overdueLabel(data.daysOverdue)})`,
     text: buildOverdueReturnEmailText(data),
     html: buildOverdueReturnEmailHtml(data),
@@ -245,6 +244,5 @@ export async function sendOverdueReturnEmail(
   return {
     messageId: result.messageId,
     to: data.requesterEmail,
-    cc: REQUEST_IT_EMAIL,
   };
 }

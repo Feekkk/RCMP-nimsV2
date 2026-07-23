@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type { SendNotificationEmailInput, SendNotificationEmailResult } from '@/lib/email-notification';
-import { EMAIL_NOT_CONFIGURED_MESSAGE_MESSAGE } from '@/lib/email-notification';
+import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { getMicrosoftEmailConfig, isEmailConfigured } from '@/lib/microsoft-email-config';
 
 const EMAIL_RECIPIENT_MISSING =

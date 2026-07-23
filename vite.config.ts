@@ -234,6 +234,9 @@ export default defineConfig(({ mode }) => {
       viteReact(),
       nitro({
         preset: 'node-server',
+        plugins: [
+          path.resolve(__dirname, 'server/plugins/overdue-email-scheduler.ts'),
+        ],
         rollupConfig: {
           external: ['mysql2', 'mysql2/promise', 'nodemailer'],
         },

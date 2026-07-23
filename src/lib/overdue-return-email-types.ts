@@ -35,7 +35,6 @@ export type OverdueReturnEmailData = {
 export type SendOverdueReturnEmailResult = {
   messageId: string;
   to: string;
-  cc: string;
 };
 
 export type OverdueReturnEmailJobDetail = {
