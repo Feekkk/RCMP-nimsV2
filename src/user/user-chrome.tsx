@@ -9,7 +9,7 @@ export function UserPageChrome({
   onSignOut,
   active,
 }: {
-  session: Pick<SessionUser, 'fullName' | 'email'>;
+  session: Pick<SessionUser, 'fullName'>;
   onSignOut: () => void;
   active?: 'request' | 'history' | 'profile';
 }) {
@@ -21,8 +21,8 @@ export function UserPageChrome({
             <NimsLogo size="sm" variant="light" />
           </Link>
           <div className="min-w-0 flex-1 text-center">
-            <p className="truncate text-sm font-medium">{session.fullName}</p>
-            <p className="truncate text-xs text-muted-foreground">{session.email}</p>
+            <p className="truncate text-sm font-medium">Information Technology Department</p>
+            <p className="truncate text-xs text-muted-foreground">{session.fullName}</p>
           </div>
           <Button
             type="button"

@@ -8,6 +8,7 @@ import {
   FileText,
   Laptop,
   ListChecks,
+  MessageCircleHeart,
   Mic,
   Minus,
   Monitor,
@@ -228,22 +229,30 @@ export function UserRequestFormPage() {
             Your request <strong>#{submittedId}</strong> has been sent for technician review. A confirmation
             email was sent to you and ITD when notifications are enabled.
           </p>
-          <Button
-            className="mt-8 rounded-[8px]"
-            onClick={() => {
-              setSubmittedId(null);
-              setStep(0);
-              setSlaAccepted(false);
-              setBorrowDate('');
-              setReturnDate('');
-              setProgramType('');
-              setUsageLocation('');
-              setRemarks('');
-              setItems([]);
-            }}
-          >
-            Submit another request
-          </Button>
+
+          <div className="mt-10 rounded-[12px] border border-border/80 bg-muted/40 px-5 py-6 text-left">
+            <div className="flex gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lavender/15 text-[oklch(0.45_0.12_290)]">
+                <MessageCircleHeart className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">Got a minute?</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Your experience helps the IT Department improve equipment requests and support for everyone
+                  on campus. A short note goes a long way. Thank you.
+                </p>
+                <Button
+                  className="mt-4 w-full rounded-[8px] sm:w-auto"
+                  onClick={() => {
+                    window.location.href = 'https://itd.rcmp.edu.my/feedback';
+                  }}
+                >
+                  <MessageCircleHeart className="mr-2 h-4 w-4" />
+                  Share feedback
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
         <Toaster />
       </div>
