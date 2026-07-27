@@ -614,31 +614,27 @@ export function TechnicianRequestPage() {
           remarks: returnRemarks.trim() || null,
         },
       });
-      try {
-        await sendRequestReturnEmailFn({
-          data: {
-            requestId: returnRequest.requestId,
-            returnedBy: session.staffId,
-            assignmentIds: result.assignmentIds,
-            returnCondition: condition,
-            remarks: returnRemarks.trim() || null,
-          },
-        });
-        toast.success(
-          `Returned ${result.returned} asset${result.returned === 1 ? '' : 's'} — notification sent to requester`,
-        );
-      } catch (emailErr) {
-        toast.success(
-          `Returned ${result.returned} asset${result.returned === 1 ? '' : 's'} to the request pool`,
-        );
-        toast.warning(
-          emailErr instanceof Error
-            ? emailErr.message
-            : 'Return saved but notification email could not be sent',
-        );
-      }
+      const emailPayload = {
+        requestId: returnRequest.requestId,
+        returnedBy: session.staffId,
+        assignmentIds: result.assignmentIds,
+        returnCondition: condition,
+        remarks: returnRemarks.trim() || null,
+      };
       setReturnRequest(null);
       setReturnRemarks('');
+      toast.success(
+        `Returned ${result.returned} asset${result.returned === 1 ? '' : 's'} to the request pool. Sending notification…`,
+      );
+      void sendRequestReturnEmailFn({ data: emailPayload })
+        .then(() => toast.success('Return notification sent to requester'))
+        .catch((emailErr) =>
+          toast.warning(
+            emailErr instanceof Error
+              ? emailErr.message
+              : 'Return saved but notification email could not be sent',
+          ),
+        );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Return failed');
