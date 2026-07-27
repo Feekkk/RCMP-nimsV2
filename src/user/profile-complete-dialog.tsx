@@ -27,32 +27,30 @@ export function UserProfileCompleteDialog({
   open,
   onCompleted,
 }: UserProfileCompleteDialogProps) {
-  const [fullName, setFullName] = useState(session.fullName);
-  const [email, setEmail] = useState(session.email);
   const [phone, setPhone] = useState(session.phone ?? '');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setFullName(session.fullName);
-    setEmail(session.email);
     setPhone(session.phone ?? '');
   }, [session]);
 
   const missing = missingUserProfileFields({
-    fullName,
-    email,
+    fullName: session.fullName,
+    email: session.email,
     phone,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const draft = {
-      fullName: fullName.trim(),
-      email: email.trim(),
-      phone: phone.trim() || null,
-    };
+    const draftPhone = phone.trim() || null;
 
-    if (!isUserProfileComplete(draft)) {
+    if (
+      !isUserProfileComplete({
+        fullName: session.fullName,
+        email: session.email,
+        phone: draftPhone,
+      })
+    ) {
       toast.error('Please fill in all required profile fields');
       return;
     }
@@ -62,9 +60,7 @@ export function UserProfileCompleteDialog({
       const updated = await updateUserProfileFn({
         data: {
           staffId: session.staffId,
-          fullName: draft.fullName,
-          email: draft.email,
-          phone: draft.phone,
+          phone: draftPhone,
         },
       });
       const nextSession: SessionUser = {
@@ -95,7 +91,7 @@ export function UserProfileCompleteDialog({
         <DialogHeader>
           <DialogTitle>Complete your profile</DialogTitle>
           <DialogDescription>
-            Add your contact details before submitting an equipment request. Technicians use this
+            Add your phone number before submitting an equipment request. Technicians use this
             information to reach you about bookings and returns.
           </DialogDescription>
         </DialogHeader>
@@ -110,19 +106,17 @@ export function UserProfileCompleteDialog({
           <FormField label="Full name">
             <div className="relative">
               <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={fullName} disabled className="rounded-[8px] bg-muted/50 pl-9" />
+              <Input value={session.fullName} disabled className="rounded-[8px] bg-muted/50 pl-9" />
             </div>
           </FormField>
-          <FormField label="Email" required>
+          <FormField label="Email">
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                className="rounded-[8px] pl-9"
+                value={session.email}
+                disabled
+                className="rounded-[8px] bg-muted/50 pl-9"
               />
             </div>
           </FormField>

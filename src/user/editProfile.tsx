@@ -21,7 +21,6 @@ export function UserEditProfilePage() {
   const [session, setSession] = useState<SessionUser | null>(readUserSession);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -62,8 +61,6 @@ export function UserEditProfilePage() {
       const updated = await updateUserProfileFn({
         data: {
           staffId: session.staffId,
-          fullName: fullName.trim(),
-          email: email.trim(),
           phone: phone.trim() || null,
         },
       });
@@ -112,35 +109,24 @@ export function UserEditProfilePage() {
               <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
             ) : (
               <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-                <FormField label="User ID">
-                  <div className="relative">
-                    <IdCard className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={session.staffId}
-                      disabled
-                      className="rounded-[8px] bg-muted/50 pl-9"
-                    />
-                  </div>
-                </FormField>
                 <FormField label="Full name">
                   <div className="relative">
                     <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input value={fullName} disabled className="rounded-[8px] bg-muted/50 pl-9" />
                   </div>
-                  <p className="text-sm text-muted-foreground">Managed by Microsoft.</p>
+                  <p className="text-sm text-muted-foreground">Managed by Microsoft</p>
                 </FormField>
-                <FormField label="Email" required>
+                <FormField label="Email">
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoComplete="email"
-                      className="rounded-[8px] pl-9"
+                      disabled
+                      className="rounded-[8px] bg-muted/50 pl-9"
                     />
                   </div>
+                  <p className="text-sm text-muted-foreground">Managed by Microsoft</p>
                 </FormField>
                 <FormField label="Phone number" required>
                   <div className="relative">

@@ -156,15 +156,17 @@ export async function handlePatchProfile(request: Request): Promise<Response> {
     const body = await readJsonBody<ProfilePatchBody>(request);
     if (body instanceof Response) return body;
     const { updateStaffProfile, updateUserProfile } = await import('@/server/auth-repo.server');
-    const input = {
-      staffId: auth.staffId,
-      fullName: body.fullName,
-      email: body.email,
-      phone: body.phone,
-    };
     const profile = isStaffRole(auth.roleId)
-      ? await updateStaffProfile(input)
-      : await updateUserProfile(input);
+      ? await updateStaffProfile({
+          staffId: auth.staffId,
+          fullName: body.fullName,
+          email: body.email,
+          phone: body.phone,
+        })
+      : await updateUserProfile({
+          staffId: auth.staffId,
+          phone: body.phone,
+        });
     return apiOk(profile);
   } catch (error) {
     return handleApiError(error);
@@ -409,6 +411,8 @@ export async function handleUserRequestAction(request: Request, action: string):
         await returnUserRequest({
           requestId: Number(body.requestId),
           returnedBy: actor,
+          returnCondition: String(body.returnCondition ?? ''),
+          remarks: typeof body.remarks === 'string' ? body.remarks : null,
         }),
       );
     }
