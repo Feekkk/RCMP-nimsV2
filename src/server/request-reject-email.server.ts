@@ -46,13 +46,10 @@ function buildItemsTableHtml(items: RequestRejectEmailData['items']): string {
 export function buildRequestRejectEmailHtml(data: RequestRejectEmailData): string {
   const requesterRows = [
     detailRow('Name', data.requesterName),
-    detailRow('Staff ID', data.requestedBy),
     detailRow('Email', data.requesterEmail),
-    detailRow('Phone', data.requesterPhone ?? '—'),
   ].join('');
 
   const requestRows = [
-    detailRow('Request ID', `#${data.requestId}`),
     detailRow('Submitted', data.submittedAt),
     detailRow('Borrow date', data.borrowDate),
     detailRow('Return date', data.returnDate),
@@ -60,7 +57,6 @@ export function buildRequestRejectEmailHtml(data: RequestRejectEmailData): strin
     detailRow('Usage location', data.usageLocation),
     detailRow('Your remarks', data.remarks ?? '—'),
     detailRow('Rejected at', data.rejectedAt),
-    detailRow('Rejected by', `${data.rejectedByName} (${data.rejectedBy})`),
     detailRow('Status', 'Rejected'),
   ].join('');
 

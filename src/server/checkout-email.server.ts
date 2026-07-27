@@ -74,22 +74,19 @@ function buildCheckedOutAssetsHtml(assets: CheckoutEmailData['assets']): string 
 export function buildCheckoutEmailHtml(data: CheckoutEmailData): string {
   const requesterRows = [
     detailRow('Name', data.requesterName),
-    detailRow('Staff ID', data.requestedBy),
     detailRow('Email', data.requesterEmail),
-    detailRow('Phone', data.requesterPhone ?? '—'),
   ].join('');
 
   const requestRows = [
-    detailRow('Request ID', `#${data.requestId}`),
     detailRow('Originally submitted', data.submittedAt),
     detailRow('Borrow date', data.borrowDate),
     detailRow('Return date', data.returnDate),
     detailRow('Program type', data.programType),
     detailRow('Usage location', data.usageLocation),
     detailRow('Remarks', data.remarks ?? '—'),
-    detailRow('Checked out by', `${data.checkedOutByName} (${data.checkedOutByStaffId})`),
+    detailRow('Checked out by', `${data.checkedOutByName}`),
     detailRow('Checkout time', data.checkedOutAt),
-    detailRow('Status', 'In use — equipment checked out'),
+    detailRow('Status', 'Equipment checked out'),
   ].join('');
 
   return `<!DOCTYPE html>

@@ -75,24 +75,21 @@ function buildReturnedAssetsHtml(assets: RequestReturnEmailData['assets']): stri
 export function buildRequestReturnEmailHtml(data: RequestReturnEmailData): string {
   const requesterRows = [
     detailRow('Name', data.requesterName),
-    detailRow('Staff ID', data.requestedBy),
     detailRow('Email', data.requesterEmail),
-    detailRow('Phone', data.requesterPhone ?? '—'),
   ].join('');
 
   const requestRows = [
-    detailRow('Request ID', `#${data.requestId}`),
     detailRow('Originally submitted', data.submittedAt),
     detailRow('Borrow date', data.borrowDate),
     detailRow('Scheduled return', data.returnDate),
     detailRow('Program type', data.programType),
     detailRow('Usage location', data.usageLocation),
     detailRow('Remarks', data.remarks ?? '—'),
-    detailRow('Processed by', `${data.returnedByName} (${data.returnedByStaffId})`),
+    detailRow('Processed by', `${data.returnedByName}`),
     detailRow('Return time', data.returnedAt),
     detailRow('Overall condition', data.returnCondition),
     detailRow('Return remarks', data.returnRemarks ?? '—'),
-    detailRow('Status', 'Returned — assets back in request pool'),
+    detailRow('Status', 'Equipment returned'),
   ].join('');
 
   return `<!DOCTYPE html>

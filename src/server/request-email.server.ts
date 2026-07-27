@@ -46,13 +46,10 @@ function buildItemsTableHtml(items: RequestEmailData['items']): string {
 export function buildRequestEmailHtml(data: RequestEmailData): string {
   const requesterRows = [
     detailRow('Name', data.requesterName),
-    detailRow('Staff ID', data.requestedBy),
     detailRow('Email', data.requesterEmail),
-    detailRow('Phone', data.requesterPhone ?? '—'),
   ].join('');
 
   const requestRows = [
-    detailRow('Request ID', `#${data.requestId}`),
     detailRow('Submitted', data.submittedAt),
     detailRow('Borrow date', data.borrowDate),
     detailRow('Return date', data.returnDate),
@@ -144,9 +141,7 @@ export function buildRequestEmailText(data: RequestEmailData): string {
     '',
     'Requester',
     `  Name: ${data.requesterName}`,
-    `  Staff ID: ${data.requestedBy}`,
     `  Email: ${data.requesterEmail}`,
-    `  Phone: ${data.requesterPhone ?? '—'}`,
     '',
     'Request details',
     `  Submitted: ${data.submittedAt}`,
