@@ -60,6 +60,7 @@ export function TechnicianDeployPage() {
   const [building, setBuilding] = useState('');
   const [level, setLevel] = useState('');
   const [zone, setZone] = useState('');
+  const [handler, setHandler] = useState('');
   const [deploymentDate, setDeploymentDate] = useState('');
   const [deploymentRemarks, setDeploymentRemarks] = useState('');
   const [saving, setSaving] = useState(false);
@@ -193,10 +194,24 @@ export function TechnicianDeployPage() {
           void handleQueueHandoverEmail(result.handoverId);
           return;
         } else {
+          if (!building.trim()) {
+            toast.error('Building is required');
+            setSaving(false);
+            return;
+          }
+          if (!handler.trim()) {
+            toast.error('Handler is required');
+            setSaving(false);
+            return;
+          }
           await deployLaptopPlaceFn({
             data: {
               assetId,
               staffId: session.staffId,
+              building: building.trim(),
+              level: level.trim() || null,
+              zone: zone.trim() || null,
+              handler: handler.trim(),
               handoverDate: isoDate,
               handoverRemarks: handoverRemarks.trim() || null,
               handledByName: session.fullName,
@@ -293,6 +308,29 @@ export function TechnicianDeployPage() {
                   <FormField label="Recipient (staff directory)" required>
                     <StaffRecipientSearch value={recipient} onSelect={setRecipient} />
                   </FormField>
+                )}
+
+                {laptopMode === 'place' && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField label="Building" required>
+                      <CampusBuildingSelect value={building} onChange={setBuilding} />
+                    </FormField>
+                    <FormField label="Level">
+                      <Input value={level} onChange={(e) => setLevel(e.target.value)} className="rounded-[8px]" />
+                    </FormField>
+                    <FormField label="Zone">
+                      <Input value={zone} onChange={(e) => setZone(e.target.value)} className="rounded-[8px]" />
+                    </FormField>
+                    <FormField label="Handler" required>
+                      <Input
+                        value={handler}
+                        onChange={(e) => setHandler(e.target.value)}
+                        placeholder="On-site contact name"
+                        required
+                        className="rounded-[8px]"
+                      />
+                    </FormField>
+                  </div>
                 )}
 
                 <div className="grid gap-4 sm:grid-cols-2">

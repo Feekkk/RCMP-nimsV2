@@ -53,7 +53,7 @@ export const INVENTORY_STATUSES = [
   { statusId: 2, name: 'return' },
   { statusId: 3, name: 'deploy' },
   { statusId: 4, name: 'assign' },
-  { statusId: 5, name: 'disposed' },
+  { statusId: 5, name: 'Pre-Disposed' },
   { statusId: 6, name: 'active (request)' },
   { statusId: 7, name: 'booked (request)' },
   { statusId: 8, name: 'checkout (request)' },
@@ -85,7 +85,28 @@ export type LaptopAsset = {
   statusId: number;
   remarks: string | null;
   recipientDivision: string | null;
+  placeHandler: string | null;
+  placeBuilding: string | null;
+  placeLevel: string | null;
+  placeZone: string | null;
+  placeHandoverRemarks: string | null;
 } & PurchaseFields;
+
+export const LAPTOP_ASSIGNMENT_BUCKETS = ['Services', 'Academic', 'Facility'] as const;
+
+export type LaptopAssignmentBucket = (typeof LAPTOP_ASSIGNMENT_BUCKETS)[number];
+
+export function isFacilityAssignment(asset: Pick<LaptopAsset, 'placeHandler'>): boolean {
+  return Boolean(asset.placeHandler?.trim());
+}
+
+export function matchesAssignmentBucket(
+  asset: Pick<LaptopAsset, 'recipientDivision' | 'placeHandler'>,
+  bucket: LaptopAssignmentBucket,
+): boolean {
+  if (bucket === 'Facility') return isFacilityAssignment(asset);
+  return asset.recipientDivision === bucket;
+}
 
 export type PlaceFields = {
   building: string | null;
@@ -218,6 +239,10 @@ export type BulkLaptopHandoverImport = {
   handoverDate: string;
   handoverRemarks: string | null;
   employeeNo: string | null;
+  building?: string | null;
+  level?: string | null;
+  zone?: string | null;
+  handler?: string | null;
 };
 
 export type BulkPlaceDeploymentImport = {

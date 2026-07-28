@@ -97,6 +97,18 @@ export function InventoryStatCard({
 }) {
   const [view, setView] = useState<InventoryStatView>('store');
 
+  const deployCount = useMemo(() => {
+    if (stats.deployByDivision) {
+      return stats.deployByDivision.reduce((sum, row) => sum + row.count, 0);
+    }
+    if (stats.deployByBuilding) {
+      return stats.deployByBuilding.reduce((sum, row) => sum + row.count, 0);
+    }
+    return stats.deploy;
+  }, [stats.deploy, stats.deployByDivision, stats.deployByBuilding]);
+
+  const totalCount = stats.store + deployCount;
+
   const header = (
     <div className="flex items-center gap-3">
       <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
@@ -104,7 +116,7 @@ export function InventoryStatCard({
       </div>
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="text-[11px] text-muted-foreground">{stats.total} total assets</p>
+        <p className="text-[11px] text-muted-foreground">{totalCount} total assets</p>
       </div>
     </div>
   );
@@ -124,7 +136,7 @@ export function InventoryStatCard({
 
       <div className="grid grid-cols-2 gap-2">
         {(['store', 'deploy'] as const).map((key) => {
-          const count = key === 'store' ? stats.store : stats.deploy;
+          const count = key === 'store' ? stats.store : deployCount;
           const isActive = view === key;
 
           return (

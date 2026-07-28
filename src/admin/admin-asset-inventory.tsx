@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
-import { ArrowLeft, Building2, GraduationCap, Laptop as LaptopIcon, Layers, Loader2, Monitor, Package, Briefcase, Search, Truck, Users } from 'lucide-react';
+import { ArrowLeft, Building2, Laptop as LaptopIcon, Layers, Loader2, Monitor, Package, Search, Truck, Users } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { AdminShell } from '@/admin/admin-shell';
@@ -26,14 +26,16 @@ import {
 import { useAssets } from '@/hooks/assets';
 import { isDesktopCategory, isNotebookCategory } from '@/hooks/assetid-generator';
 import {
-  DASHBOARD_ASSET_DEPLOY_STATUS_IDS,
   DASHBOARD_ASSET_STORE_STATUS_IDS,
 } from '@/lib/dashboard-schema';
 import {
   ASSET_KIND_LABEL,
   formatStatusLabel,
+  LAPTOP_ASSIGNMENT_BUCKETS,
+  matchesAssignmentBucket,
   type AvAsset,
   type LaptopAsset,
+  type LaptopAssignmentBucket,
   type NetworkAsset,
 } from '@/lib/inventory-schema';
 import { ACTIVITY_CATEGORY_LABEL, type ActivityLogEntry } from '@/lib/activity-log-schema';
@@ -41,22 +43,29 @@ import type {
   LaptopDepartmentHandover,
   LaptopDepartmentStaffHandover,
 } from '@/lib/admin-laptop-insights-schema';
-import { STAFF_DIVISIONS, type StaffDivision } from '@/lib/staff-schema';
 import { getLaptopDepartmentHandoversFn } from '@/server/admin-laptop-insights.functions';
 import { listActivityLogFn } from '@/server/activity-log.functions';
 import { STATUS_ID } from '@/lib/asset-status-actions';
+import { formatAssetLifespan } from '@/lib/date-format';
+import { CAMPUS_BUILDINGS } from '@/lib/deploy-return-schema';
 import { cn } from '@/lib/utils';
 
-const DASHBOARD_STATUS_IDS = [1, 2, 3, 4, 5] as const;
+type FormFactor = 'laptop' | 'desktop';
 
-type HandoverInsightFilter = {
-  division: StaffDivision;
-  formFactor: 'laptop' | 'desktop' | null;
-};
+type HandoverInsightFilter =
+  | { kind: 'status'; formFactor: FormFactor; statusId: number }
+  | { kind: 'division'; formFactor: FormFactor; division: LaptopAssignmentBucket };
 
 function isSameHandoverFilter(a: HandoverInsightFilter | null, b: HandoverInsightFilter | null) {
   if (!a || !b) return false;
-  return a.division === b.division && a.formFactor === b.formFactor;
+  if (a.kind !== b.kind || a.formFactor !== b.formFactor) return false;
+  if (a.kind === 'status' && b.kind === 'status') return a.statusId === b.statusId;
+  if (a.kind === 'division' && b.kind === 'division') return a.division === b.division;
+  return false;
+}
+
+function matchesFormFactor(category: string | null, formFactor: FormFactor) {
+  return formFactor === 'laptop' ? isNotebookCategory(category) : isDesktopCategory(category);
 }
 
 function getHandoverAssetIds(
@@ -66,14 +75,20 @@ function getHandoverAssetIds(
   return new Set(
     items
       .filter((item) => {
-        if (item.recipientDivision !== filter.division) return false;
-        if (filter.formFactor === null) return true;
-        return filter.formFactor === 'laptop'
-          ? isNotebookCategory(item.category)
-          : isDesktopCategory(item.category);
+        if (!matchesFormFactor(item.category, filter.formFactor)) return false;
+        if (filter.kind === 'status') return item.statusId === filter.statusId;
+        return matchesAssignmentBucket(item, filter.division);
       })
       .map((item) => item.assetId),
   );
+}
+
+function handoverFilterLabel(filter: HandoverInsightFilter): string {
+  const formLabel = filter.formFactor === 'laptop' ? 'Laptop' : 'Desktop';
+  if (filter.kind === 'status') {
+    return `${formLabel} · ${formatStatusLabel(filter.statusId)}`;
+  }
+  return `${formLabel} · ${filter.division}`;
 }
 
 function filterDepartmentsByAssetIds(
@@ -243,88 +258,34 @@ function AssetBucketSummaryCard({
   );
 }
 
-function AssetStockDeploySummary({ items }: { items: PlaceAsset[] }) {
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <AssetBucketSummaryCard
-        icon={Package}
-        label="Store"
-        items={items}
-        statusIds={DASHBOARD_ASSET_STORE_STATUS_IDS}
-        accent="bg-emerald-50 dark:bg-emerald-950/40"
-        iconTint="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-      />
-      <AssetBucketSummaryCard
-        icon={Truck}
-        label="Deploy"
-        items={items}
-        statusIds={DASHBOARD_ASSET_DEPLOY_STATUS_IDS}
-        accent="bg-sky-50 dark:bg-sky-950/40"
-        iconTint="bg-sky-500/15 text-sky-700 dark:text-sky-300"
-      />
-    </div>
-  );
-}
-
-function LaptopFormFactorSummary({ items }: { items: LaptopAsset[] }) {
-  const laptopItems = useMemo(
-    () => items.filter((item) => isNotebookCategory(item.category)),
-    [items],
-  );
-  const desktopItems = useMemo(
-    () => items.filter((item) => isDesktopCategory(item.category)),
-    [items],
-  );
-
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <FormFactorSummaryCard
-        icon={LaptopIcon}
-        label="Laptop"
-        items={laptopItems}
-        accent="bg-sky-50 dark:bg-sky-950/40"
-        iconTint="bg-sky-500/15 text-sky-700 dark:text-sky-300"
-      />
-      <FormFactorSummaryCard
-        icon={Monitor}
-        label="Desktop"
-        items={desktopItems}
-        accent="bg-violet-50 dark:bg-violet-950/40"
-        iconTint="bg-violet-500/15 text-violet-700 dark:text-violet-300"
-      />
-    </div>
-  );
-}
-
-function StatusAssetsDialog({
-  label,
-  statusId,
+function PlaceBuildingAssetsDialog({
+  building,
   items,
   onClose,
 }: {
-  label: string;
-  statusId: number | null;
-  items: LaptopAsset[];
+  building: string | null;
+  items: PlaceAsset[];
   onClose: () => void;
 }) {
-  const statusItems = useMemo(
-    () => (statusId == null ? [] : items.filter((item) => item.statusId === statusId)),
-    [items, statusId],
-  );
+  const buildingItems = useMemo(() => {
+    if (building == null) return [];
+    if (building === 'Unknown') {
+      return items.filter((item) => !item.building?.trim());
+    }
+    return items.filter((item) => item.building?.trim() === building);
+  }, [building, items]);
 
   return (
-    <Dialog open={statusId != null} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={building != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="capitalize">
-            {label} · {statusId != null ? formatStatusLabel(statusId) : ''}
-          </DialogTitle>
+          <DialogTitle>{building}</DialogTitle>
           <DialogDescription>
-            {statusItems.length} asset{statusItems.length === 1 ? '' : 's'}
+            {buildingItems.length} asset{buildingItems.length === 1 ? '' : 's'}
           </DialogDescription>
         </DialogHeader>
-        {statusItems.length === 0 ? (
-          <InsightsEmpty message="No assets with this status." />
+        {buildingItems.length === 0 ? (
+          <InsightsEmpty message="No assets at this building." />
         ) : (
           <ScrollArea className="max-h-[min(480px,60vh)] rounded-xl border border-border/70">
             <div className="overflow-x-auto p-1">
@@ -335,12 +296,12 @@ function StatusAssetsDialog({
                     <TableHead className="whitespace-nowrap font-semibold">Serial no.</TableHead>
                     <TableHead className="min-w-[140px] font-semibold">Brand / Model</TableHead>
                     <TableHead className="min-w-[120px] font-semibold">Category</TableHead>
-                    <TableHead className="min-w-[100px] font-semibold">Division</TableHead>
+                    <TableHead className="min-w-[100px] font-semibold">Building</TableHead>
                     <TableHead className="min-w-[140px] font-semibold">Remarks</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {statusItems.map((item) => (
+                  {buildingItems.map((item) => (
                     <TableRow key={item.assetId}>
                       <TableCell className="align-top">
                         <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
@@ -357,7 +318,7 @@ function StatusAssetsDialog({
                         {item.category ?? '—'}
                       </TableCell>
                       <TableCell className="align-top text-sm text-muted-foreground">
-                        {item.recipientDivision ?? '—'}
+                        {item.building ?? '—'}
                       </TableCell>
                       <TableCell className="align-top text-xs text-muted-foreground">
                         {item.remarks?.trim() || '—'}
@@ -374,65 +335,224 @@ function StatusAssetsDialog({
   );
 }
 
+function AssetDeployBuildingSummaryCard({ items }: { items: PlaceAsset[] }) {
+  const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
+
+  const deployItems = useMemo(
+    () => items.filter((item) => item.statusId === STATUS_ID.DEPLOY),
+    [items],
+  );
+
+  const buildingCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const building of CAMPUS_BUILDINGS) {
+      map.set(building, 0);
+    }
+    for (const item of deployItems) {
+      const building = item.building?.trim() || 'Unknown';
+      map.set(building, (map.get(building) ?? 0) + 1);
+    }
+    const campusSet = new Set<string>(CAMPUS_BUILDINGS);
+    const rows: { building: string; count: number }[] = CAMPUS_BUILDINGS.map((building) => ({
+      building,
+      count: map.get(building) ?? 0,
+    }));
+    for (const [building, count] of map) {
+      if (campusSet.has(building)) continue;
+      rows.push({ building, count });
+    }
+    return rows;
+  }, [deployItems]);
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="flex items-center justify-between gap-3 bg-sky-50 px-4 py-3 dark:bg-sky-950/40">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">Deploy</p>
+          <p className="text-3xl font-bold tabular-nums leading-none text-foreground">{deployItems.length}</p>
+        </div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-700 dark:text-sky-300">
+          <Truck className="h-5 w-5" />
+        </div>
+      </div>
+      <ul className="space-y-0.5 border-t border-border/60 px-2.5 py-2">
+        {buildingCounts.map(({ building, count }) => (
+          <li key={building}>
+            <button
+              type="button"
+              onClick={() => setSelectedBuilding(building)}
+              className="flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            >
+              <span className="min-w-0 truncate">{building}</span>
+              <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <PlaceBuildingAssetsDialog
+        building={selectedBuilding}
+        items={deployItems}
+        onClose={() => setSelectedBuilding(null)}
+      />
+    </div>
+  );
+}
+
+function AssetStockDeploySummary({ items }: { items: PlaceAsset[] }) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <AssetBucketSummaryCard
+        icon={Package}
+        label="Store"
+        items={items}
+        statusIds={DASHBOARD_ASSET_STORE_STATUS_IDS}
+        accent="bg-emerald-50 dark:bg-emerald-950/40"
+        iconTint="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+      />
+      <AssetDeployBuildingSummaryCard items={items} />
+    </div>
+  );
+}
+
+function LaptopFormFactorSummary({
+  items,
+  selectedFilter,
+  onSelectFilter,
+}: {
+  items: LaptopAsset[];
+  selectedFilter: HandoverInsightFilter | null;
+  onSelectFilter: (filter: HandoverInsightFilter | null) => void;
+}) {
+  const laptopItems = useMemo(
+    () => items.filter((item) => isNotebookCategory(item.category)),
+    [items],
+  );
+  const desktopItems = useMemo(
+    () => items.filter((item) => isDesktopCategory(item.category)),
+    [items],
+  );
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <FormFactorSummaryCard
+        icon={LaptopIcon}
+        label="Laptop"
+        formFactor="laptop"
+        items={laptopItems}
+        selectedFilter={selectedFilter}
+        onSelectFilter={onSelectFilter}
+        accent="bg-sky-50 dark:bg-sky-950/40"
+        iconTint="bg-sky-500/15 text-sky-700 dark:text-sky-300"
+      />
+      <FormFactorSummaryCard
+        icon={Monitor}
+        label="Desktop"
+        formFactor="desktop"
+        items={desktopItems}
+        selectedFilter={selectedFilter}
+        onSelectFilter={onSelectFilter}
+        accent="bg-violet-50 dark:bg-violet-950/40"
+        iconTint="bg-violet-500/15 text-violet-700 dark:text-violet-300"
+      />
+    </div>
+  );
+}
+
 function FormFactorSummaryCard({
   icon: Icon,
   label,
+  formFactor,
   items,
+  selectedFilter,
+  onSelectFilter,
   accent,
   iconTint,
 }: {
   icon: ElementType;
   label: string;
+  formFactor: FormFactor;
   items: LaptopAsset[];
+  selectedFilter: HandoverInsightFilter | null;
+  onSelectFilter: (filter: HandoverInsightFilter | null) => void;
   accent: string;
   iconTint: string;
 }) {
-  const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
-
-  const statusCounts = useMemo(() => {
-    const map = new Map<number, number>();
+  const { statusRows, divisionRows } = useMemo(() => {
+    const statusMap = new Map<number, number>();
     for (const item of items) {
-      map.set(item.statusId, (map.get(item.statusId) ?? 0) + 1);
+      statusMap.set(item.statusId, (statusMap.get(item.statusId) ?? 0) + 1);
     }
-    return DASHBOARD_STATUS_IDS.filter((statusId) => statusId !== STATUS_ID.ASSIGN).map(
-      (statusId) => ({
-        statusId,
-        count: map.get(statusId) ?? 0,
-      }),
+
+    const statusRows: { key: string; label: string; count: number; filter: HandoverInsightFilter }[] = [
+      STATUS_ID.NEW,
+      STATUS_ID.RETURN,
+      STATUS_ID.DISPOSED,
+    ].map((statusId) => ({
+      key: `status-${statusId}`,
+      label: formatStatusLabel(statusId),
+      count: statusMap.get(statusId) ?? 0,
+      filter: { kind: 'status', formFactor, statusId },
+    }));
+
+    const divisionRows = LAPTOP_ASSIGNMENT_BUCKETS.map((division) => ({
+      key: `division-${division}`,
+      label: division,
+      count: items.filter((item) => matchesAssignmentBucket(item, division)).length,
+      filter: { kind: 'division' as const, formFactor, division },
+    }));
+
+    return { statusRows, divisionRows };
+  }, [items, formFactor]);
+
+  const total = [...statusRows, ...divisionRows].reduce((sum, row) => sum + row.count, 0);
+
+  const renderRow = ({
+    key,
+    label: rowLabel,
+    count,
+    filter,
+  }: {
+    key: string;
+    label: string;
+    count: number;
+    filter: HandoverInsightFilter;
+  }) => {
+    const isSelected = isSameHandoverFilter(selectedFilter, filter);
+    return (
+      <li key={key}>
+        <button
+          type="button"
+          onClick={() => onSelectFilter(isSelected ? null : filter)}
+          className={cn(
+            'flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs transition-colors',
+            isSelected
+              ? 'bg-sky-50 font-medium text-sky-900 ring-1 ring-sky-200 dark:bg-sky-950 dark:text-sky-100 dark:ring-sky-800'
+              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+          )}
+        >
+          <span className="min-w-0 truncate capitalize">{rowLabel}</span>
+          <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
+        </button>
+      </li>
     );
-  }, [items]);
+  };
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
       <div className={cn('flex items-center justify-between gap-3 px-4 py-3', accent)}>
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">{label}</p>
-          <p className="text-3xl font-bold tabular-nums leading-none text-foreground">{items.length}</p>
+          <p className="text-3xl font-bold tabular-nums leading-none text-foreground">{total}</p>
         </div>
         <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full', iconTint)}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
       <ul className="space-y-0.5 border-t border-border/60 px-2.5 py-2">
-        {statusCounts.map(({ statusId, count }) => (
-          <li key={statusId}>
-            <button
-              type="button"
-              onClick={() => setSelectedStatusId(statusId)}
-              className="flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            >
-              <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
-              <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
-            </button>
-          </li>
-        ))}
+        {divisionRows.map(renderRow)}
+        <li aria-hidden className="my-1.5 border-t border-border/60" />
+        {statusRows.map(renderRow)}
       </ul>
-      <StatusAssetsDialog
-        label={label}
-        statusId={selectedStatusId}
-        items={items}
-        onClose={() => setSelectedStatusId(null)}
-      />
     </div>
   );
 }
@@ -460,126 +580,6 @@ function formatActivityWhen(at: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function LaptopHandoverSummary({
-  items,
-  selectedFilter,
-  onSelectFilter,
-}: {
-  items: LaptopAsset[];
-  selectedFilter: HandoverInsightFilter | null;
-  onSelectFilter: (filter: HandoverInsightFilter | null) => void;
-}) {
-  const laptopItems = useMemo(
-    () => items.filter((item) => isNotebookCategory(item.category)),
-    [items],
-  );
-  const desktopItems = useMemo(
-    () => items.filter((item) => isDesktopCategory(item.category)),
-    [items],
-  );
-
-  const divisionCounts = useMemo(
-    () =>
-      STAFF_DIVISIONS.map((division) => ({
-        division,
-        total: items.filter((item) => item.recipientDivision === division).length,
-        laptop: laptopItems.filter((item) => item.recipientDivision === division).length,
-        desktop: desktopItems.filter((item) => item.recipientDivision === division).length,
-      })),
-    [items, laptopItems, desktopItems],
-  );
-
-  const divisionIcon = {
-    Services: Briefcase,
-    Academic: GraduationCap,
-  } as const;
-
-  const divisionTint = {
-    Services: 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
-    Academic: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
-  } as const;
-
-  return (
-    <Card className="rounded-2xl border-border shadow-sm">
-      <CardContent className="p-4 sm:p-5">
-        <div className="mb-4">
-          <h2 className="text-base font-semibold text-foreground">Total handover</h2>
-          <p className="text-xs text-muted-foreground">By Services or Academic</p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {divisionCounts.map(({ division, total, laptop, desktop }) => {
-            const DivisionIcon = divisionIcon[division];
-            const divisionFilter = { division, formFactor: null };
-            const isDivisionSelected = isSameHandoverFilter(selectedFilter, divisionFilter);
-            return (
-              <div
-                key={division}
-                className="rounded-2xl border border-border bg-muted/20 px-4 py-4"
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    onSelectFilter(isDivisionSelected ? null : divisionFilter)
-                  }
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-xl border px-2 py-1.5 text-left transition-colors',
-                    isDivisionSelected
-                      ? 'border-sky-300 bg-sky-50 ring-2 ring-sky-200 dark:border-sky-700 dark:bg-sky-950 dark:ring-sky-800'
-                      : 'border-transparent hover:bg-muted/40',
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]',
-                      divisionTint[division],
-                    )}
-                  >
-                    <DivisionIcon className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {division}
-                    </p>
-                    <p className="text-3xl font-bold tabular-nums text-foreground">{total}</p>
-                  </div>
-                </button>
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/60 pt-3">
-                  {(['laptop', 'desktop'] as const).map((formFactor) => {
-                    const count = formFactor === 'laptop' ? laptop : desktop;
-                    const filter = { division, formFactor };
-                    const isSelected = isSameHandoverFilter(selectedFilter, filter);
-                    const label = formFactor === 'laptop' ? 'Laptop' : 'Desktop';
-                    return (
-                      <button
-                        key={formFactor}
-                        type="button"
-                        onClick={() =>
-                          onSelectFilter(isSelected ? null : filter)
-                        }
-                        className={cn(
-                          'rounded-xl border px-3 py-2 text-left transition-colors',
-                          isSelected
-                            ? 'border-sky-300 bg-sky-50 ring-2 ring-sky-200 dark:border-sky-700 dark:bg-sky-950 dark:ring-sky-800'
-                            : 'border-border/70 bg-card hover:bg-muted/40',
-                        )}
-                      >
-                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                          {label}
-                        </p>
-                        <p className="mt-0.5 text-lg font-bold tabular-nums">{count}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 function countDepartmentFormFactors(
@@ -678,6 +678,354 @@ function StaffHandoverTable({
   );
 }
 
+function matchesAssetSearch(item: LaptopAsset, query: string) {
+  return (
+    String(item.assetId).includes(query) ||
+    (item.serialNum ?? '').toLowerCase().includes(query) ||
+    (item.brand ?? '').toLowerCase().includes(query) ||
+    (item.model ?? '').toLowerCase().includes(query) ||
+    (item.category ?? '').toLowerCase().includes(query) ||
+    (item.recipientDivision ?? '').toLowerCase().includes(query) ||
+    (item.placeHandler ?? '').toLowerCase().includes(query) ||
+    (item.placeBuilding ?? '').toLowerCase().includes(query) ||
+    (item.placeLevel ?? '').toLowerCase().includes(query) ||
+    (item.placeZone ?? '').toLowerCase().includes(query) ||
+    (item.placeHandoverRemarks ?? '').toLowerCase().includes(query) ||
+    (item.remarks ?? '').toLowerCase().includes(query)
+  );
+}
+
+function StatusAssetsTable({ items }: { items: LaptopAsset[] }) {
+  if (items.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted-foreground">No assets match your search.</p>;
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
+          <TableHead className="whitespace-nowrap font-semibold">Asset ID</TableHead>
+          <TableHead className="whitespace-nowrap font-semibold">Serial no.</TableHead>
+          <TableHead className="min-w-[100px] font-semibold">Brand</TableHead>
+          <TableHead className="min-w-[100px] font-semibold">Model</TableHead>
+          <TableHead className="min-w-[120px] font-semibold">Category</TableHead>
+          <TableHead className="min-w-[140px] font-semibold">Remarks</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((item) => (
+          <TableRow key={item.assetId}>
+            <TableCell className="align-top">
+              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
+                #{item.assetId}
+              </span>
+            </TableCell>
+            <TableCell className="align-top">
+              <code className="text-xs text-muted-foreground">{item.serialNum ?? '—'}</code>
+            </TableCell>
+            <TableCell className="align-top text-sm font-medium text-foreground">
+              {item.brand ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-sm text-muted-foreground">
+              {item.model ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-sm capitalize text-muted-foreground">
+              {item.category ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-xs text-muted-foreground">
+              {item.remarks?.trim() || '—'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function ReturnAssetsTable({ items }: { items: LaptopAsset[] }) {
+  if (items.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted-foreground">No assets match your search.</p>;
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
+          <TableHead className="whitespace-nowrap font-semibold">Asset ID</TableHead>
+          <TableHead className="min-w-[100px] font-semibold">Brand</TableHead>
+          <TableHead className="min-w-[100px] font-semibold">Model</TableHead>
+          <TableHead className="min-w-[140px] font-semibold">Asset Lifespan</TableHead>
+          <TableHead className="min-w-[140px] font-semibold">Remarks</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((item) => (
+          <TableRow key={item.assetId}>
+            <TableCell className="align-top">
+              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
+                #{item.assetId}
+              </span>
+            </TableCell>
+            <TableCell className="align-top text-sm font-medium text-foreground">
+              {item.brand ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-sm text-muted-foreground">
+              {item.model ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-sm text-muted-foreground">
+              {formatAssetLifespan(item.poDate, item.assetId)}
+            </TableCell>
+            <TableCell className="align-top text-xs text-muted-foreground">
+              {item.remarks?.trim() || '—'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function FacilityAssetsTable({ items }: { items: LaptopAsset[] }) {
+  if (items.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted-foreground">No assets match your search.</p>;
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
+          <TableHead className="whitespace-nowrap font-semibold">Asset ID</TableHead>
+          <TableHead className="whitespace-nowrap font-semibold">Serial no.</TableHead>
+          <TableHead className="min-w-[120px] font-semibold">Brand</TableHead>
+          <TableHead className="min-w-[120px] font-semibold">Handler</TableHead>
+          <TableHead className="min-w-[100px] font-semibold">Building</TableHead>
+          <TableHead className="min-w-[80px] font-semibold">Zone</TableHead>
+          <TableHead className="min-w-[140px] font-semibold">Remarks</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((item) => (
+          <TableRow key={item.assetId}>
+            <TableCell className="align-top">
+              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
+                #{item.assetId}
+              </span>
+            </TableCell>
+            <TableCell className="align-top">
+              <code className="text-xs text-muted-foreground">{item.serialNum ?? '—'}</code>
+            </TableCell>
+            <TableCell className="align-top text-sm font-medium text-foreground">
+              {item.brand ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-sm text-muted-foreground">
+              {item.placeHandler ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-sm text-muted-foreground">
+              {item.placeBuilding ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-sm text-muted-foreground">
+              {item.placeZone ?? '—'}
+            </TableCell>
+            <TableCell className="align-top text-xs text-muted-foreground">
+              {item.placeHandoverRemarks?.trim() || '—'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function LaptopStatusAssetsPanel({
+  items,
+  filter,
+  onClearFilter,
+}: {
+  items: LaptopAsset[];
+  filter: Extract<HandoverInsightFilter, { kind: 'status' }>;
+  onClearFilter: () => void;
+}) {
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    setSearch('');
+  }, [filter]);
+
+  const statusItems = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          matchesFormFactor(item.category, filter.formFactor) &&
+          item.statusId === filter.statusId,
+      ),
+    [items, filter],
+  );
+
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return statusItems;
+    return statusItems.filter((item) => matchesAssetSearch(item, query));
+  }, [statusItems, search]);
+
+  const filterLabel = handoverFilterLabel(filter);
+
+  return (
+    <div className="mt-4">
+      <Card className="rounded-2xl border-border shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-2">
+              <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div>
+                <h2 className="text-base font-semibold capitalize text-foreground">
+                  {formatStatusLabel(filter.statusId)} assets
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {filterLabel} · {statusItems.length} asset{statusItems.length === 1 ? '' : 's'}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 rounded-[8px]"
+              onClick={onClearFilter}
+            >
+              Clear filter
+            </Button>
+          </div>
+
+          {statusItems.length > 0 ? (
+            <div className="relative mb-4 w-full sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search asset ID, serial, brand, model…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-10 rounded-[10px] pl-9"
+              />
+            </div>
+          ) : null}
+
+          {statusItems.length === 0 ? (
+            <InsightsEmpty message={`No assets for ${filterLabel}.`} />
+          ) : (
+            <div>
+              {search.trim() ? (
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {filteredItems.length} result{filteredItems.length === 1 ? '' : 's'}
+                </p>
+              ) : null}
+              <ScrollArea className="h-[min(520px,60vh)] rounded-xl border border-border/70">
+                <div className="overflow-x-auto p-1">
+                  {filter.statusId === STATUS_ID.RETURN ? (
+                    <ReturnAssetsTable items={filteredItems} />
+                  ) : (
+                    <StatusAssetsTable items={filteredItems} />
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function LaptopFacilityAssetsPanel({
+  items,
+  filter,
+  onClearFilter,
+}: {
+  items: LaptopAsset[];
+  filter: Extract<HandoverInsightFilter, { kind: 'division' }>;
+  onClearFilter: () => void;
+}) {
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    setSearch('');
+  }, [filter]);
+
+  const facilityItems = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          matchesFormFactor(item.category, filter.formFactor) &&
+          matchesAssignmentBucket(item, 'Facility'),
+      ),
+    [items, filter],
+  );
+
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return facilityItems;
+    return facilityItems.filter((item) => matchesAssetSearch(item, query));
+  }, [facilityItems, search]);
+
+  const filterLabel = handoverFilterLabel(filter);
+
+  return (
+    <div className="mt-4">
+      <Card className="rounded-2xl border-border shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-2">
+              <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Facility deployments</h2>
+                <p className="text-xs text-muted-foreground">
+                  {filterLabel} · {facilityItems.length} asset{facilityItems.length === 1 ? '' : 's'}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 rounded-[8px]"
+              onClick={onClearFilter}
+            >
+              Clear filter
+            </Button>
+          </div>
+
+          {facilityItems.length > 0 ? (
+            <div className="relative mb-4 w-full sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search asset ID, handler, building, serial…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-10 rounded-[10px] pl-9"
+              />
+            </div>
+          ) : null}
+
+          {facilityItems.length === 0 ? (
+            <InsightsEmpty message={`No facility deployments for ${filterLabel}.`} />
+          ) : (
+            <div>
+              {search.trim() ? (
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {filteredItems.length} result{filteredItems.length === 1 ? '' : 's'}
+                </p>
+              ) : null}
+              <ScrollArea className="h-[min(520px,60vh)] rounded-xl border border-border/70">
+                <div className="overflow-x-auto p-1">
+                  <FacilityAssetsTable items={filteredItems} />
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function LaptopInsightsSections({
   items,
   filter,
@@ -690,6 +1038,9 @@ function LaptopInsightsSections({
   const [departments, setDepartments] = useState<LaptopDepartmentHandover[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  const divisionFilter =
+    filter?.kind === 'division' ? filter : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -708,7 +1059,7 @@ function LaptopInsightsSections({
 
   useEffect(() => {
     setSearch('');
-  }, [filter]);
+  }, [divisionFilter]);
 
   const assetCategoryById = useMemo(
     () => new Map(items.map((item) => [item.assetId, item.category])),
@@ -716,9 +1067,9 @@ function LaptopInsightsSections({
   );
 
   const visibleDepartments = useMemo(() => {
-    if (!filter) return departments;
-    return filterDepartmentsByAssetIds(departments, getHandoverAssetIds(items, filter));
-  }, [departments, filter, items]);
+    if (!divisionFilter) return departments;
+    return filterDepartmentsByAssetIds(departments, getHandoverAssetIds(items, divisionFilter));
+  }, [departments, divisionFilter, items]);
 
   const staffRows = useMemo<StaffHandoverRow[]>(
     () =>
@@ -757,13 +1108,29 @@ function LaptopInsightsSections({
       .sort((a, b) => a.department.localeCompare(b.department));
   }, [visibleDepartments, filteredRows, search]);
 
+  if (filter?.kind === 'status') {
+    return (
+      <LaptopStatusAssetsPanel
+        items={items}
+        filter={filter}
+        onClearFilter={onClearFilter}
+      />
+    );
+  }
+
+  if (filter?.kind === 'division' && filter.division === 'Facility') {
+    return (
+      <LaptopFacilityAssetsPanel
+        items={items}
+        filter={filter}
+        onClearFilter={onClearFilter}
+      />
+    );
+  }
+
   const isSearching = search.trim().length > 0;
-  const filterLabel = filter
-    ? filter.formFactor === null
-      ? filter.division
-      : `${filter.division} · ${filter.formFactor === 'laptop' ? 'Laptop' : 'Desktop'}`
-    : null;
-  const emptyMessage = filter
+  const filterLabel = divisionFilter ? handoverFilterLabel(divisionFilter) : null;
+  const emptyMessage = divisionFilter
     ? `No handovers for ${filterLabel}.`
     : 'No department handover data yet.';
 
@@ -783,7 +1150,7 @@ function LaptopInsightsSections({
                 </p>
               </div>
             </div>
-            {filter ? (
+            {divisionFilter ? (
               <Button
                 type="button"
                 variant="outline"
@@ -1175,16 +1542,15 @@ export function AdminAssetInventoryPage({
           </div>
         </div>
 
-        <LaptopFormFactorSummary items={items as LaptopAsset[]} />
+        <LaptopFormFactorSummary
+          items={laptopItems}
+          selectedFilter={handoverFilter}
+          onSelectFilter={setHandoverFilter}
+        />
       </div>
 
       {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
 
-      <LaptopHandoverSummary
-        items={laptopItems}
-        selectedFilter={handoverFilter}
-        onSelectFilter={setHandoverFilter}
-      />
       <LaptopInsightsSections
         items={laptopItems}
         filter={handoverFilter}

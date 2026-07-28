@@ -61,6 +61,10 @@ function DeploymentDetails({ deployment }: { deployment: OpenReturnContext | nul
     return (
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <DetailItem label="Deployment date" value={formatDateLabel(r.handoverDate)} />
+        <DetailItem label="Building" value={r.building} />
+        <DetailItem label="Level" value={r.level} />
+        <DetailItem label="Zone" value={r.zone} />
+        <DetailItem label="Handler" value={r.handler} />
         <DetailItem label="Handled by" value={r.handledBy} />
         <DetailItem label="Remarks" value={r.handoverRemarks} />
       </div>
@@ -90,7 +94,9 @@ function deploymentSummaryLabel(deployment: OpenReturnContext | null): string {
   if (!deployment) return 'Not currently deployed';
   if (deployment.kind === 'laptop') {
     const r = deployment.record;
-    return r.type === 'staff' ? `Handover · ${r.recipientName}` : 'Place';
+    if (r.type === 'staff') return `Handover · ${r.recipientName}`;
+    const loc = [r.building, r.level, r.zone].filter(Boolean).join(' · ');
+    return loc ? `Place · ${loc}` : 'Place';
   }
   const r = deployment.record;
   return `Place · ${r.building}`;

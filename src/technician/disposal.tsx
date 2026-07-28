@@ -21,6 +21,7 @@ import { ASSET_KIND_LABEL, formatStatusLabel } from '@/lib/inventory-schema';
 import { readTechnicianSession } from '@/lib/auth-session';
 import { DISPOSAL_ELIGIBLE_STATUS_IDS } from '@/lib/disposal-schema';
 import { normalizeToIsoDate } from '@/lib/date-format';
+import { compareAssetIdNewestYearFirst } from '@/hooks/assetid-generator';
 import { filterBySearch, useAssets } from '@/hooks/assets';
 import { usePagination } from '@/hooks/use-pagination';
 import { createDisposalFn } from '@/server/disposal.functions';
@@ -111,7 +112,7 @@ export function TechnicianDisposalPage() {
         statusId: a.statusId,
       });
     }
-    return rows.sort((a, b) => a.assetId - b.assetId);
+    return rows.sort((a, b) => compareAssetIdNewestYearFirst(a.assetId, b.assetId));
   }, [laptop.items, av.items, network.items]);
 
   const filtered = useMemo(() => {

@@ -1,8 +1,13 @@
 import type { ElementType } from 'react';
 import { Laptop as LaptopIcon, Monitor } from 'lucide-react';
 import { isDesktopCategory, isNotebookCategory } from '@/hooks/assetid-generator';
-import { formatStatusLabel, type LaptopAsset } from '@/lib/inventory-schema';
-import { STAFF_DIVISIONS, type StaffDivision } from '@/lib/staff-schema';
+import {
+  formatStatusLabel,
+  LAPTOP_ASSIGNMENT_BUCKETS,
+  matchesAssignmentBucket,
+  type LaptopAsset,
+  type LaptopAssignmentBucket,
+} from '@/lib/inventory-schema';
 import { cn } from '@/lib/utils';
 
 export type LaptopFormFactorFilter = 'all' | 'laptop' | 'desktop';
@@ -16,7 +21,7 @@ type StatusCount = {
 };
 
 type LabelCount = {
-  label: string;
+  label: LaptopAssignmentBucket;
   count: number;
 };
 
@@ -69,22 +74,21 @@ function DivisionSplit({
 }: {
   rows: LabelCount[];
   formFactor: 'laptop' | 'desktop';
-  divisionFilter: StaffDivision | null;
+  divisionFilter: LaptopAssignmentBucket | null;
   formFactorFilter: LaptopFormFactorFilter;
-  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: StaffDivision) => void;
+  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: LaptopAssignmentBucket) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {rows.map(({ label, count }) => {
-        const division = label as StaffDivision;
-        const isActive = divisionFilter === division && formFactorFilter === formFactor;
+        const isActive = divisionFilter === label && formFactorFilter === formFactor;
 
         return (
           <button
             key={label}
             type="button"
             title={`Filter table by ${label}`}
-            onClick={() => onDivisionClick(formFactor, division)}
+            onClick={() => onDivisionClick(formFactor, label)}
             className={cn(
               'flex items-center justify-between gap-2 rounded-[10px] bg-background/80 px-3 py-2.5 text-left ring-1 ring-border/50 transition-colors',
               'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -126,9 +130,9 @@ function FormFactorCard({
   iconTint: string;
   statusFilter: number | null;
   formFactorFilter: LaptopFormFactorFilter;
-  divisionFilter: StaffDivision | null;
+  divisionFilter: LaptopAssignmentBucket | null;
   onStatusClick: (formFactor: 'laptop' | 'desktop', statusId: number) => void;
-  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: StaffDivision) => void;
+  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: LaptopAssignmentBucket) => void;
 }) {
   return (
     <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
@@ -158,7 +162,7 @@ function FormFactorCard({
 
         <div>
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Academic / Services
+            Academic / Services / Facility
           </p>
           <DivisionSplit
             rows={divisionRows}
@@ -186,9 +190,9 @@ function countStatusRows(items: LaptopAsset[]): StatusCount[] {
 }
 
 function countDivisionRows(items: LaptopAsset[]): LabelCount[] {
-  return STAFF_DIVISIONS.map((division) => ({
-    label: division,
-    count: items.filter((item) => item.recipientDivision === division).length,
+  return LAPTOP_ASSIGNMENT_BUCKETS.map((bucket) => ({
+    label: bucket,
+    count: items.filter((item) => matchesAssignmentBucket(item, bucket)).length,
   }));
 }
 
@@ -196,9 +200,9 @@ type LaptopAssetStockSummaryProps = {
   items: LaptopAsset[];
   statusFilter: number | null;
   formFactorFilter: LaptopFormFactorFilter;
-  divisionFilter: StaffDivision | null;
+  divisionFilter: LaptopAssignmentBucket | null;
   onStatusClick: (formFactor: 'laptop' | 'desktop', statusId: number) => void;
-  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: StaffDivision) => void;
+  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: LaptopAssignmentBucket) => void;
 };
 
 export function LaptopAssetStockSummary({

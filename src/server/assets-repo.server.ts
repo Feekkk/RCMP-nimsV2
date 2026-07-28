@@ -17,6 +17,7 @@ import type {
 import { isAllowedStatusTransition } from '@/lib/asset-status-actions';
 import { formatIsoToDdMmYy } from '@/lib/date-format';
 import { purchaseSqlParams } from '@/lib/purchase-field-utils';
+import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import { allocateAssetIdsFromDb } from '@/server/asset-id.server';
 import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
@@ -138,9 +139,18 @@ async function insertLaptopHandover(
   }
 
   const [handoverResult] = await conn.execute(
-    `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks)
-     VALUES (?, ?, ?, ?)`,
-    [assetId, userId, handover.handoverDate, handover.handoverRemarks],
+    `INSERT INTO handover (asset_id, user_id, building, level, zone, handler, handover_date, handover_remarks)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      assetId,
+      userId,
+      handover.building ?? null,
+      handover.level ?? null,
+      handover.zone ?? null,
+      handover.handler ?? null,
+      handover.handoverDate,
+      handover.handoverRemarks,
+    ],
   );
   const handoverId = (handoverResult as { insertId: number }).insertId;
   if (handover.employeeNo) {
@@ -201,6 +211,11 @@ type LaptopRow = RowDataPacket &
     status_id: number;
     remarks: string | null;
     recipient_division?: string | null;
+    place_handler?: string | null;
+    place_building?: string | null;
+    place_level?: string | null;
+    place_zone?: string | null;
+    place_handover_remarks?: string | null;
   };
 
 type AvRow = RowDataPacket &
@@ -264,6 +279,11 @@ function mapLaptop(row: LaptopRow): LaptopAsset {
     statusId: row.status_id,
     remarks: row.remarks,
     recipientDivision: row.recipient_division ?? null,
+    placeHandler: row.place_handler?.trim() || null,
+    placeBuilding: row.place_building?.trim() || null,
+    placeLevel: row.place_level?.trim() || null,
+    placeZone: row.place_zone?.trim() || null,
+    placeHandoverRemarks: row.place_handover_remarks?.trim() || null,
     ...mapPurchase(row),
   };
 }
@@ -424,7 +444,8 @@ export async function listAssets(kind: AssetKind) {
   const pool = getDbPool();
   if (kind === 'laptop') {
     const [rows] = await pool.query<LaptopRow[]>(
-      `SELECT l.*, ho.recipient_division
+      `SELECT l.*, ho.recipient_division, hp.place_handler, hp.place_building, hp.place_level, hp.place_zone,
+              hp.place_handover_remarks
        FROM laptop l
        LEFT JOIN (
          SELECT h.asset_id, s.division AS recipient_division
@@ -442,17 +463,39 @@ export async function listAssets(kind: AssetKind) {
          ) open_h ON open_h.handover_id = h.handover_id AND open_h.asset_id = h.asset_id
          WHERE hr.return_id IS NULL
        ) ho ON ho.asset_id = l.asset_id
-       ORDER BY l.asset_id`,
+       LEFT JOIN (
+         SELECT h.asset_id, h.handler AS place_handler, h.building AS place_building,
+                h.level AS place_level, h.zone AS place_zone,
+                h.handover_remarks AS place_handover_remarks
+         FROM handover h
+         LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
+         LEFT JOIN handover_return hr ON hr.handover_id = h.handover_id
+         INNER JOIN (
+           SELECT h2.asset_id, MAX(h2.handover_id) AS handover_id
+           FROM handover h2
+           LEFT JOIN handover_staff hs2 ON hs2.handover_id = h2.handover_id
+           LEFT JOIN handover_return hr2 ON hr2.handover_id = h2.handover_id
+           WHERE hs2.handover_staff_id IS NULL AND hr2.return_id IS NULL
+           GROUP BY h2.asset_id
+         ) open_p ON open_p.handover_id = h.handover_id AND open_p.asset_id = h.asset_id
+         WHERE hs.handover_staff_id IS NULL AND hr.return_id IS NULL
+           AND h.handler IS NOT NULL AND TRIM(h.handler) <> ''
+       ) hp ON hp.asset_id = l.asset_id
+       ORDER BY ${assetIdNewestYearFirstSql('l.asset_id')}`,
     );
     return rows.map(mapLaptop);
   }
   if (kind === 'av') {
-    const [rows] = await pool.query<AvRow[]>('SELECT * FROM av ORDER BY asset_id');
+    const [rows] = await pool.query<AvRow[]>(
+      `SELECT * FROM av ORDER BY ${assetIdNewestYearFirstSql()}`,
+    );
     const assets = rows.map(mapAv);
     const placeMap = await fetchOpenPlaceDeployments('av');
     return attachOpenPlace(assets, placeMap);
   }
-  const [rows] = await pool.query<NetworkRow[]>('SELECT * FROM network ORDER BY asset_id');
+  const [rows] = await pool.query<NetworkRow[]>(
+    `SELECT * FROM network ORDER BY ${assetIdNewestYearFirstSql()}`,
+  );
   const assets = rows.map(mapNetwork);
   const placeMap = await fetchOpenPlaceDeployments('network');
   return attachOpenPlace(assets, placeMap);
@@ -732,21 +775,26 @@ async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
       handover_id: number;
       handover_date: Date | string;
       handover_remarks: string | null;
+      building: string | null;
+      level: string | null;
+      zone: string | null;
+      handler: string | null;
       created_at: Date | string;
       technician_oid: string | null;
       technician_name: string;
       recipients: string | null;
     })[]
   >(
-    `SELECT h.handover_id, h.handover_date, h.handover_remarks, h.created_at,
-            tech.oid AS technician_oid,
+    `SELECT h.handover_id, h.handover_date, h.handover_remarks, h.building, h.level, h.zone, h.handler,
+            h.created_at, tech.oid AS technician_oid,
             GROUP_CONCAT(DISTINCT s.full_name ORDER BY s.full_name SEPARATOR ', ') AS recipients
      FROM handover h
      INNER JOIN users tech ON tech.id = h.user_id
      LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
      LEFT JOIN staff s ON s.employee_no = hs.employee_no
      WHERE h.asset_id = ?
-     GROUP BY h.handover_id, h.handover_date, h.handover_remarks, h.created_at, tech.oid
+     GROUP BY h.handover_id, h.handover_date, h.handover_remarks, h.building, h.level, h.zone, h.handler,
+              h.created_at, tech.oid
      ORDER BY h.handover_id`,
     [assetId],
   );
@@ -754,12 +802,22 @@ async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
 
   for (const h of handovers) {
     const when = trailAt(h.handover_date) || trailAt(h.created_at);
-    const to = h.recipients?.trim() ? `To ${h.recipients}` : 'Place / room handover';
+    const loc = [h.building, h.level, h.zone].filter(Boolean).join(' · ');
+    const to = h.recipients?.trim()
+      ? `To ${h.recipients}`
+      : loc
+        ? `Place · ${loc}`
+        : 'Place / room handover';
     pushTrail(events, {
       at: when,
       category: 'Handover',
       title: 'Handed over',
-      detail: [to, h.technician_name ? `by ${h.technician_name}` : null, h.handover_remarks]
+      detail: [
+        to,
+        h.handler ? `handler ${h.handler}` : null,
+        h.technician_name ? `by ${h.technician_name}` : null,
+        h.handover_remarks,
+      ]
         .filter(Boolean)
         .join(' · '),
     });

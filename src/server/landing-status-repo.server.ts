@@ -1,4 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
+import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import type { LandingSampleAsset, LandingStatusRow, LandingSystemStatus } from '@/lib/landing-status-types';
 import { isEmailConfigured, isMailpitMode } from '@/lib/microsoft-email-config';
 import { getDbPool, formatDatabaseError } from '@/server/db';
@@ -73,15 +74,15 @@ async function loadSampleAssets(): Promise<LandingSampleAsset[]> {
   const [rows] = await pool.query<SampleRow[]>(
     `(SELECT 'laptop' AS kind, l.asset_id, l.brand, l.model, l.serial_num, l.category, l.status_id, s.name AS status_name
       FROM laptop l INNER JOIN status s ON s.status_id = l.status_id
-      ORDER BY l.asset_id DESC LIMIT 2)
+      ORDER BY ${assetIdNewestYearFirstSql('l.asset_id')} LIMIT 2)
      UNION ALL
      (SELECT 'av' AS kind, a.asset_id, a.brand, a.model, a.serial_num, a.category, a.status_id, s.name AS status_name
       FROM av a INNER JOIN status s ON s.status_id = a.status_id
-      ORDER BY a.asset_id DESC LIMIT 1)
+      ORDER BY ${assetIdNewestYearFirstSql('a.asset_id')} LIMIT 1)
      UNION ALL
      (SELECT 'network' AS kind, n.asset_id, n.brand, n.model, n.serial_num, n.category, n.status_id, s.name AS status_name
       FROM network n INNER JOIN status s ON s.status_id = n.status_id
-      ORDER BY n.asset_id DESC LIMIT 1)`,
+      ORDER BY ${assetIdNewestYearFirstSql('n.asset_id')} LIMIT 1)`,
   );
 
   return rows.map((r) => {

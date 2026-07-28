@@ -175,6 +175,7 @@ function AssetForm({
   const [deployBuilding, setDeployBuilding] = useState('');
   const [deployLevel, setDeployLevel] = useState('');
   const [deployZone, setDeployZone] = useState('');
+  const [deployHandler, setDeployHandler] = useState('');
   const [deploymentDate, setDeploymentDate] = useState('');
   const [deploymentRemarks, setDeploymentRemarks] = useState('');
 
@@ -217,6 +218,10 @@ function AssetForm({
       handoverDate: string;
       handoverRemarks: string | null;
       employeeNo: string | null;
+      building?: string | null;
+      level?: string | null;
+      zone?: string | null;
+      handler?: string | null;
     } | null = null;
     let deployPlacement: {
       deploymentStaffEmail: string;
@@ -250,12 +255,25 @@ function AssetForm({
             toast.error('Selected staff has no email in the directory — add email before handover');
             return;
           }
+        } else {
+          if (!deployBuilding.trim()) {
+            toast.error('Building is required');
+            return;
+          }
+          if (!deployHandler.trim()) {
+            toast.error('Handler is required');
+            return;
+          }
         }
         deployHandover = {
           handoverStaffEmail: staffEmail,
           handoverDate: isoHandoverDate,
           handoverRemarks: handoverRemarks.trim() || null,
           employeeNo: laptopDeployMode === 'staff' ? deployRecipient!.employeeNo : null,
+          building: laptopDeployMode === 'place' ? deployBuilding.trim() : null,
+          level: laptopDeployMode === 'place' ? deployLevel.trim() || null : null,
+          zone: laptopDeployMode === 'place' ? deployZone.trim() || null : null,
+          handler: laptopDeployMode === 'place' ? deployHandler.trim() : null,
         };
       } else {
         const isoDeploymentDate = normalizeToIsoDate(deploymentDate);
@@ -471,6 +489,8 @@ function AssetForm({
                 onLevelChange={setDeployLevel}
                 zone={deployZone}
                 onZoneChange={setDeployZone}
+                handler={deployHandler}
+                onHandlerChange={setDeployHandler}
                 deploymentDate={deploymentDate}
                 onDeploymentDateChange={setDeploymentDate}
                 deploymentRemarks={deploymentRemarks}

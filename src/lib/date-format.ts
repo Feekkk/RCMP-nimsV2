@@ -1,4 +1,6 @@
 /** Compact procurement / CSV date format (e.g. 150126 = 15 Jan 2026). */
+import { parseAssetId } from '@/hooks/assetid-generator';
+
 export const DATE_FORMAT_DDMMYY = 'DDMMYY' as const;
 
 /** Separated date format (e.g. 15-01-26 or 1/2/3 = 15 Jan 2026 / 1 Feb 2003). */
@@ -205,4 +207,28 @@ export function formatAssetAge(
   const today = new Date();
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   return `${formatDurationSince(start, end)} (${basisLabel})`;
+}
+
+/** Lifespan from PO date, or from asset ID year (PPYYSSS → 20YY-01-01) when PO is missing. */
+export function formatAssetLifespan(
+  poDate: string | null | undefined,
+  assetId: number,
+): string {
+  let start: Date | undefined;
+
+  if (poDate?.trim()) {
+    const iso = normalizeToIsoDate(poDate);
+    const parsed = iso ? isoToLocalDate(iso) : undefined;
+    if (parsed) start = parsed;
+  }
+
+  if (!start) {
+    const { year } = parseAssetId(assetId);
+    start = new Date(2000 + year, 0, 1);
+  }
+
+  const today = new Date();
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const duration = formatDurationSince(start, end);
+  return duration.endsWith(' old') ? duration.slice(0, -4) : duration;
 }

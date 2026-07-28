@@ -39,6 +39,10 @@ export type LaptopPlaceOpen = {
   handoverId: number;
   handoverDate: string;
   handoverRemarks: string | null;
+  building: string | null;
+  level: string | null;
+  zone: string | null;
+  handler: string | null;
   handledBy: string | null;
 };
 
@@ -69,6 +73,10 @@ export type DeployLaptopStaffInput = {
 export type DeployLaptopPlaceInput = {
   assetId: number;
   staffId: string;
+  building: string;
+  level?: string | null;
+  zone?: string | null;
+  handler: string;
   handoverDate: string;
   handoverRemarks?: string | null;
   handledByName: string;

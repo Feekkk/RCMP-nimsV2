@@ -24,7 +24,8 @@ import {
 	normalizeCategory,
 } from '@/hooks/assetid-generator';
 import { usePagination } from '@/hooks/use-pagination';
-import type { StaffDivision } from '@/lib/staff-schema';
+import type { LaptopAssignmentBucket } from '@/lib/inventory-schema';
+import { matchesAssignmentBucket } from '@/lib/inventory-schema';
 import {
 	LaptopAssetStockSummary,
 	type LaptopFormFactorFilter,
@@ -63,7 +64,7 @@ export function TechnicianLaptopPage() {
 	const [search, setSearch] = useState('');
 	const [statusFilter, setStatusFilter] = useState<number | null>(null);
 	const [formFactorFilter, setFormFactorFilter] = useState<LaptopFormFactorFilter>('all');
-	const [divisionFilter, setDivisionFilter] = useState<StaffDivision | null>(null);
+	const [divisionFilter, setDivisionFilter] = useState<LaptopAssignmentBucket | null>(null);
 	const [categoryView, setCategoryView] = useState<LaptopCategoryView>('all');
 	const { items, isLoading, error, updateStatus } = useAssets('laptop');
 
@@ -77,7 +78,10 @@ export function TechnicianLaptopPage() {
 		setStatusFilter(statusId);
 	};
 
-	const handleDivisionMetricClick = (formFactor: 'laptop' | 'desktop', division: StaffDivision) => {
+	const handleDivisionMetricClick = (
+		formFactor: 'laptop' | 'desktop',
+		division: LaptopAssignmentBucket,
+	) => {
 		if (divisionFilter === division && formFactorFilter === formFactor) {
 			setDivisionFilter(null);
 			setFormFactorFilter('all');
@@ -92,7 +96,7 @@ export function TechnicianLaptopPage() {
 		const byDivision =
 			divisionFilter == null
 				? byFormFactor
-				: byFormFactor.filter((item) => item.recipientDivision === divisionFilter);
+				: byFormFactor.filter((item) => matchesAssignmentBucket(item, divisionFilter));
 		const byCategory = byDivision.filter((item) => matchesLaptopCategory(item.category, categoryView));
 		const bySearch = filterBySearch(byCategory, search, (c) => c.category ?? '');
 		return filterByStatus(bySearch, statusFilter);

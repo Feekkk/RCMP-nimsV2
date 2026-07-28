@@ -107,11 +107,16 @@ export async function getOpenReturnContext(
         handover_id: number;
         handover_date: Date | string;
         handover_remarks: string | null;
+        building: string | null;
+        level: string | null;
+        zone: string | null;
+        handler: string | null;
         technician_oid: string | null;
         technician_name: string;
       })[]
     >(
-      `SELECT h.handover_id, h.handover_date, h.handover_remarks, tech.oid AS technician_oid
+      `SELECT h.handover_id, h.handover_date, h.handover_remarks, h.building, h.level, h.zone, h.handler,
+              tech.oid AS technician_oid
        FROM handover h
        INNER JOIN users tech ON tech.id = h.user_id
        LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
@@ -129,6 +134,10 @@ export async function getOpenReturnContext(
         handoverId: r.handover_id,
         handoverDate: formatDateOnly(r.handover_date),
         handoverRemarks: r.handover_remarks,
+        building: r.building,
+        level: r.level,
+        zone: r.zone,
+        handler: r.handler,
         handledBy: r.technician_name?.trim() || null,
       };
       return { kind: 'laptop', record };
@@ -220,9 +229,19 @@ export async function deployLaptopToPlace(input: DeployLaptopPlaceInput) {
   try {
     await conn.beginTransaction();
     const [handoverResult] = await conn.execute(
-      `INSERT INTO handover (asset_id, user_id, handover_date, handover_remarks, handled_by_name)
-       VALUES (?, ?, ?, ?, ?)`,
-      [input.assetId, input.staffId, input.handoverDate, input.handoverRemarks ?? null, input.handledByName],
+      `INSERT INTO handover (asset_id, user_id, building, level, zone, handler, handover_date, handover_remarks, handled_by_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        input.assetId,
+        input.staffId,
+        input.building,
+        input.level ?? null,
+        input.zone ?? null,
+        input.handler,
+        input.handoverDate,
+        input.handoverRemarks ?? null,
+        input.handledByName,
+      ],
     );
     const handoverId = (handoverResult as { insertId: number }).insertId;
     await conn.execute(`UPDATE laptop SET status_id = ? WHERE asset_id = ?`, [

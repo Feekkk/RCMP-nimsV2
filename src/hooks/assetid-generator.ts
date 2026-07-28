@@ -80,6 +80,16 @@ export function parseAssetId(assetId: number): AssetIdParts {
   return { prefix, year, sequence };
 }
 
+export function compareAssetIdNewestYearFirst(a: number, b: number): number {
+  const yearDiff = parseAssetId(b).year - parseAssetId(a).year;
+  if (yearDiff !== 0) return yearDiff;
+  return b - a;
+}
+
+export function assetIdNewestYearFirstSql(column = 'asset_id'): string {
+  return `FLOOR((${column} % 100000) / 1000) DESC, ${column} DESC`;
+}
+
 export function getAssetIdRange(prefix: number, yearDigits: number): { min: number; max: number } {
   return {
     min: formatAssetId(prefix, yearDigits, ASSET_ID_SEQUENCE_MIN),

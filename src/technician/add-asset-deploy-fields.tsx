@@ -28,6 +28,8 @@ export function AddAssetDeployFields({
   onLevelChange,
   zone,
   onZoneChange,
+  handler,
+  onHandlerChange,
   deploymentDate,
   onDeploymentDateChange,
   deploymentRemarks,
@@ -48,6 +50,8 @@ export function AddAssetDeployFields({
   onLevelChange: (value: string) => void;
   zone: string;
   onZoneChange: (value: string) => void;
+  handler: string;
+  onHandlerChange: (value: string) => void;
   deploymentDate: string;
   onDeploymentDateChange: (value: string) => void;
   deploymentRemarks: string;
@@ -89,6 +93,37 @@ export function AddAssetDeployFields({
             <FormField label="Recipient (staff directory)" required>
               <StaffRecipientSearch value={recipient} onSelect={onRecipientChange} />
             </FormField>
+          )}
+
+          {laptopMode === 'place' && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Building" required>
+                <CampusBuildingSelect value={building} onChange={onBuildingChange} />
+              </FormField>
+              <FormField label="Level">
+                <Input
+                  value={level}
+                  onChange={(e) => onLevelChange(e.target.value)}
+                  className="rounded-[8px]"
+                />
+              </FormField>
+              <FormField label="Zone">
+                <Input
+                  value={zone}
+                  onChange={(e) => onZoneChange(e.target.value)}
+                  className="rounded-[8px]"
+                />
+              </FormField>
+              <FormField label="Handler" required>
+                <Input
+                  value={handler}
+                  onChange={(e) => onHandlerChange(e.target.value)}
+                  placeholder="On-site contact name"
+                  required
+                  className="rounded-[8px]"
+                />
+              </FormField>
+            </div>
           )}
 
           <div className="grid gap-4 sm:grid-cols-2">

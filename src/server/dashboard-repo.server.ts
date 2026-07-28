@@ -15,7 +15,7 @@ import {
 } from '@/lib/dashboard-schema';
 import type { RequestItemRow } from '@/lib/request-schema';
 import { REQUEST_STATUS_ACTIVE } from '@/lib/request-schema';
-import { STAFF_DIVISIONS } from '@/lib/staff-schema';
+import { LAPTOP_ASSIGNMENT_BUCKETS } from '@/lib/inventory-schema';
 import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
@@ -95,7 +95,7 @@ const REQUEST_STATUS_IDS = new Set<number>(DASHBOARD_REQUEST_STATUS_IDS);
 async function loadLaptopDeployDivisionCounts(
   pool: ReturnType<typeof getDbPool>,
 ): Promise<{ division: string; count: number }[]> {
-  const [rows] = await pool.query<(RowDataPacket & { division: string | null; cnt: number })[]>(
+  const [staffRows] = await pool.query<(RowDataPacket & { division: string | null; cnt: number })[]>(
     `SELECT ho.recipient_division AS division, COUNT(*) AS cnt
      FROM laptop l
      INNER JOIN (
@@ -118,14 +118,37 @@ async function loadLaptopDeployDivisionCounts(
      GROUP BY ho.recipient_division`,
   );
 
+  const [facilityRows] = await pool.query<(RowDataPacket & { cnt: number })[]>(
+    `SELECT COUNT(*) AS cnt
+     FROM laptop l
+     INNER JOIN (
+       SELECT h.asset_id
+       FROM handover h
+       LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
+       LEFT JOIN handover_return hr ON hr.handover_id = h.handover_id
+       INNER JOIN (
+         SELECT h2.asset_id, MAX(h2.handover_id) AS handover_id
+         FROM handover h2
+         LEFT JOIN handover_staff hs2 ON hs2.handover_id = h2.handover_id
+         LEFT JOIN handover_return hr2 ON hr2.handover_id = h2.handover_id
+         WHERE hs2.handover_staff_id IS NULL AND hr2.return_id IS NULL
+         GROUP BY h2.asset_id
+       ) open_p ON open_p.handover_id = h.handover_id AND open_p.asset_id = h.asset_id
+       WHERE hs.handover_staff_id IS NULL AND hr.return_id IS NULL
+         AND h.handler IS NOT NULL AND TRIM(h.handler) <> ''
+     ) hp ON hp.asset_id = l.asset_id
+     WHERE l.status_id IN (${DASHBOARD_ASSET_DEPLOY_STATUS_IDS.join(',')})`,
+  );
+
   const countByDivision = new Map<string, number>();
-  for (const row of rows) {
+  for (const row of staffRows) {
     const division = row.division?.trim();
     if (!division) continue;
     countByDivision.set(division, (countByDivision.get(division) ?? 0) + Number(row.cnt));
   }
+  countByDivision.set('Facility', Number(facilityRows[0]?.cnt ?? 0));
 
-  return STAFF_DIVISIONS.map((division) => ({
+  return LAPTOP_ASSIGNMENT_BUCKETS.map((division) => ({
     division,
     count: countByDivision.get(division) ?? 0,
   }));

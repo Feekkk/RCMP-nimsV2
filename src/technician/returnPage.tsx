@@ -45,6 +45,14 @@ function DeploymentSummary({ ctx }: { ctx: OpenReturnContext }) {
         <li>
           <span className="font-medium text-foreground">Place deployment</span>
         </li>
+        {(r.building || r.level || r.zone) && (
+          <li>
+            {[r.building, r.level && `Level ${r.level}`, r.zone && `Zone ${r.zone}`]
+              .filter(Boolean)
+              .join(' · ')}
+          </li>
+        )}
+        {r.handler && <li>Handler: {r.handler}</li>}
         <li>Handover date: {formatDateLabel(r.handoverDate)}</li>
         {r.handoverRemarks && <li>Remarks: {r.handoverRemarks}</li>}
       </ul>

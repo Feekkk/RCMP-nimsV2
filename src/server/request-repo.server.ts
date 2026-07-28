@@ -22,6 +22,7 @@ import {
   REQUEST_STATUS_BOOKED,
   REQUEST_STATUS_CHECKOUT,
 } from '@/lib/request-schema';
+import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import { STATUS_ID } from '@/lib/asset-status-actions';
 import type {
   ChangeBookedAssignmentInput,
@@ -84,7 +85,7 @@ async function queryLaptopActive(): Promise<ActiveForRequestAsset[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<LaptopRow[]>(
     `SELECT asset_id, model, brand, category, serial_num, status_id
-     FROM laptop WHERE status_id IN (?, ?) ORDER BY asset_id`,
+     FROM laptop WHERE status_id IN (?, ?) ORDER BY ${assetIdNewestYearFirstSql()}`,
     [...REQUEST_POOL_ELIGIBLE_STATUS_IDS],
   );
   return rows.map((r) => ({
@@ -103,7 +104,7 @@ async function queryAvActive(): Promise<ActiveForRequestAsset[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<AvRow[]>(
     `SELECT asset_id, asset_id_old, model, brand, category, serial_num, status_id
-     FROM av WHERE status_id IN (?, ?) ORDER BY asset_id`,
+     FROM av WHERE status_id IN (?, ?) ORDER BY ${assetIdNewestYearFirstSql()}`,
     [...REQUEST_POOL_ELIGIBLE_STATUS_IDS],
   );
   return rows.map((r) => ({
@@ -143,7 +144,7 @@ async function queryLaptopPool(): Promise<RequestPoolAsset[]> {
      LEFT JOIN request r ON r.request_id = ra.request_id AND r.rejected_at IS NULL
      LEFT JOIN users u ON u.id = r.requested_by
      WHERE l.status_id IN (?, ?, ?)
-     ORDER BY l.asset_id`,
+     ORDER BY ${assetIdNewestYearFirstSql('l.asset_id')}`,
     [REQUEST_STATUS_ACTIVE, REQUEST_STATUS_BOOKED, REQUEST_STATUS_CHECKOUT],
   );
   await attachDisplayNames(rows, 'requester_oid', 'requester_name');
@@ -173,7 +174,7 @@ async function queryAvPool(): Promise<RequestPoolAsset[]> {
      LEFT JOIN request r ON r.request_id = ra.request_id AND r.rejected_at IS NULL
      LEFT JOIN users u ON u.id = r.requested_by
      WHERE a.status_id IN (?, ?, ?)
-     ORDER BY a.asset_id`,
+     ORDER BY ${assetIdNewestYearFirstSql('a.asset_id')}`,
     [REQUEST_STATUS_ACTIVE, REQUEST_STATUS_BOOKED, REQUEST_STATUS_CHECKOUT],
   );
   await attachDisplayNames(rows, 'requester_oid', 'requester_name');

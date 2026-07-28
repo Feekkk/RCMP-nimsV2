@@ -1,4 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
+import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import { attachDisplayNames, getDirectoryUsersByOids } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
@@ -276,7 +277,7 @@ export async function exportAdminCsv(kind: AdminExportKind): Promise<AdminExport
 
   const table = kind;
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT * FROM \`${table}\` ORDER BY asset_id`,
+    `SELECT * FROM \`${table}\` ORDER BY ${assetIdNewestYearFirstSql()}`,
   );
   if (rows.length === 0) {
     return {

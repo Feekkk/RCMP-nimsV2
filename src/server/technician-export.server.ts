@@ -1,4 +1,8 @@
 import type { RowDataPacket } from 'mysql2';
+import {
+  assetIdNewestYearFirstSql,
+  compareAssetIdNewestYearFirst,
+} from '@/hooks/assetid-generator';
 import type { AssetKind, AssetTrailEvent } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, formatStatusLabel } from '@/lib/inventory-schema';
 import { STATUS_ID } from '@/lib/asset-status-actions';
@@ -55,7 +59,9 @@ export async function exportTechnicianAssetCsv(
 ): Promise<TechnicianExportResult> {
   const pool = getDbPool();
   const stamp = new Date().toISOString().slice(0, 10);
-  const [rows] = await pool.query<RowDataPacket[]>(`SELECT * FROM \`${kind}\` ORDER BY asset_id`);
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT * FROM \`${kind}\` ORDER BY ${assetIdNewestYearFirstSql()}`,
+  );
 
   if (rows.length === 0) {
     return {
@@ -185,7 +191,7 @@ async function fetchLaptopReportRows(
   const requestClause = requestFilterSql('laptop', filters.requestFilter, 'l');
   sql += requestClause.clause;
   params.push(...requestClause.params);
-  sql += ' ORDER BY l.asset_id';
+  sql += ` ORDER BY ${assetIdNewestYearFirstSql('l.asset_id')}`;
 
   const [rows] = await pool.query<RowDataPacket[]>(sql, params);
   return rows.map((row) => mapBaseRow('laptop', row));
@@ -207,7 +213,7 @@ async function fetchAvReportRows(filters: TechnicianReportPdfFilters): Promise<A
   const requestClause = requestFilterSql('av', filters.requestFilter, 'a');
   sql += requestClause.clause;
   params.push(...requestClause.params);
-  sql += ' ORDER BY a.asset_id';
+  sql += ` ORDER BY ${assetIdNewestYearFirstSql('a.asset_id')}`;
 
   const [rows] = await pool.query<RowDataPacket[]>(sql, params);
   return rows.map((row) => mapBaseRow('av', row));
@@ -231,7 +237,7 @@ async function fetchNetworkReportRows(
   const requestClause = requestFilterSql('network', filters.requestFilter, 'n');
   sql += requestClause.clause;
   params.push(...requestClause.params);
-  sql += ' ORDER BY n.asset_id';
+  sql += ` ORDER BY ${assetIdNewestYearFirstSql('n.asset_id')}`;
 
   const [rows] = await pool.query<RowDataPacket[]>(sql, params);
   return rows.map((row) => mapBaseRow('network', row));
@@ -484,7 +490,7 @@ export async function fetchFilteredAssetReportRows(
   const sorted = rows.sort((a, b) => {
     const kindOrder = { laptop: 0, av: 1, network: 2 } as const;
     if (kindOrder[a.kind] !== kindOrder[b.kind]) return kindOrder[a.kind] - kindOrder[b.kind];
-    return a.assetId - b.assetId;
+    return compareAssetIdNewestYearFirst(a.assetId, b.assetId);
   });
 
   await enrichReportRows(sorted, filters);
