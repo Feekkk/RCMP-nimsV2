@@ -261,14 +261,13 @@ export async function getUserProfile(staffId: string): Promise<AuthUserRow> {
   return mapUserWithAzureProfile(row);
 }
 
-export async function updateUserProfile(input: UpdateUserProfileInput): Promise<AuthUserRow> {
+export async function updateUserProfile(input: {
+  staffId: string;
+  phone: string | null;
+}): Promise<AuthUserRow> {
   const userId = parseUserId(input.staffId);
-  const email = input.email.trim().toLowerCase();
   const phone = input.phone?.trim() || null;
 
-  if (!email) {
-    throw new Error('An email address is required. Enter your email to continue.');
-  }
   if (!phone) {
     throw new Error('A phone number is required. Enter your phone number to complete your profile.');
   }
@@ -279,13 +278,8 @@ export async function updateUserProfile(input: UpdateUserProfileInput): Promise<
     throw new Error('Only user accounts can update this profile. Sign in with a user account to continue.');
   }
 
-  const emailOwner = await findUserByEmail(email);
-  if (emailOwner && emailOwner.id !== userId) {
-    throw new Error('This email is already registered to another account. Enter a different email address.');
-  }
-
   const pool = getDbPool();
-  await pool.execute(`UPDATE users SET email = ?, phone = ? WHERE id = ?`, [email, phone, userId]);
+  await pool.execute(`UPDATE users SET phone = ? WHERE id = ?`, [phone, userId]);
 
   return getUserProfile(input.staffId);
 }

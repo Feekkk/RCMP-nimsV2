@@ -44,14 +44,7 @@ export const getUserProfileFn = createServerFn({ method: 'POST' })
   });
 
 export const updateUserProfileFn = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (data: {
-      staffId: string;
-      fullName: string;
-      email: string;
-      phone: string | null;
-    }) => data,
-  )
+  .inputValidator((data: { staffId: string; phone: string | null }) => data)
   .handler(async ({ data }) => {
     const { updateUserProfile } = await import('@/server/auth-repo.server');
     return updateUserProfile(data);
