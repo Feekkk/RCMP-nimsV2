@@ -89,16 +89,10 @@ import { RequestReturnFields } from '@/technician/request-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 
 function poolAssetLabel(a: RequestPoolAsset): string {
-  const kind = a.kind === 'laptop' ? 'Laptop' : 'AV';
-  const parts = [
-    kind,
-    `#${a.assetId}`,
-    a.kind === 'av' ? a.assetIdOld : null,
-    a.model,
-    a.brand,
-    a.category,
-  ].filter(Boolean);
-  return parts.join(' · ');
+  if (a.kind === 'laptop') {
+    return [`#${a.assetId}`, a.model, a.brand].filter(Boolean).join(' · ');
+  }
+  return [a.assetIdOld, `#${a.assetId}`, a.category, a.brand].filter(Boolean).join(' · ');
 }
 
 function slotMarkLabel(mark: RequestSlotMark): string {
@@ -733,27 +727,12 @@ export function TechnicianRequestPage() {
                 : ''}
             </p>
           </div>
-          <div
-            className="flex shrink-0 flex-wrap items-center gap-1.5"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-          >
-            {awaitingReturn.length > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={cn(
-                  'h-8 rounded-[8px] text-xs',
-                  overdue && 'border-rose-300 text-rose-800 hover:bg-rose-100',
-                )}
-                onClick={() => openReturnForm(req)}
-              >
-                <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                Return
-              </Button>
-            )}
-            {toCheckout.length > 0 && (
+          {toCheckout.length > 0 && (
+            <div
+              className="flex shrink-0 flex-wrap items-center gap-1.5"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
               <Button
                 type="button"
                 size="sm"
@@ -763,8 +742,8 @@ export function TechnicianRequestPage() {
               >
                 {checkoutRequestId === req.requestId ? 'Checking out…' : 'Checkout'}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border px-4 py-4">
           <p className="mb-3 text-xs text-muted-foreground">

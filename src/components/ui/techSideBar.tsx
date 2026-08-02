@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
-  BookOpen,
   ChevronDown,
   History,
   Inbox,
@@ -42,7 +41,6 @@ const HASH = {
   inventoryNetwork: 'inventory-network',
   requestAssign: 'request-assign-assets',
   requestUser: 'request-user',
-  manual: 'manual',
 } as const;
 
 type HashValue = (typeof HASH)[keyof typeof HASH];
@@ -173,9 +171,6 @@ function TechSideBarNav() {
         active={pathname === REPORT || pathname.startsWith(`${REPORT}/`)}
       >
         Report
-      </NavLink>
-      <NavLink to={`${DASH}#${HASH.manual}`} icon={BookOpen} active={h === HASH.manual}>
-        Manual
       </NavLink>
       <NavLink
         to={PROFILE}
