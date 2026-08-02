@@ -16,7 +16,6 @@ type HandoverRow = RowDataPacket & {
   model: string | null;
   category: string | null;
   serial_num: string | null;
-  remarks: string | null;
   handled_by_name: string | null;
   handed_by_oid: string | null;
   handed_by_role: string | null;
@@ -38,7 +37,7 @@ export async function getHandoverNotificationData(
   const [rows] = await pool.query<HandoverRow[]>(
     `SELECT h.handover_id, h.asset_id, h.handover_date, h.handover_remarks,
             hs.employee_no, s.full_name AS recipient_name, s.email AS recipient_email, s.department,
-            l.brand, l.model, l.category, l.serial_num, l.remarks,
+            l.brand, l.model, l.category, l.serial_num,
             h.handled_by_name, u.oid AS handed_by_oid, r.name AS handed_by_role
      FROM handover h
      INNER JOIN laptop l ON l.asset_id = h.asset_id
@@ -79,7 +78,7 @@ export async function getHandoverNotificationData(
     modelName: row.model?.trim() || '—',
     serialNumber: row.serial_num?.trim() || '—',
     adapter: '—',
-    remark: row.handover_remarks?.trim() || row.remarks?.trim() || '—',
+    remark: row.handover_remarks?.trim() || '—',
     handoverByName: handedByName || '—',
     handoverByDesignation: row.handed_by_role?.trim() || 'IT Department',
   };

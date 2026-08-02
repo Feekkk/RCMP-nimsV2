@@ -21,7 +21,7 @@ function detailRow(label: string, value: unknown): string {
 export function buildHandoverEmailHtml(data: HandoverEmailData): string {
   const rows = [
     detailRow('Recipient', data.recipientName),
-    detailRow('Staff / IC no.', data.employeeNo),
+    detailRow('Staff ID', data.employeeNo),
     detailRow('Designation', data.employeeDesignation),
     detailRow('Handover date', data.handoverDate),
     detailRow('Asset ID', String(data.assetId)),
@@ -29,7 +29,7 @@ export function buildHandoverEmailHtml(data: HandoverEmailData): string {
     detailRow('Brand', data.brandName),
     detailRow('Model', data.modelName),
     detailRow('Serial number', data.serialNumber),
-    detailRow('Remarks', data.remark),
+    detailRow('Remarks', data.remark || '—'),
     detailRow('Handed over by', `${data.handoverByName} (${data.handoverByDesignation})`),
   ].join('');
 
@@ -100,7 +100,7 @@ export function buildHandoverEmailText(data: HandoverEmailData): string {
     '',
     'Handover details',
     `  Recipient: ${data.recipientName}`,
-    `  Staff / IC no.: ${data.employeeNo}`,
+    `  Staff ID: ${data.employeeNo}`,
     `  Designation: ${data.employeeDesignation}`,
     `  Handover date: ${data.handoverDate}`,
     `  Asset ID: ${data.assetId}`,
@@ -108,7 +108,7 @@ export function buildHandoverEmailText(data: HandoverEmailData): string {
     `  Brand: ${data.brandName}`,
     `  Model: ${data.modelName}`,
     `  Serial number: ${data.serialNumber}`,
-    `  Remarks: ${data.remark}`,
+    `  Remarks: ${data.remark || '—'}`,
     `  Handed over by: ${data.handoverByName} (${data.handoverByDesignation})`,
     '',
     `Questions: ${HANDOVER_CC}`,
