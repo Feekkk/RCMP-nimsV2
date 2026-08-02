@@ -22,7 +22,6 @@ import { Route as TechnicianRequestLogRouteImport } from './routes/technician/re
 import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
 import { Route as TechnicianReportRouteImport } from './routes/technician/report'
 import { Route as TechnicianRepairRouteImport } from './routes/technician/repair'
-import { Route as TechnicianPromptRouteImport } from './routes/technician/prompt'
 import { Route as TechnicianProfileRouteImport } from './routes/technician/profile'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
@@ -137,11 +136,6 @@ const TechnicianReportRoute = TechnicianReportRouteImport.update({
 const TechnicianRepairRoute = TechnicianRepairRouteImport.update({
   id: '/technician/repair',
   path: '/technician/repair',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianPromptRoute = TechnicianPromptRouteImport.update({
-  id: '/technician/prompt',
-  path: '/technician/prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TechnicianProfileRoute = TechnicianProfileRouteImport.update({
@@ -424,7 +418,6 @@ export interface FileRoutesByFullPath {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
-  '/technician/prompt': typeof TechnicianPromptRoute
   '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
@@ -490,7 +483,6 @@ export interface FileRoutesByTo {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
-  '/technician/prompt': typeof TechnicianPromptRoute
   '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
@@ -557,7 +549,6 @@ export interface FileRoutesById {
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
   '/technician/profile': typeof TechnicianProfileRoute
-  '/technician/prompt': typeof TechnicianPromptRoute
   '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
@@ -625,7 +616,6 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
-    | '/technician/prompt'
     | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
@@ -691,7 +681,6 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
-    | '/technician/prompt'
     | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
@@ -757,7 +746,6 @@ export interface FileRouteTypes {
     | '/technician/laptop'
     | '/technician/network'
     | '/technician/profile'
-    | '/technician/prompt'
     | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
@@ -824,7 +812,6 @@ export interface RootRouteChildren {
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
   TechnicianProfileRoute: typeof TechnicianProfileRoute
-  TechnicianPromptRoute: typeof TechnicianPromptRoute
   TechnicianRepairRoute: typeof TechnicianRepairRoute
   TechnicianReportRoute: typeof TechnicianReportRoute
   TechnicianRequestAssetsRoute: typeof TechnicianRequestAssetsRoute
@@ -957,13 +944,6 @@ declare module '@tanstack/react-router' {
       path: '/technician/repair'
       fullPath: '/technician/repair'
       preLoaderRoute: typeof TechnicianRepairRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/prompt': {
-      id: '/technician/prompt'
-      path: '/technician/prompt'
-      fullPath: '/technician/prompt'
-      preLoaderRoute: typeof TechnicianPromptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/profile': {
@@ -1355,7 +1335,6 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
   TechnicianProfileRoute: TechnicianProfileRoute,
-  TechnicianPromptRoute: TechnicianPromptRoute,
   TechnicianRepairRoute: TechnicianRepairRoute,
   TechnicianReportRoute: TechnicianReportRoute,
   TechnicianRequestAssetsRoute: TechnicianRequestAssetsRoute,

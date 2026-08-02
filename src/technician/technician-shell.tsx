@@ -7,7 +7,6 @@ import { TechSideBar } from '@/components/ui/techSideBar';
 import { Toaster } from '@/components/ui/sonner';
 import { clearAllSessions, hasTechnicianSession, isAdminRole, readTechnicianSession } from '@/lib/auth-session';
 import { AssetLookupButton } from '@/technician/asset-lookup';
-import { AskAiLink } from '@/components/ask-ai-link';
 
 export function TechnicianShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -61,9 +60,6 @@ export function TechnicianShell({ children }: { children: ReactNode }) {
                 <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">Technician</p>
                 <p className="truncate text-sm font-bold text-foreground">Asset Management System</p>
               </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <AskAiLink to="/technician/prompt" />
             </div>
           </div>
         </header>

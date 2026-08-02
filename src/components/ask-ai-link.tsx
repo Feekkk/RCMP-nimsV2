@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 
 type AskAiLinkProps = {
-  to: '/admin/prompt' | '/technician/prompt';
+  to: '/admin/prompt';
 };
 
 export function AskAiLink({ to }: AskAiLinkProps) {
