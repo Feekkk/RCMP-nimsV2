@@ -15,6 +15,7 @@ import {
   type LaptopAsset,
   type NetworkAsset,
 } from '@/lib/inventory-schema';
+import { compareAssetIdNewestYearFirst } from '@/hooks/assetid-generator';
 import {
   bulkCreateAvFn,
   bulkCreateLaptopsFn,
@@ -53,7 +54,10 @@ export function useAssets<K extends AssetKind>(kind: K) {
     setError(null);
     try {
       const data = await listAssetsFn({ data: kind });
-      setItems(data as AssetByKind[K]);
+      const sorted = [...(data as AssetByKind[K])].sort((a, b) =>
+        compareAssetIdNewestYearFirst(a.assetId, b.assetId),
+      );
+      setItems(sorted as AssetByKind[K]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load assets');
       setItems([] as AssetByKind[K]);
