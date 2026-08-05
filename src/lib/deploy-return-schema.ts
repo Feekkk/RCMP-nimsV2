@@ -12,6 +12,16 @@ export const CAMPUS_BUILDINGS = ['Al Razi', 'Avicenna', 'Al Zahrawi'] as const;
 
 export type CampusBuilding = (typeof CAMPUS_BUILDINGS)[number];
 
+const CAMPUS_BUILDING_BY_KEY = new Map(
+  CAMPUS_BUILDINGS.map((building) => [building.toLowerCase(), building] as const),
+);
+
+export function canonicalizeCampusBuilding(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return 'Unknown';
+  return CAMPUS_BUILDING_BY_KEY.get(trimmed.toLowerCase()) ?? trimmed;
+}
+
 export type ReturnCondition = (typeof RETURN_CONDITIONS)[number];
 
 export type StaffRecipient = {

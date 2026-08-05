@@ -150,7 +150,17 @@ export function AddAssetDeployFields({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Building" required>
-            <CampusBuildingSelect value={building} onChange={onBuildingChange} />
+            {kind === 'network' ? (
+              <Input
+                value={building}
+                onChange={(e) => onBuildingChange(e.target.value)}
+                placeholder="Building name"
+                required
+                className="rounded-[8px]"
+              />
+            ) : (
+              <CampusBuildingSelect value={building} onChange={onBuildingChange} />
+            )}
           </FormField>
           <FormField label="Level" required>
             <Input

@@ -357,7 +357,17 @@ export function TechnicianDeployPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField label="Building" required>
-                  <CampusBuildingSelect value={building} onChange={setBuilding} />
+                  {kind === 'network' ? (
+                    <Input
+                      value={building}
+                      onChange={(e) => setBuilding(e.target.value)}
+                      placeholder="Building name"
+                      required
+                      className="rounded-[8px]"
+                    />
+                  ) : (
+                    <CampusBuildingSelect value={building} onChange={setBuilding} />
+                  )}
                 </FormField>
                 <FormField label="Level" required>
                   <Input value={level} onChange={(e) => setLevel(e.target.value)} required className="rounded-[8px]" />

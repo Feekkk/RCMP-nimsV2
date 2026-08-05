@@ -2,28 +2,102 @@ import type { ElementType } from 'react';
 import { PackageCheck, PackageX } from 'lucide-react';
 import { countStockAssets, type StockStatusCount } from '@/hooks/assets';
 import { STATUS_ID } from '@/lib/asset-status-actions';
-import { CAMPUS_BUILDINGS } from '@/lib/deploy-return-schema';
-import { formatStatusLabel, OUTSTOCK_STATUS_IDS } from '@/lib/inventory-schema';
+import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@/lib/deploy-return-schema';
+import { formatStatusLabel, OUTSTOCK_STATUS_IDS, type AssetKind } from '@/lib/inventory-schema';
+import { cn } from '@/lib/utils';
+
+export type AssetStockBreakdownFilter =
+  | { kind: 'status'; statusId: number }
+  | { kind: 'building'; buildingKey: string };
 
 type BreakdownRow = {
   key: string;
   label: string;
   count: number;
+  filter: AssetStockBreakdownFilter;
 };
 
-function BreakdownList({ rows }: { rows: BreakdownRow[] }) {
+function breakdownFiltersEqual(
+  a: AssetStockBreakdownFilter | null | undefined,
+  b: AssetStockBreakdownFilter,
+): boolean {
+  if (a == null) return false;
+  if (a.kind !== b.kind) return false;
+  if (a.kind === 'status' && b.kind === 'status') return a.statusId === b.statusId;
+  if (a.kind === 'building' && b.kind === 'building') {
+    return a.buildingKey.toLowerCase() === b.buildingKey.toLowerCase();
+  }
+  return false;
+}
+
+function MetricChipGrid({
+  rows,
+  activeFilter,
+  onFilterClick,
+}: {
+  rows: BreakdownRow[];
+  activeFilter: AssetStockBreakdownFilter | null;
+  onFilterClick: (filter: AssetStockBreakdownFilter) => void;
+}) {
+  if (rows.length === 0) return null;
+
   return (
-    <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
-      {rows.map(({ key, label, count }) => (
-        <li
-          key={key}
-          className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
-        >
-          <span className="min-w-0 truncate capitalize">{label}</span>
-          <span className="shrink-0 tabular-nums font-medium text-foreground">{count}</span>
-        </li>
+    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+      {rows.map((row) => {
+        const isActive = breakdownFiltersEqual(activeFilter, row.filter);
+        return (
+          <button
+            key={row.key}
+            type="button"
+            title={`Filter table by ${row.label}`}
+            onClick={() => onFilterClick(row.filter)}
+            className={cn(
+              'rounded-[8px] bg-background/80 px-2 py-1.5 text-left ring-1 ring-border/50 transition-colors',
+              'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              isActive && 'bg-primary/10 ring-2 ring-primary/40',
+              row.count === 0 && !isActive && 'opacity-60',
+            )}
+          >
+            <p className="truncate text-[10px] capitalize leading-tight text-muted-foreground">
+              {row.label}
+            </p>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">{row.count}</p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function BreakdownList({
+  sections,
+  activeFilter,
+  onFilterClick,
+}: {
+  sections: { title?: string; rows: BreakdownRow[] }[];
+  activeFilter: AssetStockBreakdownFilter | null;
+  onFilterClick: (filter: AssetStockBreakdownFilter) => void;
+}) {
+  const visible = sections.filter((section) => section.rows.length > 0);
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="mt-3 space-y-3">
+      {visible.map((section) => (
+        <div key={section.title ?? 'default'}>
+          {section.title ? (
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {section.title}
+            </p>
+          ) : null}
+          <MetricChipGrid
+            rows={section.rows}
+            activeFilter={activeFilter}
+            onFilterClick={onFilterClick}
+          />
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -32,101 +106,167 @@ function statusRowsToBreakdown(rows: StockStatusCount[]): BreakdownRow[] {
     key: `status:${statusId}`,
     label: formatStatusLabel(statusId),
     count,
+    filter: { kind: 'status', statusId },
+  }));
+}
+
+const OUTSTOCK_STATUS_BREAKDOWN_IDS = OUTSTOCK_STATUS_IDS.filter(
+  (statusId) => statusId !== STATUS_ID.DEPLOY,
+);
+
+function outstockStatusRows(counts: Map<number, number>): BreakdownRow[] {
+  return OUTSTOCK_STATUS_BREAKDOWN_IDS.map((statusId) => ({
+    key: `status:${statusId}`,
+    label: formatStatusLabel(statusId),
+    count: counts.get(statusId) ?? 0,
+    filter: { kind: 'status' as const, statusId },
   }));
 }
 
 function outstockBuildingBreakdown(
   items: { statusId: number; building?: string | null }[],
-): BreakdownRow[] {
+  kind: 'av' | 'network',
+): { place: BreakdownRow[]; status: BreakdownRow[] } {
+  const campusSet = new Set<string>(CAMPUS_BUILDINGS);
   const buildingCounts = new Map<string, number>();
-  for (const building of CAMPUS_BUILDINGS) {
-    buildingCounts.set(building, 0);
+  const buildingLabels = new Map<string, string>();
+  if (kind === 'av') {
+    for (const building of CAMPUS_BUILDINGS) {
+      buildingCounts.set(building, 0);
+      buildingLabels.set(building, building);
+    }
   }
 
   const otherStatusCounts = new Map<number, number>();
 
   for (const item of items) {
     if (item.statusId === STATUS_ID.DEPLOY) {
-      const building = item.building?.trim() || 'Unknown';
-      buildingCounts.set(building, (buildingCounts.get(building) ?? 0) + 1);
+      const building = canonicalizeCampusBuilding(item.building);
+      if (kind === 'av') {
+        if (!campusSet.has(building)) continue;
+        buildingCounts.set(building, (buildingCounts.get(building) ?? 0) + 1);
+        continue;
+      }
+      const key = building.toLowerCase();
+      buildingLabels.set(key, buildingLabels.get(key) ?? building);
+      buildingCounts.set(key, (buildingCounts.get(key) ?? 0) + 1);
       continue;
     }
     if (!(OUTSTOCK_STATUS_IDS as readonly number[]).includes(item.statusId)) continue;
     otherStatusCounts.set(item.statusId, (otherStatusCounts.get(item.statusId) ?? 0) + 1);
   }
 
-  const campusSet = new Set<string>(CAMPUS_BUILDINGS);
-  const rows: BreakdownRow[] = CAMPUS_BUILDINGS.map((building) => ({
-    key: `building:${building}`,
-    label: building,
-    count: buildingCounts.get(building) ?? 0,
-  }));
+  const place: BreakdownRow[] =
+    kind === 'av'
+      ? CAMPUS_BUILDINGS.map((building) => ({
+          key: `building:${building}`,
+          label: building,
+          count: buildingCounts.get(building) ?? 0,
+          filter: { kind: 'building' as const, buildingKey: building },
+        }))
+      : [...buildingCounts.entries()]
+          .sort((a, b) => {
+            const labelA = buildingLabels.get(a[0]) ?? a[0];
+            const labelB = buildingLabels.get(b[0]) ?? b[0];
+            return b[1] - a[1] || labelA.localeCompare(labelB);
+          })
+          .map(([key, count]) => ({
+            key: `building:${key}`,
+            label: buildingLabels.get(key) ?? key,
+            count,
+            filter: { kind: 'building' as const, buildingKey: key },
+          }));
 
-  for (const [building, count] of buildingCounts) {
-    if (campusSet.has(building)) continue;
-    rows.push({ key: `building:${building}`, label: building, count });
-  }
-
-  for (const statusId of OUTSTOCK_STATUS_IDS) {
-    if (statusId === STATUS_ID.DEPLOY) continue;
-    rows.push({
-      key: `status:${statusId}`,
-      label: formatStatusLabel(statusId),
-      count: otherStatusCounts.get(statusId) ?? 0,
-    });
-  }
-
-  return rows;
+  return {
+    place,
+    status: outstockStatusRows(otherStatusCounts),
+  };
 }
 
 function StockCountCard({
   icon: Icon,
   label,
   value,
-  breakdown,
+  sections,
   tint,
+  activeFilter,
+  onFilterClick,
 }: {
   icon: ElementType;
   label: string;
   value: number;
-  breakdown: BreakdownRow[];
+  sections: { title?: string; rows: BreakdownRow[] }[];
   tint: string;
+  activeFilter: AssetStockBreakdownFilter | null;
+  onFilterClick: (filter: AssetStockBreakdownFilter) => void;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-[14px] border border-border bg-card p-4">
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${tint}`}>
-        <Icon className="h-5 w-5" />
+    <div className="rounded-[14px] border border-border bg-card p-4">
+      <div className="flex items-start gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${tint}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="text-xl font-bold tabular-nums text-foreground">{value}</p>
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="text-xl font-bold tabular-nums text-foreground">{value}</p>
-        <BreakdownList rows={breakdown} />
-      </div>
+      <BreakdownList
+        sections={sections}
+        activeFilter={activeFilter}
+        onFilterClick={onFilterClick}
+      />
     </div>
+  );
+}
+
+export function matchesAssetStockFilter<T extends { statusId: number; building?: string | null }>(
+  item: T,
+  filter: AssetStockBreakdownFilter | null,
+): boolean {
+  if (filter == null) return true;
+  if (filter.kind === 'status') return item.statusId === filter.statusId;
+  if (item.statusId !== STATUS_ID.DEPLOY) return false;
+  return (
+    canonicalizeCampusBuilding(item.building).toLowerCase() === filter.buildingKey.toLowerCase()
   );
 }
 
 export function AssetStockSummary({
   items,
+  kind,
+  activeFilter,
+  onFilterClick,
 }: {
   items: { statusId: number; building?: string | null }[];
+  kind: Extract<AssetKind, 'av' | 'network'>;
+  activeFilter: AssetStockBreakdownFilter | null;
+  onFilterClick: (filter: AssetStockBreakdownFilter) => void;
 }) {
   const { instock, outstock, instockByStatus } = countStockAssets(items);
+  const outstockSections = outstockBuildingBreakdown(items, kind);
   return (
     <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:mb-6">
       <StockCountCard
         icon={PackageCheck}
         label="In stock"
         value={instock}
-        breakdown={statusRowsToBreakdown(instockByStatus)}
+        sections={[{ rows: statusRowsToBreakdown(instockByStatus) }]}
         tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+        activeFilter={activeFilter}
+        onFilterClick={onFilterClick}
       />
       <StockCountCard
         icon={PackageX}
         label="Out of stock"
         value={outstock}
-        breakdown={outstockBuildingBreakdown(items)}
+        sections={[
+          { title: 'Place', rows: outstockSections.place },
+          { title: 'Status', rows: outstockSections.status },
+        ]}
         tint="bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200"
+        activeFilter={activeFilter}
+        onFilterClick={onFilterClick}
       />
     </div>
   );

@@ -15,9 +15,13 @@ import { TechnicianShell } from '@/technician/technician-shell';
 import { AssetStatusActions } from '@/technician/asset-status-actions';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
-import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
+import { filterBySearch, useAssets } from '@/hooks/assets';
 import { usePagination } from '@/hooks/use-pagination';
-import { AssetStockSummary } from '@/technician/asset-stock-summary';
+import {
+  AssetStockSummary,
+  matchesAssetStockFilter,
+  type AssetStockBreakdownFilter,
+} from '@/technician/asset-stock-summary';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import {
   formatPlaceCell,
@@ -28,21 +32,46 @@ import {
 export function TechnicianAvPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<number | null>(null);
+  const [stockFilter, setStockFilter] = useState<AssetStockBreakdownFilter | null>(null);
   const [showLegacyIdColumn, setShowLegacyIdColumn] = useState(false);
   const [placeColumnView, setPlaceColumnView] = useState<PlaceColumnView>('place');
   const { items, isLoading, error, updateStatus } = useAssets('av');
+
+  const handleStockFilterClick = (filter: AssetStockBreakdownFilter) => {
+    setStockFilter((current) => {
+      if (current == null) return filter;
+      if (current.kind === 'status' && filter.kind === 'status' && current.statusId === filter.statusId) {
+        return null;
+      }
+      if (
+        current.kind === 'building' &&
+        filter.kind === 'building' &&
+        current.buildingKey.toLowerCase() === filter.buildingKey.toLowerCase()
+      ) {
+        return null;
+      }
+      return filter;
+    });
+  };
 
   const filtered = useMemo(() => {
     const bySearch = filterBySearch(items, search, (item) =>
       [item.category ?? '', item.assetIdOld ?? ''].join(' '),
     );
-    return filterByStatus(bySearch, statusFilter);
-  }, [items, search, statusFilter]);
+    return bySearch.filter((item) => matchesAssetStockFilter(item, stockFilter));
+  }, [items, search, stockFilter]);
 
   const pagination = usePagination(filtered, {
-    resetKey: `${search}|${statusFilter ?? ''}`,
+    resetKey: `${search}|${stockFilter?.kind ?? ''}|${
+      stockFilter?.kind === 'status'
+        ? stockFilter.statusId
+        : stockFilter?.kind === 'building'
+          ? stockFilter.buildingKey
+          : ''
+    }`,
   });
+
+  const statusFilter = stockFilter?.kind === 'status' ? stockFilter.statusId : null;
 
   return (
     <TechnicianShell>
@@ -51,7 +80,12 @@ export function TechnicianAvPage() {
         <p className="text-xs text-muted-foreground sm:text-sm">List of AV equipment in the system</p>
       </div>
 
-      <AssetStockSummary items={items} />
+      <AssetStockSummary
+        kind="av"
+        items={items}
+        activeFilter={stockFilter}
+        onFilterClick={handleStockFilterClick}
+      />
 
       <div className="mb-4 flex items-center justify-between">
         <div className="relative w-full sm:max-w-sm">
@@ -66,7 +100,9 @@ export function TechnicianAvPage() {
         <RegisterAssetActions
           kind="av"
           statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
+          onStatusFilterChange={(statusId) => {
+            setStockFilter(statusId == null ? null : { kind: 'status', statusId });
+          }}
         />
       </div>
 

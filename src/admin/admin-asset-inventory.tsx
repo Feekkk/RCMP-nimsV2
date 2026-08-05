@@ -47,7 +47,7 @@ import { getLaptopDepartmentHandoversFn } from '@/server/admin-laptop-insights.f
 import { listActivityLogFn } from '@/server/activity-log.functions';
 import { STATUS_ID } from '@/lib/asset-status-actions';
 import { formatAssetLifespan } from '@/lib/date-format';
-import { CAMPUS_BUILDINGS } from '@/lib/deploy-return-schema';
+import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@/lib/deploy-return-schema';
 import { cn } from '@/lib/utils';
 
 type FormFactor = 'laptop' | 'desktop';
@@ -272,7 +272,7 @@ function PlaceBuildingAssetsDialog({
     if (building === 'Unknown') {
       return items.filter((item) => !item.building?.trim());
     }
-    return items.filter((item) => item.building?.trim() === building);
+    return items.filter((item) => canonicalizeCampusBuilding(item.building) === building);
   }, [building, items]);
 
   return (
@@ -349,7 +349,7 @@ function AssetDeployBuildingSummaryCard({ items }: { items: PlaceAsset[] }) {
       map.set(building, 0);
     }
     for (const item of deployItems) {
-      const building = item.building?.trim() || 'Unknown';
+      const building = canonicalizeCampusBuilding(item.building);
       map.set(building, (map.get(building) ?? 0) + 1);
     }
     const campusSet = new Set<string>(CAMPUS_BUILDINGS);
@@ -1252,7 +1252,8 @@ function AvNetworkInsightsSections({
     for (const item of items) {
       const building = item.building?.trim();
       if (!building) continue;
-      map.set(building, (map.get(building) ?? 0) + 1);
+      const key = canonicalizeCampusBuilding(building);
+      map.set(key, (map.get(key) ?? 0) + 1);
     }
     return [...map.entries()]
       .map(([building, count]) => ({ building, count }))

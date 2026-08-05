@@ -16,6 +16,7 @@ import {
 import type { RequestItemRow } from '@/lib/request-schema';
 import { REQUEST_STATUS_ACTIVE } from '@/lib/request-schema';
 import { LAPTOP_ASSIGNMENT_BUCKETS } from '@/lib/inventory-schema';
+import { canonicalizeCampusBuilding } from '@/lib/deploy-return-schema';
 import { attachDisplayNames } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 
@@ -179,7 +180,8 @@ async function loadPlaceDeployBuildingCounts(
   for (const row of rows) {
     const building = row.building?.trim();
     if (!building) continue;
-    countByBuilding.set(building, (countByBuilding.get(building) ?? 0) + Number(row.cnt));
+    const key = canonicalizeCampusBuilding(building);
+    countByBuilding.set(key, (countByBuilding.get(key) ?? 0) + Number(row.cnt));
   }
 
   return [...countByBuilding.entries()]
