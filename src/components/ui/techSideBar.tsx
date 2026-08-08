@@ -13,6 +13,7 @@ import {
   Trash2,
   Tv,
   UserCircle,
+  Wrench,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ const REQUEST_ROUTES = [
   '/technician/request-view',
   '/technician/request-log',
 ] as const;
+const MAINTENANCE = '/technician/preventive-maintenance' as const;
 const DISPOSAL = '/technician/disposal' as const;
 const HISTORY = '/technician/history' as const;
 const REPORT = '/technician/report' as const;
@@ -139,6 +141,7 @@ function TechSideBarNav() {
         <NavLink to={LAPTOP} icon={Laptop} active={laptopActive}>
           Laptop / Desktop
         </NavLink>
+
         <NavLink to={AV} icon={Tv} active={avActive}>
           AV
         </NavLink>
@@ -150,7 +153,14 @@ function TechSideBarNav() {
       <NavLink to={REQUESTS} icon={Inbox} active={requestsActive}>
         Request
       </NavLink>
-
+      
+      <NavLink
+        to={MAINTENANCE}
+        icon={Wrench}
+        active={pathname === MAINTENANCE || pathname.startsWith(`${MAINTENANCE}/`)}
+      >
+        Maintenance
+      </NavLink>
       <NavLink
         to={DISPOSAL}
         icon={Trash2}
@@ -158,6 +168,7 @@ function TechSideBarNav() {
       >
         Disposal
       </NavLink>
+ 
       <NavLink
         to={HISTORY}
         icon={History}
