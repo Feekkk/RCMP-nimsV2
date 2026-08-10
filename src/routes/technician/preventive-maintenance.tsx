@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { PMpage } from '@/technician/PMpage';
+import { PMpage } from '@/technician/pm-page';
 
 export const Route = createFileRoute('/technician/preventive-maintenance')({
   head: () => ({

@@ -24,6 +24,8 @@ import { Route as TechnicianReportRouteImport } from './routes/technician/report
 import { Route as TechnicianRepairRouteImport } from './routes/technician/repair'
 import { Route as TechnicianProfileRouteImport } from './routes/technician/profile'
 import { Route as TechnicianPreventiveMaintenanceRouteImport } from './routes/technician/preventive-maintenance'
+import { Route as TechnicianPmFormRouteImport } from './routes/technician/pm-form'
+import { Route as TechnicianPmChecklistRouteImport } from './routes/technician/pm-checklist'
 import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
 import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
 import { Route as TechnicianHistoryRouteImport } from './routes/technician/history'
@@ -150,6 +152,16 @@ const TechnicianPreventiveMaintenanceRoute =
     path: '/technician/preventive-maintenance',
     getParentRoute: () => rootRouteImport,
   } as any)
+const TechnicianPmFormRoute = TechnicianPmFormRouteImport.update({
+  id: '/technician/pm-form',
+  path: '/technician/pm-form',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianPmChecklistRoute = TechnicianPmChecklistRouteImport.update({
+  id: '/technician/pm-checklist',
+  path: '/technician/pm-checklist',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnicianNetworkRoute = TechnicianNetworkRouteImport.update({
   id: '/technician/network',
   path: '/technician/network',
@@ -424,6 +436,8 @@ export interface FileRoutesByFullPath {
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/pm-checklist': typeof TechnicianPmChecklistRoute
+  '/technician/pm-form': typeof TechnicianPmFormRoute
   '/technician/preventive-maintenance': typeof TechnicianPreventiveMaintenanceRoute
   '/technician/profile': typeof TechnicianProfileRoute
   '/technician/repair': typeof TechnicianRepairRoute
@@ -490,6 +504,8 @@ export interface FileRoutesByTo {
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/pm-checklist': typeof TechnicianPmChecklistRoute
+  '/technician/pm-form': typeof TechnicianPmFormRoute
   '/technician/preventive-maintenance': typeof TechnicianPreventiveMaintenanceRoute
   '/technician/profile': typeof TechnicianProfileRoute
   '/technician/repair': typeof TechnicianRepairRoute
@@ -557,6 +573,8 @@ export interface FileRoutesById {
   '/technician/history': typeof TechnicianHistoryRoute
   '/technician/laptop': typeof TechnicianLaptopRoute
   '/technician/network': typeof TechnicianNetworkRoute
+  '/technician/pm-checklist': typeof TechnicianPmChecklistRoute
+  '/technician/pm-form': typeof TechnicianPmFormRoute
   '/technician/preventive-maintenance': typeof TechnicianPreventiveMaintenanceRoute
   '/technician/profile': typeof TechnicianProfileRoute
   '/technician/repair': typeof TechnicianRepairRoute
@@ -625,6 +643,8 @@ export interface FileRouteTypes {
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/pm-checklist'
+    | '/technician/pm-form'
     | '/technician/preventive-maintenance'
     | '/technician/profile'
     | '/technician/repair'
@@ -691,6 +711,8 @@ export interface FileRouteTypes {
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/pm-checklist'
+    | '/technician/pm-form'
     | '/technician/preventive-maintenance'
     | '/technician/profile'
     | '/technician/repair'
@@ -757,6 +779,8 @@ export interface FileRouteTypes {
     | '/technician/history'
     | '/technician/laptop'
     | '/technician/network'
+    | '/technician/pm-checklist'
+    | '/technician/pm-form'
     | '/technician/preventive-maintenance'
     | '/technician/profile'
     | '/technician/repair'
@@ -824,6 +848,8 @@ export interface RootRouteChildren {
   TechnicianHistoryRoute: typeof TechnicianHistoryRoute
   TechnicianLaptopRoute: typeof TechnicianLaptopRoute
   TechnicianNetworkRoute: typeof TechnicianNetworkRoute
+  TechnicianPmChecklistRoute: typeof TechnicianPmChecklistRoute
+  TechnicianPmFormRoute: typeof TechnicianPmFormRoute
   TechnicianPreventiveMaintenanceRoute: typeof TechnicianPreventiveMaintenanceRoute
   TechnicianProfileRoute: typeof TechnicianProfileRoute
   TechnicianRepairRoute: typeof TechnicianRepairRoute
@@ -972,6 +998,20 @@ declare module '@tanstack/react-router' {
       path: '/technician/preventive-maintenance'
       fullPath: '/technician/preventive-maintenance'
       preLoaderRoute: typeof TechnicianPreventiveMaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/pm-form': {
+      id: '/technician/pm-form'
+      path: '/technician/pm-form'
+      fullPath: '/technician/pm-form'
+      preLoaderRoute: typeof TechnicianPmFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/pm-checklist': {
+      id: '/technician/pm-checklist'
+      path: '/technician/pm-checklist'
+      fullPath: '/technician/pm-checklist'
+      preLoaderRoute: typeof TechnicianPmChecklistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technician/network': {
@@ -1355,6 +1395,8 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianHistoryRoute: TechnicianHistoryRoute,
   TechnicianLaptopRoute: TechnicianLaptopRoute,
   TechnicianNetworkRoute: TechnicianNetworkRoute,
+  TechnicianPmChecklistRoute: TechnicianPmChecklistRoute,
+  TechnicianPmFormRoute: TechnicianPmFormRoute,
   TechnicianPreventiveMaintenanceRoute: TechnicianPreventiveMaintenanceRoute,
   TechnicianProfileRoute: TechnicianProfileRoute,
   TechnicianRepairRoute: TechnicianRepairRoute,
