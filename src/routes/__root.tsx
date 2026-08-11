@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 
+import nimsMobileIcon from "../assets/nims-mobile.png?url";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -42,6 +43,15 @@ export const Route = createRootRoute({
       { name: "twitter:description", content: "Track stock levels, suppliers, and locations with real-time low-stock alerts." },
     ],
     links: [
+      {
+        rel: "icon",
+        href: nimsMobileIcon,
+        type: "image/png",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: nimsMobileIcon,
+      },
       {
         rel: "preconnect",
         href: "https://fonts.googleapis.com",
