@@ -1,12 +1,16 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { CreateStaffInput, UpdateStaffInput } from '@/lib/staff-schema';
+import { staffMiddleware } from '@/server/auth-middleware';
 
-export const listStaffDirectoryFn = createServerFn({ method: 'GET' }).handler(async () => {
-  const { listStaffDirectory } = await import('@/server/staff-repo.server');
-  return listStaffDirectory();
-});
+export const listStaffDirectoryFn = createServerFn({ method: 'GET' })
+  .middleware([staffMiddleware])
+  .handler(async () => {
+    const { listStaffDirectory } = await import('@/server/staff-repo.server');
+    return listStaffDirectory();
+  });
 
 export const createStaffFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((data: CreateStaffInput) => data)
   .handler(async ({ data }) => {
     const { createStaff } = await import('@/server/staff-repo.server');
@@ -14,6 +18,7 @@ export const createStaffFn = createServerFn({ method: 'POST' })
   });
 
 export const updateStaffFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((data: UpdateStaffInput) => data)
   .handler(async ({ data }) => {
     const { updateStaff } = await import('@/server/staff-repo.server');
@@ -21,6 +26,7 @@ export const updateStaffFn = createServerFn({ method: 'POST' })
   });
 
 export const listStaffHandoverAssetsFn = createServerFn({ method: 'GET' })
+  .middleware([staffMiddleware])
   .inputValidator((employeeNo: string) => employeeNo)
   .handler(async ({ data: employeeNo }) => {
     const { listStaffHandoverAssets } = await import('@/server/staff-repo.server');

@@ -1,8 +1,10 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { AssetKind } from '@/lib/inventory-schema';
 import type { RepairInput, WarrantyClaimInput } from '@/lib/warranty-repair-schema';
+import { staffMiddleware } from '@/server/auth-middleware';
 
 export const getWarrantyContextFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: { kind: AssetKind; assetId: number }) => input)
   .handler(async ({ data: input }) => {
     const { getWarrantyContext } = await import('@/server/warranty-repair-repo.server');
@@ -10,6 +12,7 @@ export const getWarrantyContextFn = createServerFn({ method: 'POST' })
   });
 
 export const createWarrantyClaimFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: WarrantyClaimInput) => input)
   .handler(async ({ data: input }) => {
     const { createWarrantyClaim } = await import('@/server/warranty-repair-repo.server');
@@ -17,6 +20,7 @@ export const createWarrantyClaimFn = createServerFn({ method: 'POST' })
   });
 
 export const createRepairFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: RepairInput) => input)
   .handler(async ({ data: input }) => {
     const { createRepair } = await import('@/server/warranty-repair-repo.server');

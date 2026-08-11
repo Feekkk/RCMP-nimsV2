@@ -96,7 +96,7 @@ export function UserRequestFormPage() {
       return;
     }
     setSession(user);
-    void getUserProfileFn({ data: { staffId: user.staffId } })
+    void getUserProfileFn()
       .then((profile) => {
         const nextSession: SessionUser = {
           staffId: profile.staffId,

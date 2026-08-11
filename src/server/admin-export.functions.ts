@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { AdminExportKind } from '@/server/admin-export.server';
-import { assertAdminRole } from '@/server/admin-auth.server';
+import { adminMiddleware } from '@/server/auth-middleware';
 
 const KINDS: AdminExportKind[] = [
   'users',
@@ -14,9 +14,9 @@ const KINDS: AdminExportKind[] = [
 ];
 
 export const exportAdminCsvFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { callerRoleId: number; kind: string }) => data)
+  .middleware([adminMiddleware])
+  .inputValidator((data: { kind: string }) => data)
   .handler(async ({ data }) => {
-    assertAdminRole(data.callerRoleId);
     if (!KINDS.includes(data.kind as AdminExportKind)) {
       throw new Error('The export type is not recognized. Choose a valid export option and try again.');
     }

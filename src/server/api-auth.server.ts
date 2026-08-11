@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import type { RowDataPacket } from 'mysql2';
 import { isAdminRole, isStaffRole } from '@/lib/auth-session';
 import type { AuthUserRow } from '@/server/auth-repo.server';
 import { apiError } from '@/server/api-response.server';
@@ -31,8 +32,6 @@ export type TokenPair = {
   tokenType: 'Bearer';
 };
 
-const revokedRefreshJtis = new Set<string>();
-
 function jwtSecret(): string {
   const secret = process.env.API_JWT_SECRET?.trim();
   if (!secret) {
@@ -47,7 +46,7 @@ function signToken(payload: TokenPayload): string {
   return `${body}.${sig}`;
 }
 
-function verifyToken(token: string, expectedType: TokenType): TokenPayload | null {
+function decodeToken(token: string, expectedType: TokenType): TokenPayload | null {
   const parts = token.split('.');
   if (parts.length !== 2) return null;
   const [body, sig] = parts;
@@ -61,11 +60,39 @@ function verifyToken(token: string, expectedType: TokenType): TokenPayload | nul
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as TokenPayload;
     if (payload.type !== expectedType) return null;
     if (typeof payload.exp !== 'number' || payload.exp <= Date.now()) return null;
-    if (expectedType === 'refresh' && revokedRefreshJtis.has(payload.jti)) return null;
     return payload;
   } catch {
     return null;
   }
+}
+
+/** DB-backed revocation so it survives server restarts (refresh tokens live up to 30 days). */
+async function isRefreshJtiRevoked(jti: string): Promise<boolean> {
+  const { getDbPool } = await import('@/server/db');
+  const pool = getDbPool();
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT jti FROM revoked_refresh_token WHERE jti = ? LIMIT 1`,
+    [jti],
+  );
+  return rows.length > 0;
+}
+
+async function revokeRefreshJti(jti: string, expiresAtMs: number): Promise<void> {
+  const { getDbPool } = await import('@/server/db');
+  const pool = getDbPool();
+  await pool.execute(
+    `INSERT INTO revoked_refresh_token (jti, expires_at) VALUES (?, FROM_UNIXTIME(? / 1000))
+     ON DUPLICATE KEY UPDATE expires_at = expires_at`,
+    [jti, expiresAtMs],
+  );
+  await pool.execute(`DELETE FROM revoked_refresh_token WHERE expires_at < NOW()`);
+}
+
+async function verifyToken(token: string, expectedType: TokenType): Promise<TokenPayload | null> {
+  const payload = decodeToken(token, expectedType);
+  if (!payload) return null;
+  if (expectedType === 'refresh' && (await isRefreshJtiRevoked(payload.jti))) return null;
+  return payload;
 }
 
 export function issueTokenPair(user: AuthUserRow): TokenPair {
@@ -94,20 +121,20 @@ export function issueTokenPair(user: AuthUserRow): TokenPair {
   };
 }
 
-export function refreshAccessToken(refreshToken: string, user: AuthUserRow): TokenPair | null {
-  const payload = verifyToken(refreshToken, 'refresh');
+export async function refreshAccessToken(refreshToken: string, user: AuthUserRow): Promise<TokenPair | null> {
+  const payload = await verifyToken(refreshToken, 'refresh');
   if (!payload || payload.sub !== user.staffId) return null;
-  revokedRefreshJtis.add(payload.jti);
+  await revokeRefreshJti(payload.jti, payload.exp);
   return issueTokenPair(user);
 }
 
-export function revokeRefreshToken(refreshToken: string): void {
-  const payload = verifyToken(refreshToken, 'refresh');
-  if (payload) revokedRefreshJtis.add(payload.jti);
+export async function revokeRefreshToken(refreshToken: string): Promise<void> {
+  const payload = decodeToken(refreshToken, 'refresh');
+  if (payload) await revokeRefreshJti(payload.jti, payload.exp);
 }
 
-export function verifyRefreshTokenSubject(refreshToken: string): string | null {
-  const payload = verifyToken(refreshToken, 'refresh');
+export async function verifyRefreshTokenSubject(refreshToken: string): Promise<string | null> {
+  const payload = await verifyToken(refreshToken, 'refresh');
   return payload?.sub ?? null;
 }
 
@@ -118,16 +145,16 @@ export function parseBearerToken(request: Request): string | null {
   return token || null;
 }
 
-export function requireAuth(request: Request): ApiAuthContext | Response {
+export async function requireAuth(request: Request): Promise<ApiAuthContext | Response> {
   const token = parseBearerToken(request);
   if (!token) return apiError('Authentication required.', 401, 'unauthorized');
-  const payload = verifyToken(token, 'access');
+  const payload = await verifyToken(token, 'access');
   if (!payload) return apiError('Invalid or expired access token.', 401, 'invalid_token');
   return { staffId: payload.sub, roleId: payload.roleId };
 }
 
-export function requireStaff(request: Request): ApiAuthContext | Response {
-  const auth = requireAuth(request);
+export async function requireStaff(request: Request): Promise<ApiAuthContext | Response> {
+  const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;
   try {
     assertStaffRole(auth.roleId);
@@ -137,8 +164,8 @@ export function requireStaff(request: Request): ApiAuthContext | Response {
   return auth;
 }
 
-export function requireAdmin(request: Request): ApiAuthContext | Response {
-  const auth = requireAuth(request);
+export async function requireAdmin(request: Request): Promise<ApiAuthContext | Response> {
+  const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;
   try {
     assertAdminRole(auth.roleId);
@@ -148,8 +175,8 @@ export function requireAdmin(request: Request): ApiAuthContext | Response {
   return auth;
 }
 
-export function requireUser(request: Request): ApiAuthContext | Response {
-  const auth = requireAuth(request);
+export async function requireUser(request: Request): Promise<ApiAuthContext | Response> {
+  const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;
   if (isStaffRole(auth.roleId)) {
     return apiError('This endpoint is for user accounts only.', 403, 'forbidden');

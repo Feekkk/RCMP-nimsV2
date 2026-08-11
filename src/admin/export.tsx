@@ -112,7 +112,7 @@ export function AdminExportPage() {
     if (!admin) return;
     setLoadingKind(kind);
     try {
-      const result = await exportAdminCsvFn({ data: { callerRoleId: admin.roleId, kind } });
+      const result = await exportAdminCsvFn({ data: { kind } });
       downloadCsv(result.filename, result.body);
       toast.success(`Downloaded ${result.filename}`);
     } catch (e) {

@@ -1,8 +1,10 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { RunOverdueAutoRejectJobOptions } from '@/server/overdue-auto-reject-job.server';
 import type { RunOverdueReturnEmailJobOptions } from '@/server/overdue-return-email-job.server';
+import { adminMiddleware } from '@/server/auth-middleware';
 
 export const runOverdueReturnEmailJobFn = createServerFn({ method: 'POST' })
+  .middleware([adminMiddleware])
   .inputValidator((input: RunOverdueReturnEmailJobOptions | undefined) => input ?? {})
   .handler(async ({ data: options }) => {
     const { runOverdueReturnEmailJob } = await import('@/server/overdue-return-email-job.server');
@@ -10,6 +12,7 @@ export const runOverdueReturnEmailJobFn = createServerFn({ method: 'POST' })
   });
 
 export const runOverdueAutoRejectJobFn = createServerFn({ method: 'POST' })
+  .middleware([adminMiddleware])
   .inputValidator((input: RunOverdueAutoRejectJobOptions | undefined) => input ?? {})
   .handler(async ({ data: options }) => {
     const { runOverdueAutoRejectJob } = await import('@/server/overdue-auto-reject-job.server');

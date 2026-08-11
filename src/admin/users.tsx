@@ -68,7 +68,7 @@ export function AdminUsersPage() {
     }
     setLoading(true);
     try {
-      setUsers(await listAdminUsersFn({ data: { callerRoleId: admin.roleId } }));
+      setUsers(await listAdminUsersFn());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load users');
     } finally {
@@ -102,7 +102,6 @@ export function AdminUsersPage() {
       if (editing) {
         await updateAdminUserFn({
           data: {
-            callerRoleId: admin.roleId,
             staffId: editing.staffId,
             email: form.email.trim(),
             roleId,
@@ -113,7 +112,6 @@ export function AdminUsersPage() {
       } else {
         await createAdminUserFn({
           data: {
-            callerRoleId: admin.roleId,
             email: form.email.trim(),
             roleId,
             phone: form.phone.trim() || undefined,

@@ -52,10 +52,10 @@ export function UserRequestHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<number | null>(null);
 
-  const load = useCallback(async (staffId: string) => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await listUserRequestHistoryFn({ data: { staffId } });
+      const rows = await listUserRequestHistoryFn();
       setRequests(rows);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load history');
@@ -71,7 +71,7 @@ export function UserRequestHistoryPage() {
       return;
     }
     setSession(user);
-    void load(user.staffId);
+    void load();
   }, [navigate, load]);
 
   const handleSignOut = () => {

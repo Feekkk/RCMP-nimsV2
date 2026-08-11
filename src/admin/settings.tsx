@@ -30,7 +30,7 @@ export function AdminSettingsPage() {
     setMaintenanceEnabled(enabled);
     setSaving(true);
     try {
-      await setLoginMaintenanceModeFn({ data: { callerRoleId: admin.roleId, enabled } });
+      await setLoginMaintenanceModeFn({ data: { enabled } });
       toast.success(enabled ? 'User sign-in blocked — maintenance mode is on' : 'User sign-in restored');
     } catch (e) {
       setMaintenanceEnabled(previous);

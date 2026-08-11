@@ -200,6 +200,8 @@ export default defineConfig(({ mode }) => {
     "DATABASE_",
     "OPENROUTER_",
     "API_JWT_",
+    "SESSION_",
+    "ENABLE_DEV_LOGIN",
   ]);
   for (const [key, value] of Object.entries(serverEnv)) {
     if (process.env[key] === undefined) {
@@ -239,6 +241,17 @@ export default defineConfig(({ mode }) => {
         ],
         rollupConfig: {
           external: ['mysql2', 'mysql2/promise', 'nodemailer'],
+        },
+        routeRules: {
+          '/**': {
+            headers: {
+              'X-Content-Type-Options': 'nosniff',
+              'X-Frame-Options': 'DENY',
+              'Referrer-Policy': 'strict-origin-when-cross-origin',
+              'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()',
+              'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+            },
+          },
         },
       }),
     ],

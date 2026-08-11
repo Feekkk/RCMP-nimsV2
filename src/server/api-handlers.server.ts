@@ -71,11 +71,11 @@ export async function handleRefresh(request: Request): Promise<Response> {
     }
     const { getAuthUserByStaffId } = await import('@/server/auth-repo.server');
     const { verifyRefreshTokenSubject } = await import('@/server/api-auth.server');
-    const staffId = verifyRefreshTokenSubject(body.refreshToken.trim());
+    const staffId = await verifyRefreshTokenSubject(body.refreshToken.trim());
     if (!staffId) return apiError('Invalid or expired refresh token.', 401, 'invalid_token');
     const user = await getAuthUserByStaffId(staffId);
     if (!user) return apiError('Account not found.', 401, 'invalid_token');
-    const tokens = refreshAccessToken(body.refreshToken.trim(), user);
+    const tokens = await refreshAccessToken(body.refreshToken.trim(), user);
     if (!tokens) return apiError('Invalid or expired refresh token.', 401, 'invalid_token');
     return apiOk({ ...tokens, user: authUserPayload(user) });
   } catch (error) {
@@ -85,7 +85,7 @@ export async function handleRefresh(request: Request): Promise<Response> {
 
 export async function handleMe(request: Request): Promise<Response> {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth instanceof Response) return auth;
     const { getAuthUserByStaffId } = await import('@/server/auth-repo.server');
     const user = await getAuthUserByStaffId(auth.staffId);
@@ -100,7 +100,7 @@ export async function handleLogout(request: Request): Promise<Response> {
   try {
     const body = await readJsonBody<RefreshBody>(request);
     if (body instanceof Response) return body;
-    if (body.refreshToken?.trim()) revokeRefreshToken(body.refreshToken.trim());
+    if (body.refreshToken?.trim()) await revokeRefreshToken(body.refreshToken.trim());
     return apiOk({ ok: true });
   } catch (error) {
     return handleApiError(error);
@@ -137,7 +137,7 @@ type ProfilePatchBody = {
 
 export async function handleGetProfile(request: Request): Promise<Response> {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth instanceof Response) return auth;
     const { getStaffProfile, getUserProfile } = await import('@/server/auth-repo.server');
     const profile = isStaffRole(auth.roleId)
@@ -151,7 +151,7 @@ export async function handleGetProfile(request: Request): Promise<Response> {
 
 export async function handlePatchProfile(request: Request): Promise<Response> {
   try {
-    const auth = requireAuth(request);
+    const auth = await requireAuth(request);
     if (auth instanceof Response) return auth;
     const body = await readJsonBody<ProfilePatchBody>(request);
     if (body instanceof Response) return body;
@@ -175,7 +175,7 @@ export async function handlePatchProfile(request: Request): Promise<Response> {
 
 export async function handleDashboard(request: Request): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const url = new URL(request.url);
     const year = Number(url.searchParams.get('year'));
@@ -199,7 +199,7 @@ function parseAssetKind(raw: string | null): AssetKind | Response {
 
 export async function handleListAssets(request: Request): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const kind = parseAssetKind(new URL(request.url).searchParams.get('kind'));
     if (kind instanceof Response) return kind;
@@ -212,7 +212,7 @@ export async function handleListAssets(request: Request): Promise<Response> {
 
 export async function handleAssetLookup(request: Request): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const code = new URL(request.url).searchParams.get('code')?.trim();
     if (!code) return apiError('code query parameter is required.', 422, 'validation_error');
@@ -231,7 +231,7 @@ export async function handleAssetDetail(
   assetId: number,
 ): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const { getAssetDetail } = await import('@/server/assets-repo.server');
     const asset = await getAssetDetail(kind, assetId);
@@ -244,7 +244,7 @@ export async function handleAssetDetail(
 
 export async function handleListStaff(request: Request): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const { listStaffDirectory } = await import('@/server/staff-repo.server');
     return apiOk(await listStaffDirectory());
@@ -255,7 +255,7 @@ export async function handleListStaff(request: Request): Promise<Response> {
 
 export async function handleUserRequests(request: Request): Promise<Response> {
   try {
-    const auth = requireUser(request);
+    const auth = await requireUser(request);
     if (auth instanceof Response) return auth;
     const { listUserRequestHistory } = await import('@/server/request-repo.server');
     return apiOk(await listUserRequestHistory(auth.staffId));
@@ -266,7 +266,7 @@ export async function handleUserRequests(request: Request): Promise<Response> {
 
 export async function handleSubmitRequest(request: Request): Promise<Response> {
   try {
-    const auth = requireUser(request);
+    const auth = await requireUser(request);
     if (auth instanceof Response) return auth;
     const body = await readJsonBody<Record<string, unknown>>(request);
     if (body instanceof Response) return body;
@@ -297,7 +297,7 @@ export async function handleSubmitRequest(request: Request): Promise<Response> {
 
 export async function handlePendingRequests(request: Request): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const { listPendingRequests } = await import('@/server/request-repo.server');
     return apiOk(await listPendingRequests());
@@ -308,7 +308,7 @@ export async function handlePendingRequests(request: Request): Promise<Response>
 
 export async function handleRequestPool(request: Request): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const view = new URL(request.url).searchParams.get('view') ?? 'all';
     const { listRequestPoolAssets, listAvailablePoolAssets, listAssignedRequestPoolAssets } =
@@ -323,7 +323,7 @@ export async function handleRequestPool(request: Request): Promise<Response> {
 
 export async function handleRequestLog(request: Request): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const { listRequestLog } = await import('@/server/request-repo.server');
     return apiOk(await listRequestLog());
@@ -334,7 +334,7 @@ export async function handleRequestLog(request: Request): Promise<Response> {
 
 export async function handleRequestAction(request: Request, action: string): Promise<Response> {
   try {
-    const auth = requireStaff(request);
+    const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
     const body = await readJsonBody<Record<string, unknown>>(request);
     if (body instanceof Response) return body;
@@ -390,7 +390,7 @@ export async function handleRequestAction(request: Request, action: string): Pro
 
 export async function handleUserRequestAction(request: Request, action: string): Promise<Response> {
   try {
-    const auth = requireUser(request);
+    const auth = await requireUser(request);
     if (auth instanceof Response) return auth;
     const body = await readJsonBody<Record<string, unknown>>(request);
     if (body instanceof Response) return body;
@@ -424,7 +424,7 @@ export async function handleUserRequestAction(request: Request, action: string):
 
 export async function handleAdminDashboard(request: Request): Promise<Response> {
   try {
-    const auth = requireAdmin(request);
+    const auth = await requireAdmin(request);
     if (auth instanceof Response) return auth;
     const periodDays = Number(new URL(request.url).searchParams.get('periodDays') ?? 30);
     const { getAdminDashboard } = await import('@/server/admin-dashboard-repo.server');

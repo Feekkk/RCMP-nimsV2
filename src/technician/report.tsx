@@ -209,7 +209,7 @@ export function TechnicianReportPage() {
     if (!tech) return;
     setCsvLoading(kind);
     try {
-      const result = await exportTechnicianAssetCsvFn({ data: { callerRoleId: tech.roleId, kind } });
+      const result = await exportTechnicianAssetCsvFn({ data: { kind } });
       downloadCsvFile(result.filename, result.body);
       toast.success(`Downloaded ${result.filename}`);
     } catch (e) {
@@ -233,7 +233,7 @@ export function TechnicianReportPage() {
     setPdfLoading(true);
     try {
       const result = await generateAssetReportPdfFn({
-        data: { callerRoleId: tech.roleId, filters: pdfFilters },
+        data: { filters: pdfFilters },
       });
       downloadPdfFromBase64(result.base64, result.filename);
       toast.success(`Downloaded ${result.filename} (${result.count} assets)`);

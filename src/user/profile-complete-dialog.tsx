@@ -58,10 +58,7 @@ export function UserProfileCompleteDialog({
     setSaving(true);
     try {
       const updated = await updateUserProfileFn({
-        data: {
-          staffId: session.staffId,
-          phone: draftPhone,
-        },
+        data: { phone: draftPhone },
       });
       const nextSession: SessionUser = {
         staffId: updated.staffId,

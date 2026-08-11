@@ -1,7 +1,7 @@
 import { chat } from '@tanstack/ai';
 import { createServerFn } from '@tanstack/react-start';
 import { buildAdminPromptSystemPrompt } from '@/lib/admin-prompt-context';
-import { assertStaffRole } from '@/server/technician-auth.server';
+import { staffMiddleware } from '@/server/auth-middleware';
 import { getOpenRouterChatAdapter, isOpenRouterConfigured } from '@/lib/openrouter';
 
 type PromptChatRole = 'user' | 'assistant';
@@ -12,17 +12,15 @@ type PromptChatTurn = {
 };
 
 export const adminPromptChatFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator(
     (data: {
-      callerRoleId: number;
       message: string;
       history?: PromptChatTurn[];
       customContext?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
-    assertStaffRole(data.callerRoleId);
-
     const message = data.message.trim();
     if (!message) {
       throw new Error('Enter a question before sending.');

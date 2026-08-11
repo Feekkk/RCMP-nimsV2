@@ -8,8 +8,10 @@ import type {
   ReturnLaptopStaffInput,
   ReturnPlaceInput,
 } from '@/lib/deploy-return-schema';
+import { staffMiddleware } from '@/server/auth-middleware';
 
 export const searchStaffFn = createServerFn({ method: 'GET' })
+  .middleware([staffMiddleware])
   .inputValidator((query: string) => query)
   .handler(async ({ data: query }) => {
     const { searchStaffRecipients } = await import('@/server/deploy-return-repo.server');
@@ -17,6 +19,7 @@ export const searchStaffFn = createServerFn({ method: 'GET' })
   });
 
 export const getOpenReturnContextFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: { kind: AssetKind; assetId: number }) => input)
   .handler(async ({ data: input }) => {
     const { getOpenReturnContext } = await import('@/server/deploy-return-repo.server');
@@ -24,6 +27,7 @@ export const getOpenReturnContextFn = createServerFn({ method: 'POST' })
   });
 
 export const deployLaptopStaffFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: DeployLaptopStaffInput) => input)
   .handler(async ({ data: input }) => {
     const { deployLaptopToStaff } = await import('@/server/deploy-return-repo.server');
@@ -31,6 +35,7 @@ export const deployLaptopStaffFn = createServerFn({ method: 'POST' })
   });
 
 export const deployLaptopPlaceFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: DeployLaptopPlaceInput) => input)
   .handler(async ({ data: input }) => {
     const { deployLaptopToPlace } = await import('@/server/deploy-return-repo.server');
@@ -38,6 +43,7 @@ export const deployLaptopPlaceFn = createServerFn({ method: 'POST' })
   });
 
 export const deployPlaceFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: DeployPlaceInput) => input)
   .handler(async ({ data: input }) => {
     const { deployToPlace } = await import('@/server/deploy-return-repo.server');
@@ -45,6 +51,7 @@ export const deployPlaceFn = createServerFn({ method: 'POST' })
   });
 
 export const returnLaptopStaffFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: ReturnLaptopStaffInput) => input)
   .handler(async ({ data: input }) => {
     const { returnLaptopStaff } = await import('@/server/deploy-return-repo.server');
@@ -52,6 +59,7 @@ export const returnLaptopStaffFn = createServerFn({ method: 'POST' })
   });
 
 export const returnLaptopPlaceFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: ReturnLaptopPlaceInput) => input)
   .handler(async ({ data: input }) => {
     const { returnLaptopPlace } = await import('@/server/deploy-return-repo.server');
@@ -59,6 +67,7 @@ export const returnLaptopPlaceFn = createServerFn({ method: 'POST' })
   });
 
 export const returnPlaceFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: ReturnPlaceInput) => input)
   .handler(async ({ data: input }) => {
     const { returnPlaceAsset } = await import('@/server/deploy-return-repo.server');

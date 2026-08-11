@@ -1,31 +1,26 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { CreateAdminUserInput, UpdateAdminUserInput } from '@/lib/admin-users-schema';
-import { assertAdminRole } from '@/server/admin-auth.server';
-
-type AdminCallerInput = { callerRoleId: number };
+import { adminMiddleware } from '@/server/auth-middleware';
 
 export const listAdminUsersFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: AdminCallerInput) => data)
-  .handler(async ({ data }) => {
-    assertAdminRole(data.callerRoleId);
+  .middleware([adminMiddleware])
+  .handler(async () => {
     const { listAdminUsers } = await import('@/server/admin-users-repo.server');
     return listAdminUsers();
   });
 
 export const createAdminUserFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateAdminUserInput & AdminCallerInput) => data)
+  .middleware([adminMiddleware])
+  .inputValidator((data: CreateAdminUserInput) => data)
   .handler(async ({ data }) => {
-    assertAdminRole(data.callerRoleId);
     const { createAdminUser } = await import('@/server/admin-users-repo.server');
-    const { callerRoleId: _, ...input } = data;
-    return createAdminUser(input);
+    return createAdminUser(data);
   });
 
 export const updateAdminUserFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: UpdateAdminUserInput & AdminCallerInput) => data)
+  .middleware([adminMiddleware])
+  .inputValidator((data: UpdateAdminUserInput) => data)
   .handler(async ({ data }) => {
-    assertAdminRole(data.callerRoleId);
     const { updateAdminUser } = await import('@/server/admin-users-repo.server');
-    const { callerRoleId: _, ...input } = data;
-    return updateAdminUser(input);
+    return updateAdminUser(data);
   });

@@ -1,13 +1,13 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { AdminPeriodDays } from '@/lib/admin-dashboard-schema';
-import { assertAdminRole } from '@/server/admin-auth.server';
+import { adminMiddleware } from '@/server/auth-middleware';
 
 const PERIODS: AdminPeriodDays[] = [7, 30, 90];
 
 export const getAdminDashboardFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { callerRoleId: number; periodDays?: number }) => data)
+  .middleware([adminMiddleware])
+  .inputValidator((data: { periodDays?: number }) => data)
   .handler(async ({ data }) => {
-    assertAdminRole(data.callerRoleId);
     const periodDays = PERIODS.includes(data.periodDays as AdminPeriodDays)
       ? (data.periodDays as AdminPeriodDays)
       : 30;

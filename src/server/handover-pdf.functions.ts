@@ -1,6 +1,8 @@
 import { createServerFn } from '@tanstack/react-start';
+import { staffMiddleware } from '@/server/auth-middleware';
 
 export const generateHandoverPdfFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((handoverId: number) => handoverId)
   .handler(async ({ data: handoverId }) => {
     const { generateHandoverPdfBase64 } = await import('@/server/handover-pdf.server');

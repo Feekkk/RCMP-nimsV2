@@ -289,7 +289,6 @@ export function PromptChatPage({ Shell, getSession, sessionExpiredMessage }: Pro
     try {
       const result = await adminPromptChatFn({
         data: {
-          callerRoleId: session.roleId,
           message: content,
           history: conversationHistoryRef.current,
         },

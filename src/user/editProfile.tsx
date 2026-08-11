@@ -32,7 +32,7 @@ export function UserEditProfilePage() {
       return;
     }
     setSession(user);
-    void getUserProfileFn({ data: { staffId: user.staffId } })
+    void getUserProfileFn()
       .then((profile) => {
         setFullName(profile.fullName);
         setEmail(profile.email);
@@ -59,10 +59,7 @@ export function UserEditProfilePage() {
     setSaving(true);
     try {
       const updated = await updateUserProfileFn({
-        data: {
-          staffId: session.staffId,
-          phone: phone.trim() || null,
-        },
+        data: { phone: phone.trim() || null },
       });
       const nextSession: SessionUser = {
         staffId: updated.staffId,

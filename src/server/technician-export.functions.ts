@@ -1,13 +1,13 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { TechnicianAssetExportKind, TechnicianReportPdfFilters } from '@/lib/technician-export-schema';
-import { assertStaffRole } from '@/server/technician-auth.server';
+import { staffMiddleware } from '@/server/auth-middleware';
 
 const ASSET_KINDS: TechnicianAssetExportKind[] = ['laptop', 'av', 'network'];
 
 export const exportTechnicianAssetCsvFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { callerRoleId: number; kind: string }) => data)
+  .middleware([staffMiddleware])
+  .inputValidator((data: { kind: string }) => data)
   .handler(async ({ data }) => {
-    assertStaffRole(data.callerRoleId);
     if (!ASSET_KINDS.includes(data.kind as TechnicianAssetExportKind)) {
       throw new Error(
         'The asset type is not recognized. Choose Laptop, AV, or Network and try again.',
@@ -18,9 +18,9 @@ export const exportTechnicianAssetCsvFn = createServerFn({ method: 'POST' })
   });
 
 export const generateAssetReportPdfFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { callerRoleId: number; filters: TechnicianReportPdfFilters }) => data)
+  .middleware([staffMiddleware])
+  .inputValidator((data: { filters: TechnicianReportPdfFilters }) => data)
   .handler(async ({ data }) => {
-    assertStaffRole(data.callerRoleId);
     if (!data.filters.kinds.length) {
       throw new Error('Select at least one asset type to include in the report.');
     }

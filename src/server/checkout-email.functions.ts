@@ -1,7 +1,9 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { SendCheckoutEmailInput } from '@/lib/checkout-email-types';
+import { staffMiddleware } from '@/server/auth-middleware';
 
 export const sendCheckoutEmailFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
   .inputValidator((input: SendCheckoutEmailInput) => input)
   .handler(async ({ data: input }) => {
     const { sendCheckoutEmail } = await import('@/server/checkout-email.server');

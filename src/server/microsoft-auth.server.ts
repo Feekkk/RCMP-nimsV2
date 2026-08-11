@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { deleteCookie, getCookie, setCookie } from '@tanstack/react-start/server';
 import {
   getMicrosoftAuthConfig,
   microsoftAuthority,
@@ -6,6 +7,8 @@ import {
   type MicrosoftAuthConfig,
 } from '@/lib/microsoft-auth-config';
 import { loginMicrosoftUser, type MicrosoftLoginResult } from '@/server/auth-repo.server';
+
+const OAUTH_NONCE_COOKIE = 'nims_oauth_nonce';
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read'];
@@ -160,7 +163,29 @@ export function buildMicrosoftAuthorizeUrlForRedirect(
   return `${microsoftAuthority(config.tenantId)}/authorize?${params.toString()}`;
 }
 
-export function getMicrosoftLoginRedirect(redirectUri?: string | null): { url: string; state: string } {
+function setOAuthNonceCookie(nonce: string): void {
+  try {
+    setCookie(OAUTH_NONCE_COOKIE, nonce, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: Math.ceil(OAUTH_STATE_TTL_MS / 1000),
+    });
+  } catch {
+    // No request context available (e.g. non-browser/mobile callers) — state TTL still bounds replay.
+  }
+}
+
+/**
+ * Starts sign-in. When `bindBrowserCookie` is true (browser web login), an HttpOnly nonce cookie
+ * is set so the callback can be checked against the browser that started the flow, preventing
+ * login CSRF. Mobile/native callers use their own app-controlled redirect and skip the cookie.
+ */
+export function getMicrosoftLoginRedirect(
+  redirectUri?: string | null,
+  bindBrowserCookie = false,
+): { url: string; state: string } {
   const config = getMicrosoftAuthConfig();
   if (!config) {
     throw new Error(
@@ -169,6 +194,10 @@ export function getMicrosoftLoginRedirect(redirectUri?: string | null): { url: s
   }
   const resolvedRedirect = resolveMicrosoftRedirectUri(config, redirectUri);
   const state = createMicrosoftOAuthState(config);
+  if (bindBrowserCookie) {
+    const payload = parseOAuthStatePayload(config, state);
+    if (payload) setOAuthNonceCookie(payload.nonce);
+  }
   return { url: buildMicrosoftAuthorizeUrlForRedirect(config, state, resolvedRedirect), state };
 }
 
@@ -197,6 +226,23 @@ export async function completeMicrosoftLogin(
   const statePayload = parseOAuthStatePayload(config, state);
   if (!statePayload) {
     throw new Error('Your sign-in session expired. Go back to the sign-in page and start again.');
+  }
+
+  let nonceCookie: string | undefined;
+  try {
+    nonceCookie = getCookie(OAUTH_NONCE_COOKIE);
+  } catch {
+    nonceCookie = undefined;
+  }
+  if (nonceCookie !== undefined) {
+    if (nonceCookie !== statePayload.nonce) {
+      throw new Error('Your sign-in session expired. Go back to the sign-in page and start again.');
+    }
+    try {
+      deleteCookie(OAUTH_NONCE_COOKIE, { path: '/' });
+    } catch {
+      // best-effort cleanup
+    }
   }
 
   const resolvedRedirect = resolveMicrosoftRedirectUri(config, redirectUri);

@@ -41,7 +41,7 @@ export function TechnicianProfilePage() {
     }
     setSession(tech);
 
-    void getStaffProfileFn({ data: { staffId: tech.staffId } })
+    void getStaffProfileFn()
       .then((profile) => {
         setOid(profile.oid ?? '');
         setFullName(profile.fullName);

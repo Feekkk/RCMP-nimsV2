@@ -1,19 +1,28 @@
 import { createServerFn } from '@tanstack/react-start';
+import { sessionMiddleware, staffMiddleware } from '@/server/auth-middleware';
+import { destroySession, establishSession } from '@/server/session.server';
 
 export const getMicrosoftLoginUrlFn = createServerFn({ method: 'POST' }).handler(async () => {
   const { getMicrosoftLoginRedirect } = await import('@/server/microsoft-auth.server');
-  return getMicrosoftLoginRedirect();
+  return getMicrosoftLoginRedirect(null, true);
 });
 
 export const completeMicrosoftLoginFn = createServerFn({ method: 'POST' })
   .inputValidator((data: { code: string; state: string }) => data)
   .handler(async ({ data }) => {
     const { completeMicrosoftLogin } = await import('@/server/microsoft-auth.server');
-    return completeMicrosoftLogin(data.code, data.state);
+    const user = await completeMicrosoftLogin(data.code, data.state);
+    await establishSession(user);
+    return user;
   });
 
+export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
+  await destroySession();
+  return { ok: true };
+});
+
 function assertDevLoginAllowed(): void {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' || process.env.ENABLE_DEV_LOGIN !== 'true') {
     throw new Error('Development sign-in is not available.');
   }
 }
@@ -21,52 +30,53 @@ function assertDevLoginAllowed(): void {
 export const devLoginAsTechnicianFn = createServerFn({ method: 'POST' }).handler(async () => {
   assertDevLoginAllowed();
   const { devLoginAsTechnician } = await import('@/server/auth-repo.server');
-  return devLoginAsTechnician();
+  const user = await devLoginAsTechnician();
+  await establishSession(user);
+  return user;
 });
 
 export const devLoginAsAdminFn = createServerFn({ method: 'POST' }).handler(async () => {
   assertDevLoginAllowed();
   const { devLoginAsAdmin } = await import('@/server/auth-repo.server');
-  return devLoginAsAdmin();
+  const user = await devLoginAsAdmin();
+  await establishSession(user);
+  return user;
 });
 
 export const devLoginAsUserFn = createServerFn({ method: 'POST' }).handler(async () => {
   assertDevLoginAllowed();
   const { devLoginAsUser } = await import('@/server/auth-repo.server');
-  return devLoginAsUser();
+  const user = await devLoginAsUser();
+  await establishSession(user);
+  return user;
 });
 
 export const getUserProfileFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { staffId: string }) => data)
-  .handler(async ({ data }) => {
+  .middleware([sessionMiddleware])
+  .handler(async ({ context }) => {
     const { getUserProfile } = await import('@/server/auth-repo.server');
-    return getUserProfile(data.staffId);
+    return getUserProfile(context.staffId);
   });
 
 export const updateUserProfileFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { staffId: string; phone: string | null }) => data)
-  .handler(async ({ data }) => {
+  .middleware([sessionMiddleware])
+  .inputValidator((data: { phone: string | null }) => data)
+  .handler(async ({ data, context }) => {
     const { updateUserProfile } = await import('@/server/auth-repo.server');
-    return updateUserProfile(data);
+    return updateUserProfile({ staffId: context.staffId, phone: data.phone });
   });
 
 export const getStaffProfileFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: { staffId: string }) => data)
-  .handler(async ({ data }) => {
+  .middleware([staffMiddleware])
+  .handler(async ({ context }) => {
     const { getStaffProfile } = await import('@/server/auth-repo.server');
-    return getStaffProfile(data.staffId);
+    return getStaffProfile(context.staffId);
   });
 
 export const updateStaffProfileFn = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (data: {
-      staffId: string;
-      fullName: string;
-      email: string;
-      phone: string | null;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
+  .middleware([staffMiddleware])
+  .inputValidator((data: { fullName: string; email: string; phone: string | null }) => data)
+  .handler(async ({ data, context }) => {
     const { updateStaffProfile } = await import('@/server/auth-repo.server');
-    return updateStaffProfile(data);
+    return updateStaffProfile({ ...data, staffId: context.staffId });
   });
