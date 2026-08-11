@@ -15,11 +15,11 @@ import type {
   PurchaseFields,
 } from '@/lib/inventory-schema';
 import { isAllowedStatusTransition } from '@/lib/asset-status-actions';
-import { formatIsoToDdMmYy } from '@/lib/date-format';
+import { formatIsoToDdMmYy, parseDdMmYyToIso } from '@/lib/date-format';
 import { purchaseSqlParams } from '@/lib/purchase-field-utils';
 import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import { allocateAssetIdsFromDb } from '@/server/asset-id.server';
-import { attachDisplayNames } from '@/server/azure-directory.server';
+import { attachDisplayNames, getDisplayNameByOid } from '@/server/azure-directory.server';
 import { getDbPool } from '@/server/db';
 import { insertWarranty } from '@/server/warranty-repair-repo.server';
 
@@ -248,6 +248,20 @@ function formatDate(val: Date | string | null | undefined): string | null {
   const iso =
     val instanceof Date ? val.toISOString().slice(0, 10) : String(val).trim().slice(0, 10);
   return formatIsoToDdMmYy(iso) ?? iso;
+}
+
+function trailDateOnly(val: Date | string | null | undefined): string {
+  if (val == null) return '';
+  if (val instanceof Date) {
+    if (Number.isNaN(val.getTime())) return '';
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, '0');
+    const d = String(val.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const raw = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  return parseDdMmYyToIso(raw) ?? '';
 }
 
 function mapPurchase(row: PurchaseRow): PurchaseFields {
@@ -851,9 +865,7 @@ async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
   await attachDisplayNames(returns, 'returned_oid', 'returned_by');
 
   for (const r of returns) {
-    const at = r.return_time
-      ? `${formatDate(r.return_date)}T${r.return_time}`
-      : trailAt(r.return_date) || trailAt(r.created_at);
+    const at = trailDateOnly(r.return_date) || trailAt(r.created_at);
     pushTrail(events, {
       at,
       category: 'Handover',
@@ -946,9 +958,7 @@ async function listPlaceDeployTrails(
 
   for (const r of returns) {
     const loc = [r.building, r.level, r.zone].filter(Boolean).join(' · ');
-    const at = r.return_time
-      ? `${formatDate(r.return_date)}T${r.return_time}`
-      : trailAt(r.return_date) || trailAt(r.created_at);
+    const at = trailDateOnly(r.return_date) || trailAt(r.created_at);
     pushTrail(events, {
       at,
       category: label,
@@ -969,66 +979,30 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
   const [repairs] = await pool.query<
     (RowDataPacket & {
       repair_date: Date | string;
-      completed_date: Date | string | null;
       issue_summary: string;
       repair_remarks: string | null;
       created_at: Date | string;
       staff_oid: string | null;
-      staff_name: string;
+      staff_email: string | null;
     })[]
   >(
-    `SELECT r.repair_date, r.completed_date, r.issue_summary, r.repair_remarks, r.created_at,
-            u.oid AS staff_oid
+    `SELECT r.repair_date, r.issue_summary, r.repair_remarks, r.created_at,
+            u.oid AS staff_oid, u.email AS staff_email
      FROM repair r
      INNER JOIN users u ON u.id = r.user_id
      WHERE r.asset_type = ? AND r.asset_id = ?
      ORDER BY r.repair_id`,
     [kind, assetId],
   );
-  await attachDisplayNames(repairs, 'staff_oid', 'staff_name');
 
   for (const row of repairs) {
+    const attendedBy = await getDisplayNameByOid(row.staff_oid, row.staff_email);
     pushTrail(events, {
       at: trailAt(row.repair_date) || trailAt(row.created_at),
       category: 'Repair',
       title: 'Repair logged',
-      detail: [row.issue_summary, row.staff_name ? `by ${row.staff_name}` : null, row.repair_remarks]
-        .filter(Boolean)
-        .join(' · '),
-    });
-    if (row.completed_date) {
-      pushTrail(events, {
-        at: trailAt(row.completed_date),
-        category: 'Repair',
-        title: 'Repair completed',
-        detail: row.issue_summary,
-      });
-    }
-  }
-
-  const [warranties] = await pool.query<
-    (RowDataPacket & {
-      warranty_start_date: Date | string;
-      warranty_end_date: Date | string;
-      warranty_remarks: string | null;
-      created_at: Date | string;
-    })[]
-  >(
-    `SELECT warranty_start_date, warranty_end_date, warranty_remarks, created_at
-     FROM warranty
-     WHERE asset_type = ? AND asset_id = ?
-     ORDER BY warranty_id`,
-    [kind, assetId],
-  );
-
-  for (const w of warranties) {
-    pushTrail(events, {
-      at: trailAt(w.warranty_start_date) || trailAt(w.created_at),
-      category: 'Warranty',
-      title: 'Warranty registered',
-      detail: [`${formatDate(w.warranty_start_date)} → ${formatDate(w.warranty_end_date)}`, w.warranty_remarks]
-        .filter(Boolean)
-        .join(' · '),
+      detail: [row.issue_summary, row.repair_remarks].filter(Boolean).join(' · ') || null,
+      actor: attendedBy || null,
     });
   }
 
@@ -1040,30 +1014,27 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
       claim_remarks: string | null;
       created_at: Date | string;
       claimed_oid: string | null;
-      claimed_by: string;
+      claimed_email: string | null;
     })[]
   >(
     `SELECT c.claim_date, c.claim_time, c.issue_summary, c.claim_remarks, c.created_at,
-            u.oid AS claimed_oid
+            u.oid AS claimed_oid, u.email AS claimed_email
      FROM warranty_claim c
      INNER JOIN users u ON u.id = c.claimed_by
      WHERE c.asset_type = ? AND c.asset_id = ?
      ORDER BY c.claim_id`,
     [kind, assetId],
   );
-  await attachDisplayNames(claims, 'claimed_oid', 'claimed_by');
 
   for (const c of claims) {
-    const at = c.claim_time
-      ? `${formatDate(c.claim_date)}T${c.claim_time}`
-      : trailAt(c.claim_date) || trailAt(c.created_at);
+    const attendedBy = await getDisplayNameByOid(c.claimed_oid, c.claimed_email);
+    const at = trailDateOnly(c.claim_date) || trailAt(c.created_at);
     pushTrail(events, {
       at,
       category: 'Warranty',
       title: 'Warranty claim',
-      detail: [c.issue_summary, c.claimed_by ? `by ${c.claimed_by}` : null, c.claim_remarks]
-        .filter(Boolean)
-        .join(' · '),
+      detail: [c.issue_summary, c.claim_remarks].filter(Boolean).join(' · ') || null,
+      actor: attendedBy || null,
     });
   }
 

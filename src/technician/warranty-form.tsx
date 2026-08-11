@@ -174,33 +174,36 @@ export function TechnicianWarrantyFormPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <DatePickerField
-              label="Claim date (claim_date)"
+              label="Claim date"
               value={claimDate}
               onChange={setClaimDate}
               required
             />
-            <FormField label="Claim time (claim_time)">
+            <FormField label="Claim time">
               <Input
                 type="time"
                 value={claimTime}
                 onChange={(e) => setClaimTime(e.target.value)}
                 className="rounded-[8px]"
+                placeholder="Enter the claim time"
               />
             </FormField>
-            <FormField label="Issue summary (issue_summary)" required>
+            <FormField label="Issue summary" required>
               <Input
                 value={issueSummary}
                 onChange={(e) => setIssueSummary(e.target.value)}
                 maxLength={255}
+                placeholder="Enter the issue summary"
                 required
                 className="rounded-[8px]"
               />
             </FormField>
-            <FormField label="Claim remarks (claim_remarks)">
+            <FormField label="Claim remarks">
               <Textarea
                 value={claimRemarks}
                 onChange={(e) => setClaimRemarks(e.target.value)}
                 className="min-h-[80px] rounded-[8px]"
+                placeholder="Enter any additional remarks"
               />
             </FormField>
 

@@ -332,14 +332,9 @@ function AssetForm({
           await createLaptop(laptopInput);
         }
       } else if (kind === 'av') {
-        if (!assetIdOld.trim()) {
-          toast.error('Legacy asset ID is required for AV equipment. Enter the previous asset identifier.');
-          setSaving(false);
-          return;
-        }
         const avInput = {
           assetId: id,
-          assetIdOld: assetIdOld.trim(),
+          assetIdOld: assetIdOld.trim() || null,
           category: avCategory.trim() || null,
           brand: brand.trim() || null,
           model: model.trim() || null,
@@ -542,8 +537,8 @@ function AssetForm({
               <section className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AV</p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Legacy ID" required>
-                    <Input value={assetIdOld} onChange={(e) => setAssetIdOld(e.target.value)} required className="rounded-[8px]" />
+                  <Field label="Legacy ID">
+                    <Input value={assetIdOld} onChange={(e) => setAssetIdOld(e.target.value)} className="rounded-[8px]" />
                   </Field>
                   <Field label="Category">
                     <Input

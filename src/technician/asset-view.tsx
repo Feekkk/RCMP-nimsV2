@@ -16,7 +16,7 @@ import {
 import type { AssetDetail, AssetDetailResponse, AssetKind, AssetTrailEvent } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH } from '@/lib/inventory-schema';
 import type { OpenReturnContext } from '@/lib/deploy-return-schema';
-import { formatAssetAge, formatDateLabel, formatPurchaseDateLabel } from '@/lib/date-format';
+import { formatAssetAge, formatDateLabel, formatPurchaseDateLabel, parseDdMmYyToIso } from '@/lib/date-format';
 import { formatPurchaseCost } from '@/lib/purchase-field-utils';
 import { cn } from '@/lib/utils';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
@@ -112,8 +112,20 @@ function DeploymentIcon({ deployment }: { deployment: OpenReturnContext | null }
 
 function formatTrailWhen(at: string): string {
   if (!at) return '—';
-  const d = new Date(at);
-  return Number.isNaN(d.getTime()) ? at : d.toLocaleString();
+  const trimmed = at.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return formatDateLabel(trimmed.slice(0, 10));
+  }
+  const beforeT = trimmed.split('T')[0] ?? trimmed;
+  const fromCompact = parseDdMmYyToIso(beforeT);
+  if (fromCompact) return formatDateLabel(fromCompact);
+  const d = new Date(trimmed);
+  if (Number.isNaN(d.getTime())) return trimmed;
+  return d.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function assetHeaderSubtitle(asset: AssetDetail): string {
@@ -258,7 +270,9 @@ function TrailsTable({ trails, readOnly }: { trails: AssetTrailEvent[]; readOnly
                     </TableCell>
                     <TableCell className="text-sm font-medium">{ev.title}</TableCell>
                     <TableCell className="max-w-[280px] truncate text-sm text-muted-foreground sm:max-w-none">
-                      {ev.detail ?? '—'}
+                      {[ev.detail, ev.actor ? `Attended by ${ev.actor}` : null]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
                       {hasLink && !isOpen && (
                         <span className="ml-2 text-xs text-[oklch(0.45_0.12_290)]">View</span>
                       )}
@@ -272,6 +286,9 @@ function TrailsTable({ trails, readOnly }: { trails: AssetTrailEvent[]; readOnly
                             {ev.category} · {ev.title}
                           </p>
                           <p className="text-sm text-foreground">{ev.detail ?? 'No additional details.'}</p>
+                          {ev.actor ? (
+                            <p className="text-sm text-muted-foreground">Attended by {ev.actor}</p>
+                          ) : null}
                           <p className="text-xs text-muted-foreground">{formatTrailWhen(ev.at)}</p>
                           <TrailEventLinks event={ev} readOnly={readOnly} />
                         </div>

@@ -151,7 +151,6 @@ export async function createWarrantyClaim(input: WarrantyClaimInput) {
 export async function createRepair(input: RepairInput) {
   const pool = getDbPool();
   const conn = await pool.getConnection();
-  const completedDate = input.completedDate ?? input.repairDate;
   try {
     await conn.beginTransaction();
 
@@ -163,7 +162,7 @@ export async function createRepair(input: RepairInput) {
         input.kind,
         input.staffId,
         input.repairDate,
-        completedDate,
+        input.completedDate ?? null,
         input.issueSummary,
         input.repairRemarks ?? null,
       ],

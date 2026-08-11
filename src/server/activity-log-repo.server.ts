@@ -471,13 +471,12 @@ async function loadMaintenanceEvents(events: ActivityLogEntry[]) {
       asset_id: number;
       asset_type: string;
       repair_date: Date | string;
-      completed_date: Date | string | null;
       issue_summary: string;
       staff_oid: string | null;
       staff_name: string;
     })[]
   >(
-    `SELECT r.repair_id, r.asset_id, r.asset_type, r.repair_date, r.completed_date,
+    `SELECT r.repair_id, r.asset_id, r.asset_type, r.repair_date,
             r.issue_summary, u.oid AS staff_oid
      FROM repair r
      INNER JOIN users u ON u.id = r.user_id
@@ -499,52 +498,6 @@ async function loadMaintenanceEvents(events: ActivityLogEntry[]) {
       requestId: null,
       disposalId: null,
       at: trailAt(row.repair_date),
-    });
-    if (row.completed_date) {
-      push(events, {
-        id: `repair-done-${row.repair_id}`,
-        category: 'repair',
-        title: 'Repair completed',
-        detail: row.issue_summary,
-        actor: row.staff_name,
-        assetKind: kind,
-        assetId: row.asset_id,
-        requestId: null,
-        disposalId: null,
-        at: trailAt(row.completed_date),
-      });
-    }
-  }
-
-  const [warranties] = await pool.query<
-    (RowDataPacket & {
-      warranty_id: number;
-      asset_id: number;
-      asset_type: string;
-      warranty_start_date: Date | string;
-      warranty_end_date: Date | string;
-      warranty_remarks: string | null;
-    })[]
-  >(
-    `SELECT warranty_id, asset_id, asset_type, warranty_start_date, warranty_end_date, warranty_remarks
-     FROM warranty
-     ORDER BY warranty_id DESC
-     LIMIT 100`,
-  );
-
-  for (const w of warranties) {
-    const kind = parseKind(w.asset_type);
-    push(events, {
-      id: `warr-${w.warranty_id}`,
-      category: 'warranty',
-      title: 'Warranty registered',
-      detail: `${formatDate(w.warranty_start_date)} → ${formatDate(w.warranty_end_date)}${w.warranty_remarks ? ` · ${w.warranty_remarks}` : ''}`,
-      actor: null,
-      assetKind: kind,
-      assetId: w.asset_id,
-      requestId: null,
-      disposalId: null,
-      at: trailAt(w.warranty_start_date),
     });
   }
 

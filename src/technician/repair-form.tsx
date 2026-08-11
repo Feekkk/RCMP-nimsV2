@@ -111,33 +111,35 @@ export function TechnicianRepairFormPage() {
 
       <Card className="rounded-[14px] border-border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">Log repair</CardTitle>
+          <CardTitle className="text-base">Log Repair</CardTitle>
           <CardDescription>
-            Log an in-house repair for this asset. The asset keeps its current status.
+            Log an In-House Repair for this asset. The asset keeps its current status.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <DatePickerField
-              label="Repair date (repair_date)"
+              label="Repair date"
               value={repairDate}
               onChange={setRepairDate}
               required
             />
-            <FormField label="Issue summary (issue_summary)" required>
+            <FormField label="Issue summary" required>
               <Input
                 value={issueSummary}
                 onChange={(e) => setIssueSummary(e.target.value)}
+                placeholder="Enter the issue summary"
                 maxLength={255}
                 required
                 className="rounded-[8px]"
               />
             </FormField>
-            <FormField label="Repair remarks (repair_remarks)">
+            <FormField label="Repair remarks">
               <Textarea
                 value={repairRemarks}
                 onChange={(e) => setRepairRemarks(e.target.value)}
                 className="min-h-[80px] rounded-[8px]"
+                placeholder="Enter any additional remarks"
               />
             </FormField>
 

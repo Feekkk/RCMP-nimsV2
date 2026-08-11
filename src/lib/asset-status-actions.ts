@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Reply, Trash2, Truck } from 'lucide-react';
+import { Hammer, Reply, Shield, Trash2, Truck } from 'lucide-react';
 import type { AssetKind, StatusId } from '@/lib/inventory-schema';
 
 /** status_id values from database/schema.sql */
@@ -13,6 +13,13 @@ export const STATUS_ID = {
   REQUEST_BOOKED: 7,
   REQUEST_CHECKOUT: 8,
 } as const;
+
+export type AssetStatusNavigateHref =
+  | '/technician/deploy'
+  | '/technician/return'
+  | '/technician/disposal'
+  | '/technician/repair'
+  | '/technician/warranty';
 
 export type AssetStatusAction = {
   key: string;
@@ -28,12 +35,9 @@ export type AssetStatusAction = {
   label: string;
   icon: LucideIcon;
   buttonClassName: string;
-  /** Open deploy / return / disposal form */
+  /** Open deploy / return / disposal / repair / warranty form */
   mode: 'navigate';
-  href:
-    | '/technician/deploy'
-    | '/technician/return'
-    | '/technician/disposal';
+  href: AssetStatusNavigateHref;
 };
 
 const actionBtn =
@@ -66,6 +70,30 @@ const DISPOSE_ACTION: AssetStatusAction = {
   buttonClassName: `${actionBtn} border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900`,
 };
 
+const REPAIR_ACTION: AssetStatusAction = {
+  key: 'repair',
+  label: 'In-house repair',
+  mode: 'navigate',
+  href: '/technician/repair',
+  icon: Hammer,
+  buttonClassName: `${actionBtn} border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200 dark:hover:bg-orange-900`,
+};
+
+const WARRANTY_ACTION: AssetStatusAction = {
+  key: 'warranty',
+  label: 'Warranty claim',
+  mode: 'navigate',
+  href: '/technician/warranty',
+  icon: Shield,
+  buttonClassName: `${actionBtn} border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200 dark:hover:bg-violet-900`,
+};
+
+const FAULTY_SERVICE_STATUSES = new Set<number>([
+  STATUS_ID.RETURN,
+  STATUS_ID.DEPLOY,
+  STATUS_ID.REQUEST_ACTIVE,
+]);
+
 /** Unified asset lifecycle — see status.md (applies to laptop, av, network) */
 const LIFECYCLE_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
   [STATUS_ID.NEW]: [DEPLOY_ACTION],
@@ -73,6 +101,14 @@ const LIFECYCLE_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
   [STATUS_ID.DEPLOY]: [RETURN_ACTION],
   [STATUS_ID.RETURN]: [DEPLOY_ACTION, DISPOSE_ACTION],
 };
+
+export function isFaultyServiceStatus(statusId: number): boolean {
+  return FAULTY_SERVICE_STATUSES.has(statusId);
+}
+
+export function getRepairOrWarrantyAction(warrantyActive: boolean): AssetStatusAction {
+  return warrantyActive ? WARRANTY_ACTION : REPAIR_ACTION;
+}
 
 export function getAssetStatusActions(_kind: AssetKind, statusId: number): AssetStatusAction[] {
   return LIFECYCLE_ACTIONS[statusId as StatusId] ?? [];
