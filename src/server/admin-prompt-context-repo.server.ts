@@ -444,32 +444,6 @@ async function loadExpiringWarranties() {
   }));
 }
 
-async function loadRecentDisposals() {
-  const pool = getDbPool();
-  const [rows] = await pool.query<
-    (RowDataPacket & {
-      disposal_id: number;
-      disposal_date: Date | string;
-      item_count: number;
-      disposal_remarks: string | null;
-    })[]
-  >(
-    `SELECT d.disposal_id, d.disposal_date, d.disposal_remarks, COUNT(di.disposal_item_id) AS item_count
-     FROM disposal d
-     INNER JOIN disposal_item di ON di.disposal_id = d.disposal_id
-     GROUP BY d.disposal_id, d.disposal_date, d.disposal_remarks
-     ORDER BY d.disposal_date DESC
-     LIMIT 5`,
-  );
-
-  return rows.map((row) => ({
-    disposalId: row.disposal_id,
-    disposalDate: formatDate(row.disposal_date),
-    itemCount: Number(row.item_count),
-    remarks: row.disposal_remarks,
-  }));
-}
-
 async function loadActiveHandoverCount() {
   const pool = getDbPool();
   const [rows] = await pool.query<(RowDataPacket & { cnt: number })[]>(
@@ -491,7 +465,6 @@ export async function buildAdminPromptDbContext(
     requestLookup,
     openRepairs,
     expiringWarranties,
-    recentDisposals,
     activeHandovers,
   ] = await Promise.all([
     loadOverdueReturns(),
@@ -501,7 +474,6 @@ export async function buildAdminPromptDbContext(
     loadRequestLookup(lookupText),
     loadOpenRepairs(),
     loadExpiringWarranties(),
-    loadRecentDisposals(),
     loadActiveHandoverCount(),
   ]);
 
@@ -519,7 +491,6 @@ export async function buildAdminPromptDbContext(
     operations: {
       openRepairs,
       expiringWarranties,
-      recentDisposals,
       activeHandovers,
     },
     requests: {

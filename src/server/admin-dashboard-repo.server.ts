@@ -137,7 +137,6 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
     (RowDataPacket & {
       deployed: number;
       open_repairs: number;
-      disposals: number;
       warranties_expiring: number;
     })[]
   >(
@@ -146,7 +145,6 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
       (SELECT COUNT(*) FROM av WHERE status_id = 3) +
       (SELECT COUNT(*) FROM network WHERE status_id = 3) AS deployed,
       (SELECT COUNT(*) FROM repair WHERE completed_date IS NULL) AS open_repairs,
-      (SELECT COUNT(*) FROM disposal WHERE disposal_date >= ?) AS disposals,
       (SELECT COUNT(*) FROM warranty
        WHERE warranty_end_date >= ? AND warranty_end_date <= ?) AS warranties_expiring`,
     [rangeStart, today, warrantyEnd],
@@ -155,7 +153,6 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
   const lifecycle: LifecycleSnapshot = {
     deployedAssets: Number(lc?.deployed ?? 0),
     openRepairs: Number(lc?.open_repairs ?? 0),
-    disposalsInPeriod: Number(lc?.disposals ?? 0),
     warrantiesExpiringSoon: Number(lc?.warranties_expiring ?? 0),
   };
 

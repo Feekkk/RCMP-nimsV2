@@ -9,7 +9,6 @@ import {
   Reply,
   Search,
   Shield,
-  Trash2,
   Truck,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -56,7 +55,6 @@ const CATEGORY_META: Record<ActivityLogCategory, { icon: ElementType; dot: strin
   handover: { icon: Truck, dot: 'bg-sky-500' },
   deployment: { icon: MapPin, dot: 'bg-indigo-500' },
   return: { icon: Reply, dot: 'bg-emerald-500' },
-  disposal: { icon: Trash2, dot: 'bg-rose-500' },
   repair: { icon: Hammer, dot: 'bg-amber-500' },
   warranty: { icon: Shield, dot: 'bg-violet-500' },
   inventory: { icon: Package, dot: 'bg-slate-500' },

@@ -193,7 +193,6 @@ export type AssetTrailEvent = {
   detail: string | null;
   actor?: string | null;
   requestId?: number | null;
-  disposalId?: number | null;
 };
 
 export type AssetDetailMeta = {

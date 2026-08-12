@@ -188,7 +188,7 @@ function PurchaseBlock({ asset }: { asset: AssetDetail }) {
 }
 
 function TrailEventLinks({ event, readOnly }: { event: AssetTrailEvent; readOnly?: boolean }) {
-  if (readOnly || (event.requestId == null && event.disposalId == null)) return null;
+  if (readOnly || event.requestId == null) return null;
 
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2">
@@ -199,16 +199,6 @@ function TrailEventLinks({ event, readOnly }: { event: AssetTrailEvent; readOnly
           onClick={(e) => e.stopPropagation()}
         >
           Request #{event.requestId}
-          <ExternalLink className="h-3 w-3" />
-        </Link>
-      )}
-      {event.disposalId != null && (
-        <Link
-          to="/technician/disposal"
-          className="inline-flex items-center gap-1 text-xs text-[oklch(0.45_0.12_290)] hover:underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Disposal #{event.disposalId}
           <ExternalLink className="h-3 w-3" />
         </Link>
       )}
@@ -241,7 +231,7 @@ function TrailsTable({ trails, readOnly }: { trails: AssetTrailEvent[]; readOnly
           ) : (
             trails.map((ev, idx) => {
               const isOpen = openIndex === idx;
-              const hasLink = ev.requestId != null || ev.disposalId != null;
+              const hasLink = ev.requestId != null;
 
               return (
                 <Fragment key={`${ev.category}-${ev.title}-${ev.at}-${idx}`}>
@@ -445,7 +435,7 @@ export function AssetViewContent({
                   Activity trail
                 </CardTitle>
                 <CardDescription>
-                  Handovers, deployments, borrow requests, repairs, warranty, and disposal events
+                  Handovers, deployments, borrow requests, repairs, and warranty events
                 </CardDescription>
               </div>
               {!readOnly ? (

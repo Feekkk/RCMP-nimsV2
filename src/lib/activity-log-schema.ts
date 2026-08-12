@@ -5,7 +5,6 @@ export const ACTIVITY_LOG_CATEGORIES = [
   'handover',
   'deployment',
   'return',
-  'disposal',
   'repair',
   'warranty',
   'inventory',
@@ -18,7 +17,6 @@ export const ACTIVITY_CATEGORY_LABEL: Record<ActivityLogCategory, string> = {
   handover: 'Handover',
   deployment: 'Deployment',
   return: 'Return',
-  disposal: 'Disposal',
   repair: 'Repair',
   warranty: 'Warranty',
   inventory: 'Inventory',
@@ -35,5 +33,4 @@ export type ActivityLogEntry = {
   assetKind: AssetKind | null;
   assetId: number | null;
   requestId: number | null;
-  disposalId: number | null;
 };

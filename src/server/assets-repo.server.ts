@@ -1038,42 +1038,6 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
     });
   }
 
-  if (kind === 'laptop' || kind === 'av' || kind === 'network') {
-    const [disposals] = await pool.query<
-      (RowDataPacket & {
-        disposal_id: number;
-        disposal_date: Date | string;
-        disposal_remarks: string | null;
-        item_remarks: string | null;
-        created_at: Date | string;
-        requested_oid: string | null;
-        requested_by: string;
-      })[]
-    >(
-      `SELECT d.disposal_id, d.disposal_date, d.disposal_remarks, di.item_remarks, di.created_at,
-              u.oid AS requested_oid
-       FROM disposal_item di
-       INNER JOIN disposal d ON d.disposal_id = di.disposal_id
-       INNER JOIN users u ON u.id = d.requested_by
-       WHERE di.asset_id = ? AND di.asset_type = ?
-       ORDER BY di.disposal_item_id`,
-      [assetId, kind],
-    );
-    await attachDisplayNames(disposals, 'requested_oid', 'requested_by');
-
-    for (const row of disposals) {
-      pushTrail(events, {
-        at: trailAt(row.disposal_date) || trailAt(row.created_at),
-        category: 'Disposal',
-        title: 'Marked for disposal',
-        detail: [row.requested_by ? `by ${row.requested_by}` : null, row.disposal_remarks, row.item_remarks]
-          .filter(Boolean)
-          .join(' · '),
-        disposalId: row.disposal_id,
-      });
-    }
-  }
-
   return events;
 }
 

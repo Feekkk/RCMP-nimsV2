@@ -79,7 +79,6 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
       assetKind: null,
       assetId: null,
       requestId: row.request_id,
-      disposalId: null,
       at: trailAt(row.created_at),
     });
   }
@@ -112,7 +111,6 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
       assetKind: null,
       assetId: null,
       requestId: row.request_id,
-      disposalId: null,
       at: trailAt(row.rejected_at),
     });
   }
@@ -173,7 +171,6 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
         assetKind: kind,
         assetId: row.asset_id,
         requestId: row.request_id,
-        disposalId: null,
         at: trailAt(row.unavailable_at),
       });
     } else if (row.assigned_at && row.asset_id != null) {
@@ -186,7 +183,6 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
         assetKind: kind,
         assetId: row.asset_id,
         requestId: row.request_id,
-        disposalId: null,
         at: trailAt(row.assigned_at),
       });
     }
@@ -200,7 +196,6 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
         assetKind: kind,
         assetId: row.asset_id,
         requestId: row.request_id,
-        disposalId: null,
         at: trailAt(row.checkout_at),
       });
     }
@@ -214,7 +209,6 @@ async function loadRequestEvents(events: ActivityLogEntry[]) {
         assetKind: kind,
         assetId: row.asset_id,
         requestId: row.request_id,
-        disposalId: null,
         at: trailAt(row.returned_at),
       });
     }
@@ -263,7 +257,6 @@ async function loadHandoverEvents(events: ActivityLogEntry[]) {
       assetKind: 'laptop',
       assetId: h.asset_id,
       requestId: null,
-      disposalId: null,
       at: trailAt(h.handover_date) || trailAt(h.created_at),
     });
   }
@@ -309,7 +302,6 @@ async function loadHandoverEvents(events: ActivityLogEntry[]) {
       assetKind: 'laptop',
       assetId: r.asset_id,
       requestId: null,
-      disposalId: null,
       at: atFromDateAndTime(r.return_date, r.return_time, r.created_at),
     });
   }
@@ -359,7 +351,6 @@ async function loadDeployEvents(
       assetKind: kind,
       assetId: d.asset_id,
       requestId: null,
-      disposalId: null,
       at: trailAt(d.deployment_date) || trailAt(d.created_at),
     });
   }
@@ -399,65 +390,7 @@ async function loadDeployEvents(
       assetKind: kind,
       assetId: r.asset_id,
       requestId: null,
-      disposalId: null,
       at: atFromDateAndTime(r.return_date, r.return_time, r.created_at),
-    });
-  }
-}
-
-async function loadDisposalEvents(events: ActivityLogEntry[]) {
-  const pool = getDbPool();
-
-  const [rows] = await pool.query<
-    (RowDataPacket & {
-      disposal_item_id: number;
-      disposal_id: number;
-      asset_id: number;
-      asset_type: string;
-      disposal_date: Date | string;
-      disposal_time: string | null;
-      disposal_remarks: string | null;
-      item_remarks: string | null;
-      requested_oid: string | null;
-      requested_by: string;
-      model: string | null;
-    })[]
-  >(
-    `SELECT di.disposal_item_id, di.disposal_id, di.asset_id, di.asset_type,
-            d.disposal_date, d.disposal_time, d.disposal_remarks, di.item_remarks,
-            u.oid AS requested_oid,
-            COALESCE(l.model, av.model, n.model) AS model
-     FROM disposal_item di
-     INNER JOIN disposal d ON d.disposal_id = di.disposal_id
-     INNER JOIN users u ON u.id = d.requested_by
-     LEFT JOIN laptop l ON di.asset_type = 'laptop' AND l.asset_id = di.asset_id
-     LEFT JOIN av av ON di.asset_type = 'av' AND av.asset_id = di.asset_id
-     LEFT JOIN network n ON di.asset_type = 'network' AND n.asset_id = di.asset_id
-     ORDER BY di.disposal_item_id DESC
-     LIMIT 200`,
-  );
-  await attachDisplayNames(rows, 'requested_oid', 'requested_by');
-
-  for (const row of rows) {
-    const kind = parseKind(row.asset_type);
-    push(events, {
-      id: `disp-${row.disposal_item_id}`,
-      category: 'disposal',
-      title: 'Marked for disposal',
-      detail: [
-        kind ? `${kind} #${row.asset_id}` : `#${row.asset_id}`,
-        row.model,
-        row.disposal_remarks,
-        row.item_remarks,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      actor: row.requested_by,
-      assetKind: kind,
-      assetId: row.asset_id,
-      requestId: null,
-      disposalId: row.disposal_id,
-      at: atFromDateAndTime(row.disposal_date, row.disposal_time),
     });
   }
 }
@@ -496,7 +429,6 @@ async function loadMaintenanceEvents(events: ActivityLogEntry[]) {
       assetKind: kind,
       assetId: row.asset_id,
       requestId: null,
-      disposalId: null,
       at: trailAt(row.repair_date),
     });
   }
@@ -533,7 +465,6 @@ async function loadMaintenanceEvents(events: ActivityLogEntry[]) {
       assetKind: kind,
       assetId: c.asset_id,
       requestId: null,
-      disposalId: null,
       at: atFromDateAndTime(c.claim_date, c.claim_time),
     });
   }
@@ -564,7 +495,6 @@ async function loadInventoryEvents(events: ActivityLogEntry[]) {
         assetKind: kind,
         assetId: row.asset_id,
         requestId: null,
-        disposalId: null,
         at: trailAt(row.created_at),
       });
     }
@@ -579,7 +509,6 @@ export async function listActivityLog(): Promise<ActivityLogEntry[]> {
     loadHandoverEvents(events),
     loadDeployEvents(events, 'av', 'deployment'),
     loadDeployEvents(events, 'network', 'deployment'),
-    loadDisposalEvents(events),
     loadMaintenanceEvents(events),
     loadInventoryEvents(events),
   ]);

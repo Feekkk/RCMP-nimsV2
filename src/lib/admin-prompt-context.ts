@@ -17,7 +17,6 @@ KEY PROCESSES:
 - Return: an asset is returned to the inventory after use.
 - Staff: staff members that make requests for assets or been handover laptop to them based on division services / academic staff services or department.
 - Repair: logged per asset with issue summary and completion date.
-- Disposal: assets can be grouped into a disposal batch with per-item remarks.
 - Warranty: tracked per asset with start/end dates; claims are logged separately.
 
 ROLES: technician, admin, user (from the `+"`role`"+` table) — technicians/admins manage assets; regular users submit requests.
@@ -29,7 +28,7 @@ export const BASE_SYSTEM_PROMPT = `You are the NIMS Asset Assistant, a support c
 SCOPE — you may ONLY answer questions about:
 - Asset details (e.g. model, serial number, specifications)
 - Asset status, location, and deployment history
-- Handover, return, repair, disposal, and warranty records
+- Handover, return, repair, and warranty records
 - Request/booking status for laptops, network gear, or AV equipment
 - How to use features of this asset management system
 

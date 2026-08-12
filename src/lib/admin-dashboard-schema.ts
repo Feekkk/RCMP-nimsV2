@@ -31,7 +31,6 @@ export type RecentRejectionRow = {
 export type LifecycleSnapshot = {
   deployedAssets: number;
   openRepairs: number;
-  disposalsInPeriod: number;
   warrantiesExpiringSoon: number;
 };
 

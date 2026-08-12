@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Hammer, Reply, Shield, Trash2, Truck } from 'lucide-react';
+import { Hammer, Reply, Shield, Truck } from 'lucide-react';
 import type { AssetKind, StatusId } from '@/lib/inventory-schema';
 
 /** status_id values from database/schema.sql */
@@ -17,7 +17,6 @@ export const STATUS_ID = {
 export type AssetStatusNavigateHref =
   | '/technician/deploy'
   | '/technician/return'
-  | '/technician/disposal'
   | '/technician/repair'
   | '/technician/warranty';
 
@@ -35,7 +34,7 @@ export type AssetStatusAction = {
   label: string;
   icon: LucideIcon;
   buttonClassName: string;
-  /** Open deploy / return / disposal / repair / warranty form */
+  /** Open deploy / return / repair / warranty form */
   mode: 'navigate';
   href: AssetStatusNavigateHref;
 };
@@ -59,15 +58,6 @@ const RETURN_ACTION: AssetStatusAction = {
   href: '/technician/return',
   icon: Reply,
   buttonClassName: `${actionBtn} border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900`,
-};
-
-const DISPOSE_ACTION: AssetStatusAction = {
-  key: 'dispose',
-  label: 'Dispose',
-  mode: 'navigate',
-  href: '/technician/disposal',
-  icon: Trash2,
-  buttonClassName: `${actionBtn} border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900`,
 };
 
 const REPAIR_ACTION: AssetStatusAction = {
@@ -99,7 +89,7 @@ const LIFECYCLE_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
   [STATUS_ID.NEW]: [DEPLOY_ACTION],
   [STATUS_ID.ASSIGN]: [DEPLOY_ACTION],
   [STATUS_ID.DEPLOY]: [RETURN_ACTION],
-  [STATUS_ID.RETURN]: [DEPLOY_ACTION, DISPOSE_ACTION],
+  [STATUS_ID.RETURN]: [DEPLOY_ACTION],
 };
 
 export function isFaultyServiceStatus(statusId: number): boolean {
