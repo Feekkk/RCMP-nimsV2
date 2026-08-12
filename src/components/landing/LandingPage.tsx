@@ -6,21 +6,16 @@ import {
   BarChart3,
   Bell,
   Boxes,
-  Database,
-  Laptop,
   Loader2,
   Menu,
-  Network,
   PackageSearch,
   ScanBarcode,
   Shield,
-  Tv,
   X,
 } from 'lucide-react';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 import uniklOfficialLogo from '@/assets/unikl-official.png';
-import { AssetStatusBadge } from '@/technician/asset-status-badge';
-import type { LandingSampleAsset, LandingStatusLevel, LandingSystemStatus } from '@/lib/landing-status-types';
+import type { LandingStatusLevel, LandingSystemStatus } from '@/lib/landing-status-types';
 import { getLandingSystemStatusFn } from '@/server/landing-status.functions';
 import { cn } from '@/lib/utils';
 
@@ -31,12 +26,6 @@ const STATUS_DOT: Record<LandingStatusLevel, string> = {
   neutral: 'bg-muted-foreground/40',
 };
 
-function kindIcon(kind: LandingSampleAsset['kind']) {
-  if (kind === 'laptop') return Laptop;
-  if (kind === 'av') return Tv;
-  return Network;
-}
-
 function StatusRow({ label, value, level }: { label: string; value: string; level: LandingStatusLevel }) {
   return (
     <div className="flex items-start gap-3 rounded-[10px] border border-border/50 bg-white/80 px-3 py-2.5">
@@ -45,24 +34,6 @@ function StatusRow({ label, value, level }: { label: string; value: string; leve
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
         <p className="mt-0.5 text-[12px] font-medium leading-snug text-foreground">{value}</p>
       </div>
-    </div>
-  );
-}
-
-function SampleAssetRow({ asset }: { asset: LandingSampleAsset }) {
-  const Icon = kindIcon(asset.kind);
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-[10px] border border-border/40 bg-white/60 px-3 py-2">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-lavender/15">
-          <Icon className="h-4 w-4 text-[oklch(0.45_0.12_290)]" />
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-[12px] font-semibold text-foreground">{asset.label}</p>
-          <p className="truncate font-mono text-[10px] text-muted-foreground">{asset.detail}</p>
-        </div>
-      </div>
-      <AssetStatusBadge statusId={asset.statusId} />
     </div>
   );
 }
@@ -139,20 +110,6 @@ function SystemOverviewPanel() {
                   <StatusRow key={row.key} label={row.label} value={row.value} level={row.level} />
                 ))}
               </div>
-
-              {data.sampleAssets.length > 0 && (
-                <div className="pt-1">
-                  <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    <Database className="h-3 w-3" />
-                    Recent assets
-                  </p>
-                  <div className="space-y-1.5">
-                    {data.sampleAssets.map((asset) => (
-                      <SampleAssetRow key={`${asset.kind}-${asset.assetId}`} asset={asset} />
-                    ))}
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -192,13 +149,13 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sticky nav */}
-      <nav className={`fixed top-0 left-0 right-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl px-6 py-4 sm:px-8 md:px-12 transition-all duration-300 ${showNav ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl px-6 py-4 sm:px-8 md:px-12 transition-all duration-300 ${showNav ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'} sm:translate-y-0 sm:opacity-100 sm:pointer-events-auto`}>
         <div className="mx-auto flex max-w-6xl h-8 items-center justify-between">
           <NimsLogo size="md" variant="light" />
           <div className="hidden items-center gap-8 sm:flex">
-            <Link to="/login" className="rounded-[10px] bg-foreground px-5 py-1.5 text-sm font-semibold text-background hover:opacity-90 transition-all">
-              Access the System
-            </Link>
+            <a href="https://itd.rcmp.edu.my/feedback" className="rounded-[10px] bg-foreground px-5 py-1.5 text-sm font-semibold text-background hover:opacity-90 transition-all">
+              Submit Feedback
+            </a>
           </div>
           <button onClick={() => setMobileNavOpen(!mobileNavOpen)} className="flex h-10 w-10 items-center justify-center rounded-[8px] text-muted-foreground hover:text-foreground sm:hidden">
             {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -206,9 +163,9 @@ export function LandingPage() {
         </div>
         {mobileNavOpen && (
           <div className="mx-auto max-w-6xl space-y-3 px-1 pt-4 sm:hidden">
-            <Link to="/login" className="block w-full rounded-[10px] bg-foreground px-4 py-2 text-center text-sm font-semibold text-background">
-              Access the System
-            </Link>
+            <a href="https://itd.rcmp.edu.my/feedback" className="block w-full rounded-[10px] bg-foreground px-4 py-2 text-center text-sm font-semibold text-background">
+              Submit Feedback
+            </a>
           </div>
         )}
       </nav>
