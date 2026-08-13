@@ -2,7 +2,7 @@ import type { Template } from '@pdfme/common';
 import { generate } from '@pdfme/generator';
 import { image, text } from '@pdfme/schemas';
 import type { HandoverPdfData } from '@/lib/handover-pdf-types';
-import { loadLogoBase64 } from '@/server/pdf-form-common.server';
+import { loadLogoBase64 } from '@/server/pdf/pdf-form-common.server';
 
 const UNIKL_HEADER = 'UNIVERSITY KUALA LUMPUR ROYAL COLLEGE OF MEDICINE PERAK';
 
@@ -241,7 +241,7 @@ export async function buildHandoverPdfFromData(data: HandoverPdfData): Promise<U
 }
 
 export async function generateHandoverPdfBuffer(handoverId: number): Promise<Uint8Array> {
-  const { getHandoverNotificationData } = await import('@/server/handover-pdf-repo.server');
+  const { getHandoverNotificationData } = await import('@/server/pdf/handover-pdf-repo.server');
   const data = await getHandoverNotificationData(handoverId);
   if (!data) {
     throw new Error('This handover record could not be found. Refresh the page and try again.');

@@ -1,4 +1,4 @@
-import { loadServerEnv } from '@/server/env.server';
+import { loadServerEnv } from '@/server/core/env.server';
 import { createOpenRouterText } from '@tanstack/ai-openrouter';
 
 type OpenRouterModel = Parameters<typeof createOpenRouterText>[0];

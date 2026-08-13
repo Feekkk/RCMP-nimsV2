@@ -3,7 +3,7 @@ import type {
   LaptopDepartmentHandover,
   LaptopDepartmentStaffHandover,
 } from '@/lib/admin-laptop-insights-schema';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 type DepartmentHandoverRow = RowDataPacket & {
   department: string;

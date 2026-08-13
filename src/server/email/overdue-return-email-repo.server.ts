@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import type { OverdueReturnEmailData } from '@/lib/overdue-return-email-types';
-import { getRequestEmailData } from '@/server/request-email-repo.server';
-import { getDbPool } from '@/server/db';
+import { getRequestEmailData } from '@/server/email/request-email-repo.server';
+import { getDbPool } from '@/server/core/db';
 import { getOverdueEmailScheduleConfig, getTodayIsoInTimeZone } from '@/lib/overdue-email-schedule';
 import { isoToLocalDate, localDateToIso } from '@/lib/date-format';
 

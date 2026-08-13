@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { TechnicianAssetExportKind, TechnicianReportPdfFilters } from '@/lib/technician-export-schema';
-import { staffMiddleware } from '@/server/auth-middleware';
+import { staffMiddleware } from '@/server/core/auth-middleware';
 
 const ASSET_KINDS: TechnicianAssetExportKind[] = ['laptop', 'av', 'network'];
 
@@ -13,7 +13,7 @@ export const exportTechnicianAssetCsvFn = createServerFn({ method: 'POST' })
         'The asset type is not recognized. Choose Laptop, AV, or Network and try again.',
       );
     }
-    const { exportTechnicianAssetCsv } = await import('@/server/technician-export.server');
+    const { exportTechnicianAssetCsv } = await import('@/server/admin/technician-export.server');
     return exportTechnicianAssetCsv(data.kind as TechnicianAssetExportKind);
   });
 
@@ -27,6 +27,6 @@ export const generateAssetReportPdfFn = createServerFn({ method: 'POST' })
     if (!data.filters.columns.length) {
       throw new Error('Select at least one column to include in the report.');
     }
-    const { generateAssetReportPdfBase64 } = await import('@/server/asset-report-pdf.server');
+    const { generateAssetReportPdfBase64 } = await import('@/server/pdf/asset-report-pdf.server');
     return generateAssetReportPdfBase64(data.filters);
   });

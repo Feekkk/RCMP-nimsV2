@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
-import { attachDisplayNames, getDirectoryUsersByOids } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { attachDisplayNames, getDirectoryUsersByOids } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 export type AdminExportKind =
   | 'users'

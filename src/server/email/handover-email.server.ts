@@ -2,11 +2,11 @@ import type { HandoverEmailData } from '@/lib/handover-email-types';
 import type { SendHandoverEmailResult } from '@/lib/handover-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
-import { escapeHtml } from '@/server/email.server';
-import { markHandoverEmailStatus } from '@/server/handover-email-repo.server';
-import { buildHandoverPdfFromData } from '@/server/handover-pdf.server';
-import { getHandoverNotificationData } from '@/server/handover-pdf-repo.server';
-import { loadLogoBuffer } from '@/server/pdf-form-common.server';
+import { escapeHtml } from '@/server/email/email.server';
+import { markHandoverEmailStatus } from '@/server/email/handover-email-repo.server';
+import { buildHandoverPdfFromData } from '@/server/pdf/handover-pdf.server';
+import { getHandoverNotificationData } from '@/server/pdf/handover-pdf-repo.server';
+import { loadLogoBuffer } from '@/server/pdf/pdf-form-common.server';
 
 const HANDOVER_CC = 'it.rcmp@unikl.edu.my';
 const LOGO_CID = 'unikl-logo';
@@ -142,7 +142,7 @@ export async function sendHandoverEmail(handoverId: number): Promise<SendHandove
     const logo = loadLogoBuffer();
     const pdfFilename = `handover-${handoverId}-asset-${data.assetId}.pdf`;
 
-    const { sendNotificationEmail } = await import('@/server/email.server');
+    const { sendNotificationEmail } = await import('@/server/email/email.server');
     const result = await sendNotificationEmail({
       to: email,
       cc: HANDOVER_CC,

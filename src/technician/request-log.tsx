@@ -25,7 +25,7 @@ import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
-import { listRequestLogFn } from '@/server/request.functions';
+import { listRequestLogFn } from '@/server/requests/request.functions';
 
 type LogEvent = {
   at: string;

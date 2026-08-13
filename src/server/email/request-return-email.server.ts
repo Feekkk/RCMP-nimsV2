@@ -8,8 +8,8 @@ import type {
 } from '@/lib/request-return-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
-import { escapeHtml } from '@/server/email.server';
-import { getRequestReturnEmailData } from '@/server/request-return-email-repo.server';
+import { escapeHtml } from '@/server/email/email.server';
+import { getRequestReturnEmailData } from '@/server/email/request-return-email-repo.server';
 
 const LOGO_CID = 'unikl-logo';
 
@@ -221,7 +221,7 @@ export async function sendRequestReturnEmail(
   }
 
   const logo = loadLogoBuffer();
-  const { sendNotificationEmail } = await import('@/server/email.server');
+  const { sendNotificationEmail } = await import('@/server/email/email.server');
   const result = await sendNotificationEmail({
     to: data.requesterEmail,
     cc: REQUEST_IT_EMAIL,

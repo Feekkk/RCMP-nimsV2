@@ -8,10 +8,10 @@ const runDate = process.argv.find((a) => a.startsWith('--date='))?.slice('--date
 
 async function main() {
   const { runOverdueReturnEmailJob } = await import(
-    '../src/server/overdue-return-email-job.server'
+    '../src/server/jobs/overdue-return-email-job.server'
   );
   const { runOverdueAutoRejectJob } = await import(
-    '../src/server/overdue-auto-reject-job.server'
+    '../src/server/jobs/overdue-auto-reject-job.server'
   );
 
   const overdueReturnEmails = await runOverdueReturnEmailJob({

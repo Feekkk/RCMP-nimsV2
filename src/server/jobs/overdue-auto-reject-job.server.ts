@@ -6,8 +6,8 @@ import {
   logOverdueAutoReject,
   markOverdueAutoRejectEmailSent,
   resolveAutoRejectActorUserId,
-} from '@/server/overdue-auto-reject-repo.server';
-import { resolveOverdueEmailRunDate } from '@/server/overdue-return-email-repo.server';
+} from '@/server/jobs/overdue-auto-reject-repo.server';
+import { resolveOverdueEmailRunDate } from '@/server/email/overdue-return-email-repo.server';
 
 export type RunOverdueAutoRejectJobOptions = {
   runDate?: string;
@@ -15,7 +15,7 @@ export type RunOverdueAutoRejectJobOptions = {
 };
 
 async function sendRejectEmail(requestId: number): Promise<void> {
-  const { sendRequestRejectEmail } = await import('@/server/request-reject-email.server');
+  const { sendRequestRejectEmail } = await import('@/server/email/request-reject-email.server');
   await sendRequestRejectEmail(requestId);
 }
 
@@ -41,7 +41,7 @@ export async function runOverdueAutoRejectJob(
   let failed = 0;
 
   const actorUserId = await resolveAutoRejectActorUserId();
-  const { rejectUserRequest } = await import('@/server/request-repo.server');
+  const { rejectUserRequest } = await import('@/server/requests/request-repo.server');
 
   for (const requestId of await listOverdueRequestsForAutoReject(runDate)) {
     try {

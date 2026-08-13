@@ -25,7 +25,7 @@ import {
   createNetworkFn,
   listAssetsFn,
   updateAssetStatusFn,
-} from '@/server/assets.functions';
+} from '@/server/assets/assets.functions';
 
 export type {
   AssetKind,

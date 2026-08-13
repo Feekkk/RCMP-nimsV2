@@ -9,7 +9,7 @@ export type SessionContext = {
 /** Base guard: any signed-in account. Reads identity from the server-side session cookie only. */
 export const sessionMiddleware = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
-    const { getSessionUser } = await import('@/server/session.server');
+    const { getSessionUser } = await import('@/server/auth/session.server');
     const session = await getSessionUser();
     if (!session) {
       throw new Error('Your session has expired. Sign in again to continue.');

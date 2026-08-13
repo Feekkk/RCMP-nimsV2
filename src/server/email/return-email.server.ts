@@ -3,11 +3,11 @@ import { RETURN_IT_CC } from '@/lib/return-email-types';
 import type { SendReturnEmailResult } from '@/lib/return-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
-import { escapeHtml, sendNotificationEmail } from '@/server/email.server';
-import { loadLogoBuffer } from '@/server/pdf-form-common.server';
-import { markReturnEmailStatus } from '@/server/return-email-repo.server';
-import { buildReturnPdfFromData } from '@/server/return-pdf.server';
-import { getReturnNotificationData } from '@/server/return-pdf-repo.server';
+import { escapeHtml, sendNotificationEmail } from '@/server/email/email.server';
+import { loadLogoBuffer } from '@/server/pdf/pdf-form-common.server';
+import { markReturnEmailStatus } from '@/server/email/return-email-repo.server';
+import { buildReturnPdfFromData } from '@/server/pdf/return-pdf.server';
+import { getReturnNotificationData } from '@/server/pdf/return-pdf-repo.server';
 
 const LOGO_CID = 'unikl-logo';
 

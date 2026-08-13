@@ -1,7 +1,7 @@
 import { chat } from '@tanstack/ai';
 import { createServerFn } from '@tanstack/react-start';
 import { buildAdminPromptSystemPrompt } from '@/lib/admin-prompt-context';
-import { staffMiddleware } from '@/server/auth-middleware';
+import { staffMiddleware } from '@/server/core/auth-middleware';
 import { getOpenRouterChatAdapter, isOpenRouterConfigured } from '@/lib/openrouter';
 
 type PromptChatRole = 'user' | 'assistant';
@@ -30,9 +30,9 @@ export const adminPromptChatFn = createServerFn({ method: 'POST' })
       throw new Error('OpenRouter is not configured. Add OPENROUTER_API_KEY to your .env file.');
     }
 
-    const { getTechnicianDashboard } = await import('@/server/dashboard-repo.server');
-    const { getAdminRequestInsights } = await import('@/server/admin-request-insights-repo.server');
-    const { buildAdminPromptDbContext } = await import('@/server/admin-prompt-context-repo.server');
+    const { getTechnicianDashboard } = await import('@/server/operations/dashboard-repo.server');
+    const { getAdminRequestInsights } = await import('@/server/admin/admin-request-insights-repo.server');
+    const { buildAdminPromptDbContext } = await import('@/server/admin/admin-prompt-context-repo.server');
 
     const now = new Date();
     const [dashboard, requestInsights] = await Promise.all([

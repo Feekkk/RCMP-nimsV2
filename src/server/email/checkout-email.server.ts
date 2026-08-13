@@ -5,8 +5,8 @@ import { REQUEST_IT_EMAIL } from '@/lib/checkout-email-types';
 import type { SendCheckoutEmailInput, SendCheckoutEmailResult } from '@/lib/checkout-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
-import { escapeHtml } from '@/server/email.server';
-import { getCheckoutEmailData } from '@/server/checkout-email-repo.server';
+import { escapeHtml } from '@/server/email/email.server';
+import { getCheckoutEmailData } from '@/server/email/checkout-email-repo.server';
 
 const LOGO_CID = 'unikl-logo';
 
@@ -208,7 +208,7 @@ export async function sendCheckoutEmail(input: SendCheckoutEmailInput): Promise<
   }
 
   const logo = loadLogoBuffer();
-  const { sendNotificationEmail } = await import('@/server/email.server');
+  const { sendNotificationEmail } = await import('@/server/email/email.server');
   const result = await sendNotificationEmail({
     to: data.requesterEmail,
     cc: REQUEST_IT_EMAIL,

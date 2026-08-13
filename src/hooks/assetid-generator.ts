@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import type { AssetKind } from '@/lib/inventory-schema';
-import { getNextAssetIdFn } from '@/server/assets.functions';
+import { getNextAssetIdFn } from '@/server/assets/assets.functions';
 
 export const ASSET_ID_PREFIX = {
   laptop: 12,

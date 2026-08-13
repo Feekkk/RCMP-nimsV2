@@ -7,7 +7,7 @@ import type {
   UpdateStaffInput,
 } from '@/lib/staff-schema';
 import { STAFF_DIVISIONS } from '@/lib/staff-schema';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 export async function listStaffDirectory(): Promise<StaffDirectoryRow[]> {
   const pool = getDbPool();

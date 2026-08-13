@@ -16,12 +16,12 @@ import {
   loadLogoBase64,
   pageFooterField,
   pageHeaderFields,
-} from '@/server/pdf-form-common.server';
+} from '@/server/pdf/pdf-form-common.server';
 import {
   describeReportFilters,
   fetchFilteredAssetReportRows,
   type AssetReportRow,
-} from '@/server/technician-export.server';
+} from '@/server/admin/technician-export.server';
 
 const TABLE_X = 14;
 const TABLE_W = 182;

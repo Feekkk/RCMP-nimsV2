@@ -1,10 +1,10 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { RowDataPacket } from 'mysql2';
 import { isAdminRole, isStaffRole } from '@/lib/auth-session';
-import type { AuthUserRow } from '@/server/auth-repo.server';
-import { apiError } from '@/server/api-response.server';
-import { assertAdminRole } from '@/server/admin-auth.server';
-import { assertStaffRole } from '@/server/technician-auth.server';
+import type { AuthUserRow } from '@/server/auth/auth-repo.server';
+import { apiError } from '@/server/core/api-response.server';
+import { assertAdminRole } from '@/server/auth/admin-auth.server';
+import { assertStaffRole } from '@/server/auth/technician-auth.server';
 
 const ACCESS_TTL_MS = 60 * 60 * 1000;
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -68,7 +68,7 @@ function decodeToken(token: string, expectedType: TokenType): TokenPayload | nul
 
 /** DB-backed revocation so it survives server restarts (refresh tokens live up to 30 days). */
 async function isRefreshJtiRevoked(jti: string): Promise<boolean> {
-  const { getDbPool } = await import('@/server/db');
+  const { getDbPool } = await import('@/server/core/db');
   const pool = getDbPool();
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT jti FROM revoked_refresh_token WHERE jti = ? LIMIT 1`,
@@ -78,7 +78,7 @@ async function isRefreshJtiRevoked(jti: string): Promise<boolean> {
 }
 
 async function revokeRefreshJti(jti: string, expiresAtMs: number): Promise<void> {
-  const { getDbPool } = await import('@/server/db');
+  const { getDbPool } = await import('@/server/core/db');
   const pool = getDbPool();
   await pool.execute(
     `INSERT INTO revoked_refresh_token (jti, expires_at) VALUES (?, FROM_UNIXTIME(? / 1000))

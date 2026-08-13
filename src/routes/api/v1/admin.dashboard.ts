@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { handleAdminDashboard } from '@/server/api-handlers.server';
+import { handleAdminDashboard } from '@/server/api/api-handlers.server';
 
 export const Route = createFileRoute('/api/v1/admin/dashboard')({
   server: {

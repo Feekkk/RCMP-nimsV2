@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 import { isAdminRole, isStaffRole, persistSession } from '@/lib/auth-session';
-import { completeMicrosoftLoginFn } from '@/server/auth.functions';
+import { completeMicrosoftLoginFn } from '@/server/auth/auth.functions';
 
 export const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
 

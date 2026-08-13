@@ -31,7 +31,7 @@ import {
   bulkCreateAvImportFn,
   bulkCreateLaptopsImportFn,
   bulkCreateNetworkImportFn,
-} from '@/server/assets.functions';
+} from '@/server/assets/assets.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { AddAssetDeployFields, type LaptopDeployMode } from '@/technician/add-asset-deploy-fields';
 import { PurchaseFieldsSection } from '@/technician/asset-purchase-fields';

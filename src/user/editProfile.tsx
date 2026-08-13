@@ -12,7 +12,7 @@ import {
   readUserSession,
   type SessionUser,
 } from '@/lib/auth-session';
-import { getUserProfileFn, updateUserProfileFn } from '@/server/auth.functions';
+import { getUserProfileFn, updateUserProfileFn } from '@/server/auth/auth.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
 

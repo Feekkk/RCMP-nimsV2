@@ -8,7 +8,7 @@ import {
   type TechnicianDashboardData,
 } from '@/lib/dashboard-schema';
 import { ASSET_KIND_LABEL } from '@/lib/inventory-schema';
-import { getTechnicianDashboardFn } from '@/server/dashboard.functions';
+import { getTechnicianDashboardFn } from '@/server/operations/dashboard.functions';
 import {
   InventoryStatCard,
   RequestTimetable,

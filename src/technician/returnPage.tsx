@@ -14,13 +14,13 @@ import {
   returnLaptopPlaceFn,
   returnLaptopStaffFn,
   returnPlaceFn,
-} from '@/server/deploy-return.functions';
-import { generateReturnPdfFn } from '@/server/return-pdf.functions';
+} from '@/server/requests/deploy-return.functions';
+import { generateReturnPdfFn } from '@/server/pdf/return-pdf.functions';
 import {
   getReturnEmailStatusFn,
   queueReturnEmailFn,
   sendReturnEmailFn,
-} from '@/server/return-email.functions';
+} from '@/server/email/return-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { ReturnDetailsFields } from '@/technician/deploy-return-fields';
 import { STATUS_ID } from '@/lib/asset-status-actions';

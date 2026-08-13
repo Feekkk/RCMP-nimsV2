@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/table';
 import type { AdminUserRow } from '@/lib/admin-users-schema';
 import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER, readAdminSession } from '@/lib/auth-session';
-import { createAdminUserFn, listAdminUsersFn, updateAdminUserFn } from '@/server/admin-users.functions';
+import { createAdminUserFn, listAdminUsersFn, updateAdminUserFn } from '@/server/admin/admin-users.functions';
 
 type UserFormState = {
   email: string;

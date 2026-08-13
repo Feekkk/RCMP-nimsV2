@@ -6,7 +6,7 @@ import {
   resolveMicrosoftRedirectUri,
   type MicrosoftAuthConfig,
 } from '@/lib/microsoft-auth-config';
-import { loginMicrosoftUser, type MicrosoftLoginResult } from '@/server/auth-repo.server';
+import { loginMicrosoftUser, type MicrosoftLoginResult } from '@/server/auth/auth-repo.server';
 
 const OAUTH_NONCE_COOKIE = 'nims_oauth_nonce';
 

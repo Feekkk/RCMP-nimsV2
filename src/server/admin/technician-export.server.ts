@@ -17,9 +17,9 @@ import type {
   TechnicianReportPdfFilters,
 } from '@/lib/technician-export-schema';
 import { REPORT_PDF_COLUMNS } from '@/lib/technician-export-schema';
-import { getAssetTrailEvents } from '@/server/assets-repo.server';
-import { attachDisplayNames } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { getAssetTrailEvents } from '@/server/assets/assets-repo.server';
+import { attachDisplayNames } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 export type TechnicianExportResult = {
   filename: string;

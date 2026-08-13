@@ -74,7 +74,7 @@ export async function clearAllSessions(): Promise<void> {
   sessionStorage.removeItem(TECHNICIAN_SESSION_KEY);
   sessionStorage.removeItem(USER_SESSION_KEY);
   try {
-    const { logoutFn } = await import('@/server/auth.functions');
+    const { logoutFn } = await import('@/server/auth/auth.functions');
     await logoutFn();
   } catch {
     // no-op

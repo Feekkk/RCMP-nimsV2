@@ -5,12 +5,12 @@ import { REQUEST_IT_EMAIL } from '@/lib/overdue-return-email-types';
 import type { SendOverdueReturnEmailResult } from '@/lib/overdue-return-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
-import { escapeHtml } from '@/server/email.server';
+import { escapeHtml } from '@/server/email/email.server';
 import {
   getOverdueReturnEmailData,
   logOverdueEmailSent,
   resolveOverdueEmailRunDate,
-} from '@/server/overdue-return-email-repo.server';
+} from '@/server/email/overdue-return-email-repo.server';
 
 const LOGO_CID = 'unikl-logo';
 
@@ -223,7 +223,7 @@ export async function sendOverdueReturnEmail(
   }
 
   const logo = loadLogoBuffer();
-  const { sendNotificationEmail } = await import('@/server/email.server');
+  const { sendNotificationEmail } = await import('@/server/email/email.server');
   const result = await sendNotificationEmail({
     to: data.requesterEmail,
     subject: `UNIKL RCMP — Overdue Return Reminder (Request #${data.requestId} — ${overdueLabel(data.daysOverdue)})`,

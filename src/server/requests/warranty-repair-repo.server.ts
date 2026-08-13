@@ -7,7 +7,7 @@ import type {
   WarrantyInput,
   WarrantyRecord,
 } from '@/lib/warranty-repair-schema';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 type WarrantyRow = RowDataPacket & {
   warranty_id: number;

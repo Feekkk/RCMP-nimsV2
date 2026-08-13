@@ -53,12 +53,12 @@ import {
   kindGroupLabel,
   requestItemKindFromAssetType,
 } from '@/lib/request-asset-types';
-import { sendRequestEmailFn } from '@/server/request-email.functions';
-import { submitUserRequestFn } from '@/server/request.functions';
+import { sendRequestEmailFn } from '@/server/email/request-email.functions';
+import { submitUserRequestFn } from '@/server/requests/request.functions';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
 import { UserProfileCompleteDialog } from '@/user/profile-complete-dialog';
-import { getUserProfileFn } from '@/server/auth.functions';
+import { getUserProfileFn } from '@/server/auth/auth.functions';
 import { localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 

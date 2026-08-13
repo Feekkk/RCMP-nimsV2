@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
-import type { AdminExportKind } from '@/server/admin-export.server';
-import { adminMiddleware } from '@/server/auth-middleware';
+import type { AdminExportKind } from '@/server/admin/admin-export.server';
+import { adminMiddleware } from '@/server/core/auth-middleware';
 
 const KINDS: AdminExportKind[] = [
   'users',
@@ -20,6 +20,6 @@ export const exportAdminCsvFn = createServerFn({ method: 'POST' })
     if (!KINDS.includes(data.kind as AdminExportKind)) {
       throw new Error('The export type is not recognized. Choose a valid export option and try again.');
     }
-    const { exportAdminCsv } = await import('@/server/admin-export.server');
+    const { exportAdminCsv } = await import('@/server/admin/admin-export.server');
     return exportAdminCsv(data.kind as AdminExportKind);
   });

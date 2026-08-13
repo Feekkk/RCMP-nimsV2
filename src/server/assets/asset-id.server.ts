@@ -8,7 +8,7 @@ import {
   getLaptopAssetIdPrefix,
   getPrefixForKind,
 } from '@/hooks/assetid-generator';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 type MaxRow = RowDataPacket & { max_id: number | null };
 

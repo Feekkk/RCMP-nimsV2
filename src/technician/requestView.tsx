@@ -23,7 +23,7 @@ import type { RequestAssignableKind, RequestPoolAsset } from '@/lib/request-sche
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
-import { listRequestPoolAssetsFn, removeAssetFromRequestPoolFn } from '@/server/request.functions';
+import { listRequestPoolAssetsFn, removeAssetFromRequestPoolFn } from '@/server/requests/request.functions';
 
 type KindFilter = 'all' | RequestAssignableKind;
 

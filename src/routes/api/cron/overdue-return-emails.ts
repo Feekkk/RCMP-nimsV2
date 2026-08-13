@@ -10,8 +10,8 @@ export const Route = createFileRoute('/api/cron/overdue-return-emails')({
           return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { runOverdueReturnEmailJob } = await import('@/server/overdue-return-email-job.server');
-        const { runOverdueAutoRejectJob } = await import('@/server/overdue-auto-reject-job.server');
+        const { runOverdueReturnEmailJob } = await import('@/server/jobs/overdue-return-email-job.server');
+        const { runOverdueAutoRejectJob } = await import('@/server/jobs/overdue-auto-reject-job.server');
         const overdueReturnEmails = await runOverdueReturnEmailJob({ skipTimeCheck: true });
         const overdueAutoReject = await runOverdueAutoRejectJob({ skipTimeCheck: true });
         return Response.json({ overdueReturnEmails, overdueAutoReject });

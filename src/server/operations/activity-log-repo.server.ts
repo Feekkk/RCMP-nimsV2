@@ -1,8 +1,8 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AssetKind } from '@/lib/inventory-schema';
 import type { ActivityLogCategory, ActivityLogEntry } from '@/lib/activity-log-schema';
-import { attachDisplayNames } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { attachDisplayNames } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 const MAX_EVENTS = 600;
 

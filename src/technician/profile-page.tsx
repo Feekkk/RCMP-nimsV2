@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { clearAllSessions, readTechnicianSession, type SessionUser } from '@/lib/auth-session';
-import { getStaffProfileFn } from '@/server/auth.functions';
+import { getStaffProfileFn } from '@/server/auth/auth.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
 

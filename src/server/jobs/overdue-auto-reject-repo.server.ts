@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import { ROLE_ADMIN, ROLE_TECHNICIAN } from '@/lib/auth-session';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 type RequestIdRow = RowDataPacket & {
   request_id: number;

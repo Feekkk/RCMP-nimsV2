@@ -1,4 +1,4 @@
-import { loadServerEnv } from '@/server/env.server';
+import { loadServerEnv } from '@/server/core/env.server';
 
 export type WhatsAppConfig = {
   accessToken: string;

@@ -5,7 +5,7 @@ import type {
   DashboardTrendPoint,
   TechnicianDashboardCharts,
 } from '@/lib/dashboard-schema';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 function formatDate(val: Date | string | null | undefined): string {
   if (val == null) return '';

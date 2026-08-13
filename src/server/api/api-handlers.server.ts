@@ -9,8 +9,8 @@ import {
   requireStaff,
   requireUser,
   revokeRefreshToken,
-} from '@/server/api-auth.server';
-import { apiError, apiOk, handleApiError, readJsonBody } from '@/server/api-response.server';
+} from '@/server/auth/api-auth.server';
+import { apiError, apiOk, handleApiError, readJsonBody } from '@/server/core/api-response.server';
 
 type MicrosoftStartBody = {
   redirectUri?: string;
@@ -34,7 +34,7 @@ export async function handleMicrosoftStart(request: Request): Promise<Response> 
   try {
     const body = request.method === 'POST' ? await readJsonBody<MicrosoftStartBody>(request) : null;
     const redirectUri = body && !(body instanceof Response) ? body.redirectUri : undefined;
-    const { getMicrosoftLoginRedirect } = await import('@/server/microsoft-auth.server');
+    const { getMicrosoftLoginRedirect } = await import('@/server/auth/microsoft-auth.server');
     const result = getMicrosoftLoginRedirect(redirectUri);
     return apiOk(result);
   } catch (error) {
@@ -49,7 +49,7 @@ export async function handleMicrosoftToken(request: Request): Promise<Response> 
     if (!body.code?.trim() || !body.state?.trim()) {
       return apiError('code and state are required.', 422, 'validation_error');
     }
-    const { completeMicrosoftLogin } = await import('@/server/microsoft-auth.server');
+    const { completeMicrosoftLogin } = await import('@/server/auth/microsoft-auth.server');
     const user = await completeMicrosoftLogin(body.code.trim(), body.state.trim(), body.redirectUri);
     const tokens = issueTokenPair(user);
     return apiOk({
@@ -69,8 +69,8 @@ export async function handleRefresh(request: Request): Promise<Response> {
     if (!body.refreshToken?.trim()) {
       return apiError('refreshToken is required.', 422, 'validation_error');
     }
-    const { getAuthUserByStaffId } = await import('@/server/auth-repo.server');
-    const { verifyRefreshTokenSubject } = await import('@/server/api-auth.server');
+    const { getAuthUserByStaffId } = await import('@/server/auth/auth-repo.server');
+    const { verifyRefreshTokenSubject } = await import('@/server/auth/api-auth.server');
     const staffId = await verifyRefreshTokenSubject(body.refreshToken.trim());
     if (!staffId) return apiError('Invalid or expired refresh token.', 401, 'invalid_token');
     const user = await getAuthUserByStaffId(staffId);
@@ -87,7 +87,7 @@ export async function handleMe(request: Request): Promise<Response> {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof Response) return auth;
-    const { getAuthUserByStaffId } = await import('@/server/auth-repo.server');
+    const { getAuthUserByStaffId } = await import('@/server/auth/auth-repo.server');
     const user = await getAuthUserByStaffId(auth.staffId);
     if (!user) return apiError('Account not found.', 404, 'not_found');
     return apiOk(authUserPayload(user));
@@ -116,7 +116,7 @@ export async function handleDevLogin(request: Request): Promise<Response> {
     if (body instanceof Response) return body;
     const role = body.role ?? 'technician';
     const { devLoginAsTechnician, devLoginAsAdmin, devLoginAsUser } = await import(
-      '@/server/auth-repo.server'
+      '@/server/auth/auth-repo.server'
     );
     let user;
     if (role === 'admin') user = await devLoginAsAdmin();
@@ -139,7 +139,7 @@ export async function handleGetProfile(request: Request): Promise<Response> {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof Response) return auth;
-    const { getStaffProfile, getUserProfile } = await import('@/server/auth-repo.server');
+    const { getStaffProfile, getUserProfile } = await import('@/server/auth/auth-repo.server');
     const profile = isStaffRole(auth.roleId)
       ? await getStaffProfile(auth.staffId)
       : await getUserProfile(auth.staffId);
@@ -155,7 +155,7 @@ export async function handlePatchProfile(request: Request): Promise<Response> {
     if (auth instanceof Response) return auth;
     const body = await readJsonBody<ProfilePatchBody>(request);
     if (body instanceof Response) return body;
-    const { updateStaffProfile, updateUserProfile } = await import('@/server/auth-repo.server');
+    const { updateStaffProfile, updateUserProfile } = await import('@/server/auth/auth-repo.server');
     const profile = isStaffRole(auth.roleId)
       ? await updateStaffProfile({
           staffId: auth.staffId,
@@ -181,7 +181,7 @@ export async function handleDashboard(request: Request): Promise<Response> {
     const year = Number(url.searchParams.get('year'));
     const month = Number(url.searchParams.get('month'));
     const now = new Date();
-    const { getTechnicianDashboard } = await import('@/server/dashboard-repo.server');
+    const { getTechnicianDashboard } = await import('@/server/operations/dashboard-repo.server');
     const data = await getTechnicianDashboard({
       year: Number.isFinite(year) ? year : now.getFullYear(),
       month: Number.isFinite(month) ? month : now.getMonth() + 1,
@@ -203,7 +203,7 @@ export async function handleListAssets(request: Request): Promise<Response> {
     if (auth instanceof Response) return auth;
     const kind = parseAssetKind(new URL(request.url).searchParams.get('kind'));
     if (kind instanceof Response) return kind;
-    const { listAssets } = await import('@/server/assets-repo.server');
+    const { listAssets } = await import('@/server/assets/assets-repo.server');
     return apiOk(await listAssets(kind));
   } catch (error) {
     return handleApiError(error);
@@ -216,7 +216,7 @@ export async function handleAssetLookup(request: Request): Promise<Response> {
     if (auth instanceof Response) return auth;
     const code = new URL(request.url).searchParams.get('code')?.trim();
     if (!code) return apiError('code query parameter is required.', 422, 'validation_error');
-    const { findAssetByCode } = await import('@/server/assets-repo.server');
+    const { findAssetByCode } = await import('@/server/assets/assets-repo.server');
     const asset = await findAssetByCode(code);
     if (!asset) return apiError('No asset found for that code.', 404, 'not_found');
     return apiOk(asset);
@@ -233,7 +233,7 @@ export async function handleAssetDetail(
   try {
     const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
-    const { getAssetDetail } = await import('@/server/assets-repo.server');
+    const { getAssetDetail } = await import('@/server/assets/assets-repo.server');
     const asset = await getAssetDetail(kind, assetId);
     if (!asset) return apiError('Asset not found.', 404, 'not_found');
     return apiOk(asset);
@@ -246,7 +246,7 @@ export async function handleListStaff(request: Request): Promise<Response> {
   try {
     const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
-    const { listStaffDirectory } = await import('@/server/staff-repo.server');
+    const { listStaffDirectory } = await import('@/server/operations/staff-repo.server');
     return apiOk(await listStaffDirectory());
   } catch (error) {
     return handleApiError(error);
@@ -257,7 +257,7 @@ export async function handleUserRequests(request: Request): Promise<Response> {
   try {
     const auth = await requireUser(request);
     if (auth instanceof Response) return auth;
-    const { listUserRequestHistory } = await import('@/server/request-repo.server');
+    const { listUserRequestHistory } = await import('@/server/requests/request-repo.server');
     return apiOk(await listUserRequestHistory(auth.staffId));
   } catch (error) {
     return handleApiError(error);
@@ -270,7 +270,7 @@ export async function handleSubmitRequest(request: Request): Promise<Response> {
     if (auth instanceof Response) return auth;
     const body = await readJsonBody<Record<string, unknown>>(request);
     if (body instanceof Response) return body;
-    const { submitUserRequest } = await import('@/server/request-repo.server');
+    const { submitUserRequest } = await import('@/server/requests/request-repo.server');
     const result = await submitUserRequest({
       requestedBy: auth.staffId,
       borrowDate: String(body.borrowDate ?? ''),
@@ -299,7 +299,7 @@ export async function handlePendingRequests(request: Request): Promise<Response>
   try {
     const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
-    const { listPendingRequests } = await import('@/server/request-repo.server');
+    const { listPendingRequests } = await import('@/server/requests/request-repo.server');
     return apiOk(await listPendingRequests());
   } catch (error) {
     return handleApiError(error);
@@ -312,7 +312,7 @@ export async function handleRequestPool(request: Request): Promise<Response> {
     if (auth instanceof Response) return auth;
     const view = new URL(request.url).searchParams.get('view') ?? 'all';
     const { listRequestPoolAssets, listAvailablePoolAssets, listAssignedRequestPoolAssets } =
-      await import('@/server/request-repo.server');
+      await import('@/server/requests/request-repo.server');
     if (view === 'available') return apiOk(await listAvailablePoolAssets());
     if (view === 'assigned') return apiOk(await listAssignedRequestPoolAssets());
     return apiOk(await listRequestPoolAssets());
@@ -325,7 +325,7 @@ export async function handleRequestLog(request: Request): Promise<Response> {
   try {
     const auth = await requireStaff(request);
     if (auth instanceof Response) return auth;
-    const { listRequestLog } = await import('@/server/request-repo.server');
+    const { listRequestLog } = await import('@/server/requests/request-repo.server');
     return apiOk(await listRequestLog());
   } catch (error) {
     return handleApiError(error);
@@ -341,44 +341,44 @@ export async function handleRequestAction(request: Request, action: string): Pro
     const actor = auth.staffId;
 
     if (action === 'pool-mark') {
-      const { markAssetsForRequest } = await import('@/server/request-repo.server');
+      const { markAssetsForRequest } = await import('@/server/requests/request-repo.server');
       const assets = Array.isArray(body.assets) ? body.assets : [];
       return apiOk(await markAssetsForRequest(assets as never));
     }
     if (action === 'pool-remove') {
-      const { removeAssetFromRequestPool } = await import('@/server/request-repo.server');
+      const { removeAssetFromRequestPool } = await import('@/server/requests/request-repo.server');
       await removeAssetFromRequestPool(body as never);
       return apiOk({ ok: true });
     }
     if (action === 'book') {
-      const { bookPoolAssetToRequest } = await import('@/server/request-repo.server');
+      const { bookPoolAssetToRequest } = await import('@/server/requests/request-repo.server');
       return apiOk(await bookPoolAssetToRequest({ ...body, bookedBy: actor } as never));
     }
     if (action === 'checkout-staff') {
-      const { checkoutRequestAssignment } = await import('@/server/request-repo.server');
+      const { checkoutRequestAssignment } = await import('@/server/requests/request-repo.server');
       await checkoutRequestAssignment({ ...body, checkedOutBy: actor } as never);
       return apiOk({ ok: true });
     }
     if (action === 'return-staff') {
-      const { returnRequestAssignment } = await import('@/server/request-repo.server');
+      const { returnRequestAssignment } = await import('@/server/requests/request-repo.server');
       await returnRequestAssignment({ ...body, returnedBy: actor } as never);
       return apiOk({ ok: true });
     }
     if (action === 'reject') {
-      const { rejectUserRequest } = await import('@/server/request-repo.server');
+      const { rejectUserRequest } = await import('@/server/requests/request-repo.server');
       await rejectUserRequest({ ...body, rejectedBy: actor } as never);
       return apiOk({ ok: true });
     }
     if (action === 'slot-unavailable') {
-      const { markRequestSlotUnavailable } = await import('@/server/request-repo.server');
+      const { markRequestSlotUnavailable } = await import('@/server/requests/request-repo.server');
       return apiOk(await markRequestSlotUnavailable({ ...body, markedBy: actor } as never));
     }
     if (action === 'slot-not-taken') {
-      const { markRequestSlotNotTaken } = await import('@/server/request-repo.server');
+      const { markRequestSlotNotTaken } = await import('@/server/requests/request-repo.server');
       return apiOk(await markRequestSlotNotTaken({ ...body, markedBy: actor } as never));
     }
     if (action === 'cancel-not-taken') {
-      const { cancelBookedAssignmentNotTaken } = await import('@/server/request-repo.server');
+      const { cancelBookedAssignmentNotTaken } = await import('@/server/requests/request-repo.server');
       await cancelBookedAssignmentNotTaken({ ...body, cancelledBy: actor } as never);
       return apiOk({ ok: true });
     }
@@ -397,7 +397,7 @@ export async function handleUserRequestAction(request: Request, action: string):
     const actor = auth.staffId;
 
     if (action === 'checkout') {
-      const { checkoutUserRequest } = await import('@/server/request-repo.server');
+      const { checkoutUserRequest } = await import('@/server/requests/request-repo.server');
       return apiOk(
         await checkoutUserRequest({
           requestId: Number(body.requestId),
@@ -406,7 +406,7 @@ export async function handleUserRequestAction(request: Request, action: string):
       );
     }
     if (action === 'return') {
-      const { returnUserRequest } = await import('@/server/request-repo.server');
+      const { returnUserRequest } = await import('@/server/requests/request-repo.server');
       return apiOk(
         await returnUserRequest({
           requestId: Number(body.requestId),
@@ -427,7 +427,7 @@ export async function handleAdminDashboard(request: Request): Promise<Response> 
     const auth = await requireAdmin(request);
     if (auth instanceof Response) return auth;
     const periodDays = Number(new URL(request.url).searchParams.get('periodDays') ?? 30);
-    const { getAdminDashboard } = await import('@/server/admin-dashboard-repo.server');
+    const { getAdminDashboard } = await import('@/server/admin/admin-dashboard-repo.server');
     const allowed = [7, 30, 90];
     const period = allowed.includes(periodDays) ? (periodDays as 7 | 30 | 90) : 30;
     return apiOk(await getAdminDashboard(period));

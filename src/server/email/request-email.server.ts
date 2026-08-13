@@ -5,8 +5,8 @@ import { REQUEST_IT_EMAIL } from '@/lib/request-email-types';
 import type { SendRequestEmailResult } from '@/lib/request-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
-import { escapeHtml } from '@/server/email.server';
-import { getRequestEmailData } from '@/server/request-email-repo.server';
+import { escapeHtml } from '@/server/email/email.server';
+import { getRequestEmailData } from '@/server/email/request-email-repo.server';
 
 const LOGO_CID = 'unikl-logo';
 
@@ -176,7 +176,7 @@ export async function sendRequestEmail(requestId: number): Promise<SendRequestEm
   const recipients = [...new Set([data.requesterEmail, REQUEST_IT_EMAIL])];
   const logo = loadLogoBuffer();
 
-  const { sendNotificationEmail } = await import('@/server/email.server');
+  const { sendNotificationEmail } = await import('@/server/email/email.server');
   const result = await sendNotificationEmail({
     to: recipients,
     subject: `UNIKL RCMP — Equipment Request #${data.requestId} Submitted`,

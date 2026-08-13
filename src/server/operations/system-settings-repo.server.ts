@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import { ROLE_USER } from '@/lib/auth-session';
 import { LOGIN_MAINTENANCE_MESSAGE } from '@/lib/system-settings';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 export { LOGIN_MAINTENANCE_MESSAGE };
 

@@ -1,6 +1,6 @@
 import { useSession } from '@tanstack/react-start/server';
-import type { AuthUserRow } from '@/server/auth-repo.server';
-import { loadServerEnv } from '@/server/env.server';
+import type { AuthUserRow } from '@/server/auth/auth-repo.server';
+import { loadServerEnv } from '@/server/core/env.server';
 
 const SESSION_NAME = 'nims_session';
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;

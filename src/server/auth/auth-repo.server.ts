@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
-import { resolveAccountProfile } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { resolveAccountProfile } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 export type AuthUserRow = {
   staffId: string;
@@ -140,7 +140,7 @@ export async function loginMicrosoftUser(input: MicrosoftLoginInput): Promise<Mi
   let row = await findUserByEmail(email);
   let accountCreated = false;
 
-  const { assertUserRoleLoginAllowed } = await import('@/server/system-settings-repo.server');
+  const { assertUserRoleLoginAllowed } = await import('@/server/operations/system-settings-repo.server');
 
   if (!row) {
     row = await findUserByOid(oid);

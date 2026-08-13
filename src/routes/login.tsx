@@ -11,8 +11,8 @@ import {
   devLoginAsTechnicianFn,
   devLoginAsUserFn,
   getMicrosoftLoginUrlFn,
-} from '@/server/auth.functions';
-import { getLoginMaintenanceModeFn } from '@/server/system-settings.functions';
+} from '@/server/auth/auth.functions';
+import { getLoginMaintenanceModeFn } from '@/server/operations/system-settings.functions';
 import { LOGIN_MAINTENANCE_MESSAGE } from '@/lib/system-settings';
 import { MICROSOFT_OAUTH_STATE_KEY } from '@/auth/microsoft-callback-page';
 

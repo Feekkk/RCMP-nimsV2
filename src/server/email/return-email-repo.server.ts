@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { ReturnEmailStatus, ReturnEmailStatusInfo } from '@/lib/return-pdf-types';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 export async function markReturnEmailStatus(
   returnId: number,

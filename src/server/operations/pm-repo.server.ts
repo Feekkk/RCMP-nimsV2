@@ -19,7 +19,7 @@ import type {
   UpdatePmChecklistItemInput,
 } from '@/lib/pm-schema';
 import { derivePmLogStatus } from '@/lib/pm-schema';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 function toIsoDate(d: Date | string): string {
   if (typeof d === 'string') return d.slice(0, 10);

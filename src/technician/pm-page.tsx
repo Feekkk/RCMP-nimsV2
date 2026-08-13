@@ -44,7 +44,7 @@ import { ASSET_KIND_LABEL, type AssetKind } from '@/lib/inventory-schema';
 import type { PmLogListRow, PmLogStatus, PmStats } from '@/lib/pm-schema';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
-import { getPmStatsFn, listPmChecklistsFn, listPmLogsFn } from '@/server/pm.functions';
+import { getPmStatsFn, listPmChecklistsFn, listPmLogsFn } from '@/server/operations/pm.functions';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';

@@ -12,7 +12,7 @@ import {
   isFaultyServiceStatus,
   type AssetStatusAction,
 } from '@/lib/asset-status-actions';
-import { getWarrantyContextFn } from '@/server/warranty-repair.functions';
+import { getWarrantyContextFn } from '@/server/requests/warranty-repair.functions';
 
 type AssetStatusActionsProps = {
   kind: AssetKind;

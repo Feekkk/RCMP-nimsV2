@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { handleGetProfile, handlePatchProfile } from '@/server/api-handlers.server';
+import { handleGetProfile, handlePatchProfile } from '@/server/api/api-handlers.server';
 
 export const Route = createFileRoute('/api/v1/profile')({
   server: {

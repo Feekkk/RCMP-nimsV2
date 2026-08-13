@@ -23,7 +23,7 @@ import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 import {
   listActiveForRequestPoolFn,
   markAssetsForRequestFn,
-} from '@/server/request.functions';
+} from '@/server/requests/request.functions';
 
 function assetKey(kind: RequestAssignableKind, assetId: number) {
   return `${kind}:${assetId}`;

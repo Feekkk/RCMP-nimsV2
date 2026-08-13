@@ -1,4 +1,4 @@
-import { loadServerEnv } from '@/server/env.server';
+import { loadServerEnv } from '@/server/core/env.server';
 
 /** Server-only Microsoft Entra ID (Azure AD) OAuth settings. */
 

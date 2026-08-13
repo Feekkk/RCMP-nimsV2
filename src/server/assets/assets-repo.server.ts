@@ -18,10 +18,10 @@ import { isAllowedStatusTransition } from '@/lib/asset-status-actions';
 import { formatIsoToDdMmYy, parseDdMmYyToIso } from '@/lib/date-format';
 import { purchaseSqlParams } from '@/lib/purchase-field-utils';
 import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
-import { allocateAssetIdsFromDb } from '@/server/asset-id.server';
-import { attachDisplayNames, getDisplayNameByOid } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
-import { insertWarranty } from '@/server/warranty-repair-repo.server';
+import { allocateAssetIdsFromDb } from '@/server/assets/asset-id.server';
+import { attachDisplayNames, getDisplayNameByOid } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
+import { insertWarranty } from '@/server/requests/warranty-repair-repo.server';
 
 export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & {
   assetId?: number;

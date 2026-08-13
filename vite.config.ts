@@ -167,7 +167,7 @@ function overdueReturnEmailSchedulerPlugin() {
     configureServer(server: import('vite').ViteDevServer) {
       if (process.env.OVERDUE_EMAIL_SCHEDULER !== 'true') return;
       const schedulerModule = pathToFileURL(
-        path.resolve(process.cwd(), 'src/server/overdue-return-email-scheduler.server.ts'),
+        path.resolve(process.cwd(), 'src/server/jobs/overdue-return-email-scheduler.server.ts'),
       ).href;
       void server
         .ssrLoadModule(schedulerModule)

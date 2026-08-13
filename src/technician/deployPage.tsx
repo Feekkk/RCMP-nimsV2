@@ -15,13 +15,13 @@ import {
   deployLaptopPlaceFn,
   deployLaptopStaffFn,
   deployPlaceFn,
-} from '@/server/deploy-return.functions';
-import { generateHandoverPdfFn } from '@/server/handover-pdf.functions';
+} from '@/server/requests/deploy-return.functions';
+import { generateHandoverPdfFn } from '@/server/pdf/handover-pdf.functions';
 import {
   getHandoverEmailStatusFn,
   queueHandoverEmailFn,
   sendHandoverEmailFn,
-} from '@/server/handover-email.functions';
+} from '@/server/email/handover-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { DatePickerField, CampusBuildingSelect, FormField } from '@/technician/deploy-return-fields';
 import { StaffRecipientSearch } from '@/technician/staff-recipient-search';

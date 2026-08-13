@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import type { HandoverNotificationData } from '@/lib/handover-pdf-types';
-import { getDisplayNameByOid } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { getDisplayNameByOid } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 type HandoverRow = RowDataPacket & {
   handover_id: number;

@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AdminRequestInsights } from '@/lib/admin-request-insights-schema';
-import { attachDisplayNames } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { attachDisplayNames } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 function formatDate(val: Date | string | null | undefined): string {
   if (val == null) return '';

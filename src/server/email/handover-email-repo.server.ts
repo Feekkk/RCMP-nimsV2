@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { HandoverEmailStatus, HandoverEmailStatusInfo } from '@/lib/handover-pdf-types';
-import { getDbPool } from '@/server/db';
+import { getDbPool } from '@/server/core/db';
 
 export async function markHandoverEmailStatus(
   handoverId: number,

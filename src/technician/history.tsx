@@ -42,7 +42,7 @@ import {
 import { isoToLocalDate, localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
-import { listActivityLogFn } from '@/server/activity-log.functions';
+import { listActivityLogFn } from '@/server/operations/activity-log.functions';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';

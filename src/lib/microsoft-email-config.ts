@@ -1,4 +1,4 @@
-import { loadServerEnv } from '@/server/env.server';
+import { loadServerEnv } from '@/server/core/env.server';
 
 /** Server-only SMTP settings for notification mail (M365 or local Mailpit). Not stored in DB. */
 

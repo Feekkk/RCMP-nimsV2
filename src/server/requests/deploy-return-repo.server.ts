@@ -15,8 +15,8 @@ import type {
   StaffRecipient,
 } from '@/lib/deploy-return-schema';
 import { getReturnStatusIdForCondition } from '@/lib/deploy-return-schema';
-import { attachDisplayNames } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { attachDisplayNames } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 const ASSET_TABLE: Record<AssetKind, string> = {
   laptop: 'laptop',

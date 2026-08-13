@@ -70,9 +70,9 @@ import { cn } from '@/lib/utils';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { sendCheckoutEmailFn } from '@/server/checkout-email.functions';
-import { sendRequestRejectEmailFn } from '@/server/request-reject-email.functions';
-import { sendRequestReturnEmailFn } from '@/server/request-return-email.functions';
+import { sendCheckoutEmailFn } from '@/server/email/checkout-email.functions';
+import { sendRequestRejectEmailFn } from '@/server/email/request-reject-email.functions';
+import { sendRequestReturnEmailFn } from '@/server/email/request-return-email.functions';
 import {
   bookPoolAssetToRequestFn,
   cancelBookedAssignmentNotTakenFn,
@@ -84,7 +84,7 @@ import {
   markRequestSlotUnavailableFn,
   rejectUserRequestFn,
   returnUserRequestFn,
-} from '@/server/request.functions';
+} from '@/server/requests/request.functions';
 import { RequestReturnFields } from '@/technician/request-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 

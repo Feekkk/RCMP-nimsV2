@@ -5,8 +5,8 @@ import { REQUEST_IT_EMAIL } from '@/lib/request-reject-email-types';
 import type { SendRequestRejectEmailResult } from '@/lib/request-reject-email-types';
 import { EMAIL_NOT_CONFIGURED_MESSAGE } from '@/lib/email-notification';
 import { isEmailConfigured } from '@/lib/microsoft-email-config';
-import { escapeHtml } from '@/server/email.server';
-import { getRequestRejectEmailData } from '@/server/request-reject-email-repo.server';
+import { escapeHtml } from '@/server/email/email.server';
+import { getRequestRejectEmailData } from '@/server/email/request-reject-email-repo.server';
 
 const LOGO_CID = 'unikl-logo';
 
@@ -178,7 +178,7 @@ export async function sendRequestRejectEmail(
   }
 
   const logo = loadLogoBuffer();
-  const { sendNotificationEmail } = await import('@/server/email.server');
+  const { sendNotificationEmail } = await import('@/server/email/email.server');
   const result = await sendNotificationEmail({
     to: data.requesterEmail,
     cc: REQUEST_IT_EMAIL,

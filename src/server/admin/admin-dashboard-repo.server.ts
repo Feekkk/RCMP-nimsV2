@@ -9,9 +9,9 @@ import type {
   TopRequesterRow,
 } from '@/lib/admin-dashboard-schema';
 import { ROLE_USER } from '@/lib/auth-session';
-import { attachDisplayNames } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
-import { loadDashboardCharts } from '@/server/dashboard-charts.server';
+import { attachDisplayNames } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
+import { loadDashboardCharts } from '@/server/operations/dashboard-charts.server';
 
 function formatDate(val: Date | string | null | undefined): string {
   if (val == null) return '';

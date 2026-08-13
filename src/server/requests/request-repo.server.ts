@@ -40,8 +40,8 @@ import type {
 } from '@/lib/request-schema';
 import { requestItemKindFromAssetType } from '@/lib/request-asset-types';
 import { isUserProfileComplete } from '@/lib/user-profile';
-import { attachDisplayNames, resolveAccountProfile } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { attachDisplayNames, resolveAccountProfile } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 /** Source statuses eligible to enter the request pool: new (1) and return (2). */
 const REQUEST_POOL_ELIGIBLE_STATUS_IDS = [STATUS_ID.NEW, STATUS_ID.RETURN] as const;

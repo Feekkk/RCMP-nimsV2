@@ -18,8 +18,8 @@ import {
   type AssetDetailResponse,
   type AssetKind,
 } from '@/lib/inventory-schema';
-import { attachDisplayNames } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { attachDisplayNames } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 function formatDate(val: Date | string | null | undefined): string {
   if (val == null) return '';
@@ -200,7 +200,7 @@ async function findAssetIdsByMac(mac: string): Promise<{ kind: AssetKind; assetI
 }
 
 async function loadAssetLookup(lookupText: string) {
-  const { findAssetByAnyId } = await import('@/server/assets-repo.server');
+  const { findAssetByAnyId } = await import('@/server/assets/assets-repo.server');
   const assetsById: ReturnType<typeof summarizeAssetForPrompt>[] = [];
   const seen = new Set<string>();
   const notFoundIds: number[] = [];

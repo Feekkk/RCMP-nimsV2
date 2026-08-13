@@ -11,7 +11,7 @@ import {
   loadLogoBase64,
   pageFooterField,
   pageHeaderFields,
-} from '@/server/pdf-form-common.server';
+} from '@/server/pdf/pdf-form-common.server';
 
 const TABLE_HDR_BG = '#E8E8E8';
 
@@ -151,7 +151,7 @@ export async function buildReturnPdfFromData(data: ReturnPdfData): Promise<Uint8
 }
 
 export async function generateReturnPdfBuffer(returnId: number): Promise<Uint8Array> {
-  const { getReturnNotificationData } = await import('@/server/return-pdf-repo.server');
+  const { getReturnNotificationData } = await import('@/server/pdf/return-pdf-repo.server');
   const data = await getReturnNotificationData(returnId);
   if (!data) {
     throw new Error('This return record could not be found. Refresh the page and try again.');

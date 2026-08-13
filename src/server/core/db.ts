@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import type { Pool, PoolConnection, PoolOptions } from 'mysql2/promise';
-import { loadServerEnv } from '@/server/env.server';
+import { loadServerEnv } from '@/server/core/env.server';
 
 type MysqlPromise = typeof import('mysql2/promise');
 

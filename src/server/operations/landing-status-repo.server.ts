@@ -2,7 +2,7 @@ import type { RowDataPacket } from 'mysql2';
 import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import type { LandingSampleAsset, LandingStatusRow, LandingSystemStatus } from '@/lib/landing-status-types';
 import { isEmailConfigured, isMailpitMode } from '@/lib/microsoft-email-config';
-import { getDbPool, formatDatabaseError } from '@/server/db';
+import { getDbPool, formatDatabaseError } from '@/server/core/db';
 
 type SampleRow = RowDataPacket & {
   kind: string;

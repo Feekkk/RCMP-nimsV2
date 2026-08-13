@@ -1,8 +1,8 @@
 import type { RowDataPacket } from 'mysql2';
 import type { RequestReturnEmailData } from '@/lib/request-return-email-types';
-import { getDisplayNameByOid } from '@/server/azure-directory.server';
-import { getRequestEmailData } from '@/server/request-email-repo.server';
-import { getDbPool } from '@/server/db';
+import { getDisplayNameByOid } from '@/server/core/azure-directory.server';
+import { getRequestEmailData } from '@/server/email/request-email-repo.server';
+import { getDbPool } from '@/server/core/db';
 
 type ReturnAssetRow = RowDataPacket & {
   assignment_id: number;

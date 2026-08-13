@@ -33,7 +33,7 @@ import {
   getPmChecklistDetailFn,
   getPmLocationTreeFn,
   listPmAssetsAtPlaceFn,
-} from '@/server/pm.functions';
+} from '@/server/operations/pm.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
 

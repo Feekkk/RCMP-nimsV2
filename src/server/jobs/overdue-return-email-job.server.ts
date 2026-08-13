@@ -3,7 +3,7 @@ import { isOverdueEmailScheduleTime } from '@/lib/overdue-email-schedule';
 import {
   listOverdueRequestIdsForEmail,
   resolveOverdueEmailRunDate,
-} from '@/server/overdue-return-email-repo.server';
+} from '@/server/email/overdue-return-email-repo.server';
 
 export type RunOverdueReturnEmailJobOptions = {
   /** ISO date (YYYY-MM-DD) used for eligibility and deduplication; defaults to today in OVERDUE_EMAIL_TZ. */
@@ -32,7 +32,7 @@ export async function runOverdueReturnEmailJob(
   let sent = 0;
   let failed = 0;
 
-  const { sendOverdueReturnEmail } = await import('@/server/overdue-return-email.server');
+  const { sendOverdueReturnEmail } = await import('@/server/email/overdue-return-email.server');
 
   for (const requestId of requestIds) {
     try {

@@ -1,12 +1,12 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { SendNotificationEmailInput } from '@/lib/email-notification';
-import { staffMiddleware } from '@/server/auth-middleware';
+import { staffMiddleware } from '@/server/core/auth-middleware';
 
 export const sendNotificationEmailFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((input: SendNotificationEmailInput) => input)
   .handler(async ({ data: input }) => {
-    const { sendNotificationEmail } = await import('@/server/email.server');
+    const { sendNotificationEmail } = await import('@/server/email/email.server');
     return sendNotificationEmail(input);
   });
 
@@ -23,7 +23,7 @@ export const verifyEmailConfigFn = createServerFn({ method: 'GET' })
       };
     }
     try {
-      const { verifyEmailTransport } = await import('@/server/email.server');
+      const { verifyEmailTransport } = await import('@/server/email/email.server');
       await verifyEmailTransport();
       return { configured: true as const, ok: true, message: 'Email connection verified successfully.' };
     } catch (e) {

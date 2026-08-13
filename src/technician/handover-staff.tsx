@@ -37,7 +37,7 @@ import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { createStaffFn, listStaffDirectoryFn, listStaffHandoverAssetsFn, updateStaffFn } from '@/server/staff.functions';
+import { createStaffFn, listStaffDirectoryFn, listStaffHandoverAssetsFn, updateStaffFn } from '@/server/operations/staff.functions';
 
 type StaffFormState = {
   employeeNo: string;

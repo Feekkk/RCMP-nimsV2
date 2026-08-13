@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { readAdminSession } from '@/lib/auth-session';
-import { getLoginMaintenanceModeFn, setLoginMaintenanceModeFn } from '@/server/system-settings.functions';
+import { getLoginMaintenanceModeFn, setLoginMaintenanceModeFn } from '@/server/operations/system-settings.functions';
 
 export function AdminSettingsPage() {
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);

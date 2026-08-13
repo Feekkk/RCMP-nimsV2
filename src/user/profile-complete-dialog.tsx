@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { persistSession, type SessionUser } from '@/lib/auth-session';
 import { isUserProfileComplete, missingUserProfileFields } from '@/lib/user-profile';
-import { updateUserProfileFn } from '@/server/auth.functions';
+import { updateUserProfileFn } from '@/server/auth/auth.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 
 type UserProfileCompleteDialogProps = {

@@ -16,8 +16,8 @@ import { AdminShell } from '@/admin/admin-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { readAdminSession } from '@/lib/auth-session';
-import { exportAdminCsvFn } from '@/server/admin-export.functions';
-import type { AdminExportKind } from '@/server/admin-export.server';
+import { exportAdminCsvFn } from '@/server/admin/admin-export.functions';
+import type { AdminExportKind } from '@/server/admin/admin-export.server';
 
 type ExportOption = {
   kind: AdminExportKind;

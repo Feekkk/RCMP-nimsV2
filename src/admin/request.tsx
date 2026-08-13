@@ -13,8 +13,8 @@ import {
 import type { AdminRequestInsights } from '@/lib/admin-request-insights-schema';
 import { ASSET_KIND_LABEL } from '@/lib/inventory-schema';
 import { formatDateLabel } from '@/lib/date-format';
-import { getTechnicianDashboardFn } from '@/server/dashboard.functions';
-import { getAdminRequestInsightsFn } from '@/server/admin-request-insights.functions';
+import { getTechnicianDashboardFn } from '@/server/operations/dashboard.functions';
+import { getAdminRequestInsightsFn } from '@/server/admin/admin-request-insights.functions';
 import { currentCalendarMonth } from '@/dashboard/dashboard-widgets';
 
 const EMPTY_REQUEST_STATS: DashboardRequestStats = {

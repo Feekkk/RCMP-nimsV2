@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { AdminPeriodDays } from '@/lib/admin-dashboard-schema';
-import { adminMiddleware } from '@/server/auth-middleware';
+import { adminMiddleware } from '@/server/core/auth-middleware';
 
 const PERIODS: AdminPeriodDays[] = [7, 30, 90];
 
@@ -11,6 +11,6 @@ export const getAdminDashboardFn = createServerFn({ method: 'POST' })
     const periodDays = PERIODS.includes(data.periodDays as AdminPeriodDays)
       ? (data.periodDays as AdminPeriodDays)
       : 30;
-    const { getAdminDashboard } = await import('@/server/admin-dashboard-repo.server');
+    const { getAdminDashboard } = await import('@/server/admin/admin-dashboard-repo.server');
     return getAdminDashboard(periodDays);
   });

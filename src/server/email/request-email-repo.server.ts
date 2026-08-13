@@ -1,7 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import type { RequestEmailData } from '@/lib/request-email-types';
-import { resolveAccountProfile } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { resolveAccountProfile } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 type RequestEmailHeaderRow = RowDataPacket & {
   request_id: number;

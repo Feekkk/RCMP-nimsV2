@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { handleListAssets } from '@/server/api-handlers.server';
+import { handleListAssets } from '@/server/api/api-handlers.server';
 
 export const Route = createFileRoute('/api/v1/assets/')({
   server: {

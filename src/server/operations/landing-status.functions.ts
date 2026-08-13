@@ -23,7 +23,7 @@ function fallbackStatus(message: string): LandingSystemStatus {
 
 export const getLandingSystemStatusFn = createServerFn({ method: 'GET' }).handler(async () => {
   try {
-    const { getLandingSystemStatus } = await import('@/server/landing-status-repo.server');
+    const { getLandingSystemStatus } = await import('@/server/operations/landing-status-repo.server');
     return await getLandingSystemStatus();
   } catch (e) {
     const message = e instanceof Error ? e.message : 'System status could not be loaded. Try refreshing the page.';

@@ -1,8 +1,8 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AdminUserRow, CreateAdminUserInput, UpdateAdminUserInput } from '@/lib/admin-users-schema';
 import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
-import { getDirectoryUserByEmail, getDirectoryUsersByOids } from '@/server/azure-directory.server';
-import { getDbPool } from '@/server/db';
+import { getDirectoryUserByEmail, getDirectoryUsersByOids } from '@/server/core/azure-directory.server';
+import { getDbPool } from '@/server/core/db';
 
 type AdminUserDbRow = RowDataPacket & {
   id: number;

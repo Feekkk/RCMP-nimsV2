@@ -37,7 +37,7 @@ import { downloadCsvFile } from '@/hooks/bulkImport';
 import {
   exportTechnicianAssetCsvFn,
   generateAssetReportPdfFn,
-} from '@/server/technician-export.functions';
+} from '@/server/admin/technician-export.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 
 const CSV_EXPORTS: {

@@ -43,8 +43,8 @@ import type {
   LaptopDepartmentHandover,
   LaptopDepartmentStaffHandover,
 } from '@/lib/admin-laptop-insights-schema';
-import { getLaptopDepartmentHandoversFn } from '@/server/admin-laptop-insights.functions';
-import { listActivityLogFn } from '@/server/activity-log.functions';
+import { getLaptopDepartmentHandoversFn } from '@/server/admin/admin-laptop-insights.functions';
+import { listActivityLogFn } from '@/server/operations/activity-log.functions';
 import { STATUS_ID } from '@/lib/asset-status-actions';
 import { formatAssetLifespan } from '@/lib/date-format';
 import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@/lib/deploy-return-schema';

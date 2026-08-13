@@ -3,8 +3,8 @@ import {
   getTodayIsoInTimeZone,
   isOverdueEmailScheduleTime,
 } from '@/lib/overdue-email-schedule';
-import { runOverdueAutoRejectJob } from '@/server/overdue-auto-reject-job.server';
-import { runOverdueReturnEmailJob } from '@/server/overdue-return-email-job.server';
+import { runOverdueAutoRejectJob } from '@/server/jobs/overdue-auto-reject-job.server';
+import { runOverdueReturnEmailJob } from '@/server/jobs/overdue-return-email-job.server';
 
 let started = false;
 let running = false;

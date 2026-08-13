@@ -1,11 +1,11 @@
 import { createServerFn } from '@tanstack/react-start';
-import { staffMiddleware } from '@/server/auth-middleware';
+import { staffMiddleware } from '@/server/core/auth-middleware';
 
 export const sendReturnEmailFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((returnId: number) => returnId)
   .handler(async ({ data: returnId }) => {
-    const { sendReturnEmail } = await import('@/server/return-email.server');
+    const { sendReturnEmail } = await import('@/server/email/return-email.server');
     return sendReturnEmail(returnId);
   });
 
@@ -14,7 +14,7 @@ export const queueReturnEmailFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((returnId: number) => returnId)
   .handler(async ({ data: returnId }) => {
-    const { queueReturnEmail } = await import('@/server/return-email.server');
+    const { queueReturnEmail } = await import('@/server/email/return-email.server');
     queueReturnEmail(returnId);
     return { queued: true };
   });
@@ -23,6 +23,6 @@ export const getReturnEmailStatusFn = createServerFn({ method: 'GET' })
   .middleware([staffMiddleware])
   .inputValidator((returnId: number) => returnId)
   .handler(async ({ data: returnId }) => {
-    const { getReturnEmailStatus } = await import('@/server/return-email-repo.server');
+    const { getReturnEmailStatus } = await import('@/server/email/return-email-repo.server');
     return getReturnEmailStatus(returnId);
   });

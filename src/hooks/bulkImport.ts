@@ -20,7 +20,7 @@ import {
   bulkCreateAvImportFn,
   bulkCreateLaptopsImportFn,
   bulkCreateNetworkImportFn,
-} from '@/server/assets.functions';
+} from '@/server/assets/assets.functions';
 
 export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & {
   assetId?: number;

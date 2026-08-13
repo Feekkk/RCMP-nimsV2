@@ -12,7 +12,7 @@ import {
 import { Toaster } from '@/components/ui/sonner';
 import { clearAllSessions, readUserSession } from '@/lib/auth-session';
 import type { UserRequestHistory, UserRequestItemProgress } from '@/lib/request-schema';
-import { listUserRequestHistoryFn } from '@/server/request.functions';
+import { listUserRequestHistoryFn } from '@/server/requests/request.functions';
 import { UserPageChrome } from '@/user/user-chrome';
 import { cn } from '@/lib/utils';
 

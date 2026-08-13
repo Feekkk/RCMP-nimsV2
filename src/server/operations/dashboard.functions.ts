@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { staffMiddleware } from '@/server/auth-middleware';
+import { staffMiddleware } from '@/server/core/auth-middleware';
 
 export const getTechnicianDashboardFn = createServerFn({ method: 'GET' })
   .middleware([staffMiddleware])
@@ -8,6 +8,6 @@ export const getTechnicianDashboardFn = createServerFn({ method: 'GET' })
     return data ?? { year: now.getFullYear(), month: now.getMonth() + 1 };
   })
   .handler(async ({ data }) => {
-    const { getTechnicianDashboard } = await import('@/server/dashboard-repo.server');
+    const { getTechnicianDashboard } = await import('@/server/operations/dashboard-repo.server');
     return getTechnicianDashboard(data);
   });

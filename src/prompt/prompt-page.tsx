@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import type { SessionUser } from '@/lib/auth-session';
 import { cn } from '@/lib/utils';
-import { adminPromptChatFn } from '@/server/admin-prompt.functions';
+import { adminPromptChatFn } from '@/server/admin/admin-prompt.functions';
 import chatbotAnimation from '../../public/Talking robot - chatbot.json';
 
 type ChatRole = 'assistant' | 'user';

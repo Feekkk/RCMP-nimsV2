@@ -10,7 +10,7 @@ import { readTechnicianSession } from '@/lib/auth-session';
 import { normalizeToIsoDate } from '@/lib/date-format';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
 import { parseFaultyAssetRouteSearch } from '@/lib/warranty-repair-schema';
-import { createRepairFn } from '@/server/warranty-repair.functions';
+import { createRepairFn } from '@/server/requests/warranty-repair.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 
