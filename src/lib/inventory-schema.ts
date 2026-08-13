@@ -52,8 +52,8 @@ export const INVENTORY_STATUSES = [
   { statusId: 1, name: 'new' },
   { statusId: 2, name: 'return' },
   { statusId: 3, name: 'deploy' },
-  { statusId: 4, name: 'assign' },
-  { statusId: 5, name: 'Pre-Disposed' },
+  { statusId: 4, name: 'pre-disposed' },
+  { statusId: 5, name: 'disposed' },
   { statusId: 6, name: 'active (request)' },
   { statusId: 7, name: 'booked (request)' },
   { statusId: 8, name: 'checkout (request)' },
@@ -317,11 +317,11 @@ export function bulkImportDeployRequiredColumns(kind: AssetKind): readonly strin
   return kind === 'laptop' ? BULK_LAPTOP_HANDOVER_REQUIRED : BULK_PLACE_DEPLOYMENT_REQUIRED;
 }
 
-/** In stock — on-site / available (new, return, assign, or reserved for a request). */
-export const INSTOCK_STATUS_IDS = [1, 2, 4, 6, 7] as const;
+/** In stock — on-site / available (new, return, or reserved for a request). */
+export const INSTOCK_STATUS_IDS = [1, 2, 6, 7] as const;
 
-/** Out of stock — deployed, disposed, or checked out to a user. */
-export const OUTSTOCK_STATUS_IDS = [3, 5, 8] as const;
+/** Out of stock — deployed, pre-disposed, disposed, or checked out to a user. */
+export const OUTSTOCK_STATUS_IDS = [3, 4, 5, 8] as const;
 
 const INSTOCK_SET = new Set<number>(INSTOCK_STATUS_IDS);
 const OUTSTOCK_SET = new Set<number>(OUTSTOCK_STATUS_IDS);

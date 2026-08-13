@@ -24,7 +24,6 @@ import {
   type DashboardStatusCount,
   type DashboardTimetableEntry,
 } from '@/lib/dashboard-schema';
-import { STATUS_ID } from '@/lib/asset-status-actions';
 import { ASSET_KIND_LABEL, formatStatusLabel } from '@/lib/inventory-schema';
 import { formatDateLabel, localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
@@ -53,9 +52,7 @@ function StatusBreakdown({
   statusIds: readonly number[];
 }) {
   const countByStatus = new Map(items.map((item) => [item.statusId, item.count]));
-  const rows = statusIds
-    .filter((statusId) => statusId !== STATUS_ID.ASSIGN)
-    .map((statusId) => ({
+  const rows = statusIds.map((statusId) => ({
       label: formatStatusLabel(statusId),
       count: countByStatus.get(statusId) ?? 0,
     }));
@@ -97,7 +94,7 @@ export function InventoryStatCard({
 }) {
   const [view, setView] = useState<InventoryStatView>('store');
 
-  const deployCount = useMemo(() => {
+  const deployCount = useMemo(() =>   {
     if (stats.deployByDivision) {
       return stats.deployByDivision.reduce((sum, row) => sum + row.count, 0);
     }

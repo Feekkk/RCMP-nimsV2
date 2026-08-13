@@ -215,9 +215,7 @@ function AssetBucketSummaryCard({
     for (const item of bucketItems) {
       map.set(item.statusId, (map.get(item.statusId) ?? 0) + 1);
     }
-    return statusIds
-      .filter((statusId) => statusId !== STATUS_ID.ASSIGN)
-      .map((statusId) => ({
+    return statusIds.map((statusId) => ({
         statusId,
         count: map.get(statusId) ?? 0,
       }));

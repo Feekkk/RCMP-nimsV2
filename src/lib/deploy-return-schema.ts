@@ -144,7 +144,7 @@ export function getReturnTargetStatusId(
 }
 
 export function getReturnStatusIdForCondition(condition?: string | null): number {
-  if (condition?.trim().toLowerCase() === 'bad') return STATUS_ID.DISPOSED;
+  if (condition?.trim().toLowerCase() === 'bad') return STATUS_ID.PRE_DISPOSED;
   return STATUS_ID.RETURN;
 }
 

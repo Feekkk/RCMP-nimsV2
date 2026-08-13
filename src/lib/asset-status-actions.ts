@@ -7,7 +7,7 @@ export const STATUS_ID = {
   NEW: 1,
   RETURN: 2,
   DEPLOY: 3,
-  ASSIGN: 4,
+  PRE_DISPOSED: 4,
   DISPOSED: 5,
   REQUEST_ACTIVE: 6,
   REQUEST_BOOKED: 7,
@@ -87,7 +87,6 @@ const FAULTY_SERVICE_STATUSES = new Set<number>([
 /** Unified asset lifecycle — see status.md (applies to laptop, av, network) */
 const LIFECYCLE_ACTIONS: Partial<Record<StatusId, AssetStatusAction[]>> = {
   [STATUS_ID.NEW]: [DEPLOY_ACTION],
-  [STATUS_ID.ASSIGN]: [DEPLOY_ACTION],
   [STATUS_ID.DEPLOY]: [RETURN_ACTION],
   [STATUS_ID.RETURN]: [DEPLOY_ACTION],
 };

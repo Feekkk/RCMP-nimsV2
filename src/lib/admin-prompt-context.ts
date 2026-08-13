@@ -6,7 +6,7 @@ export const DEFAULT_ADMIN_PROMPT_CUSTOM_CONTEXT = `SYSTEM CONTEXT: NIMS (Networ
 - AV equipment (av table) — projectors, mics, etc.
 
 STATUS CODES (status_id → meaning):
-1=new, 2=return, 3=deploy, 4=assign, 5=disposed, 6=active for request, 7=booked for request, 8=checkout in request
+1=new, 2=return, 3=deploy, 4=pre-disposed, 5=disposed, 6=active for request, 7=booked for request, 8=checkout in request
 Note: don't confuse with the request statuses above, those are different.
 
 KEY PROCESSES:

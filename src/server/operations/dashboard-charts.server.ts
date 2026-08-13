@@ -121,8 +121,8 @@ export async function loadDashboardCharts(
     for (const r of rows) {
       const id = Number(r.status_id);
       const c = Number(r.cnt);
-      // In stock: new (1), return (2), assign (4)
-      if (id === 1 || id === 2 || id === 4) active += c;
+      // In stock: new (1), return (2)
+      if (id === 1 || id === 2) active += c;
       else if (id === 3) deploy += c;
       // Request flow: active / booked / checkout (request)
       else if (id === 6 || id === 7 || id === 8) requestFlow += c;

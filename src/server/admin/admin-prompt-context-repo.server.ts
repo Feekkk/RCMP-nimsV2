@@ -18,6 +18,7 @@ import {
   type AssetDetailResponse,
   type AssetKind,
 } from '@/lib/inventory-schema';
+import { STATUS_ID } from '@/lib/asset-status-actions';
 import { attachDisplayNames } from '@/server/core/azure-directory.server';
 import { getDbPool } from '@/server/core/db';
 
@@ -444,10 +445,11 @@ async function loadExpiringWarranties() {
   }));
 }
 
-async function loadActiveHandoverCount() {
+async function loadPreDisposedLaptopCount() {
   const pool = getDbPool();
   const [rows] = await pool.query<(RowDataPacket & { cnt: number })[]>(
-    `SELECT COUNT(*) AS cnt FROM laptop WHERE status_id = 4`,
+    `SELECT COUNT(*) AS cnt FROM laptop WHERE status_id = ?`,
+    [STATUS_ID.PRE_DISPOSED],
   );
   return Number(rows[0]?.cnt ?? 0);
 }
@@ -465,7 +467,7 @@ export async function buildAdminPromptDbContext(
     requestLookup,
     openRepairs,
     expiringWarranties,
-    activeHandovers,
+    preDisposedLaptops,
   ] = await Promise.all([
     loadOverdueReturns(),
     loadUserCounts(),
@@ -474,7 +476,7 @@ export async function buildAdminPromptDbContext(
     loadRequestLookup(lookupText),
     loadOpenRepairs(),
     loadExpiringWarranties(),
-    loadActiveHandoverCount(),
+    loadPreDisposedLaptopCount(),
   ]);
 
   const registeredUsers =
@@ -491,7 +493,7 @@ export async function buildAdminPromptDbContext(
     operations: {
       openRepairs,
       expiringWarranties,
-      activeHandovers,
+      preDisposedLaptops,
     },
     requests: {
       activeTotal: dashboardStats.totalRequest.total,

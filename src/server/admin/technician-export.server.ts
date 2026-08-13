@@ -36,7 +36,7 @@ const REQUEST_STATUS_IDS = [
 const HISTORY_STATUS_IDS = new Set<number>([
   STATUS_ID.NEW,
   STATUS_ID.RETURN,
-  STATUS_ID.ASSIGN,
+  STATUS_ID.PRE_DISPOSED,
   STATUS_ID.DISPOSED,
 ]);
 
@@ -144,18 +144,17 @@ function requestFilterSql(
   };
 }
 
-function mapBaseRow(
-  kind: AssetKind,
-  row: RowDataPacket & {
-    asset_id: number;
-    brand: string | null;
-    model: string | null;
-    category?: string | null;
-    serial_num: string | null;
-    status_id: number;
-    created_at?: Date | string | null;
-  },
-): AssetReportRow {
+type BaseReportQueryRow = RowDataPacket & {
+  asset_id: number;
+  brand: string | null;
+  model: string | null;
+  category?: string | null;
+  serial_num: string | null;
+  status_id: number;
+  created_at?: Date | string | null;
+};
+
+function mapBaseRow(kind: AssetKind, row: BaseReportQueryRow): AssetReportRow {
   return {
     kind,
     assetId: row.asset_id,
@@ -193,7 +192,7 @@ async function fetchLaptopReportRows(
   params.push(...requestClause.params);
   sql += ` ORDER BY ${assetIdNewestYearFirstSql('l.asset_id')}`;
 
-  const [rows] = await pool.query<RowDataPacket[]>(sql, params);
+  const [rows] = await pool.query<BaseReportQueryRow[]>(sql, params);
   return rows.map((row) => mapBaseRow('laptop', row));
 }
 
@@ -215,7 +214,7 @@ async function fetchAvReportRows(filters: TechnicianReportPdfFilters): Promise<A
   params.push(...requestClause.params);
   sql += ` ORDER BY ${assetIdNewestYearFirstSql('a.asset_id')}`;
 
-  const [rows] = await pool.query<RowDataPacket[]>(sql, params);
+  const [rows] = await pool.query<BaseReportQueryRow[]>(sql, params);
   return rows.map((row) => mapBaseRow('av', row));
 }
 
@@ -239,7 +238,7 @@ async function fetchNetworkReportRows(
   params.push(...requestClause.params);
   sql += ` ORDER BY ${assetIdNewestYearFirstSql('n.asset_id')}`;
 
-  const [rows] = await pool.query<RowDataPacket[]>(sql, params);
+  const [rows] = await pool.query<BaseReportQueryRow[]>(sql, params);
   return rows.map((row) => mapBaseRow('network', row));
 }
 
