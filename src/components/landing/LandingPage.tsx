@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import {
   Activity,
   ArrowRight,
@@ -13,10 +13,13 @@ import {
   Shield,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 import uniklOfficialLogo from '@/assets/unikl-official.png';
+import { MICROSOFT_OAUTH_STATE_KEY } from '@/auth/microsoft-callback-page';
 import type { LandingStatusLevel, LandingSystemStatus } from '@/lib/landing-status-types';
 import { getLandingSystemStatusFn } from '@/server/landing-status.functions';
+import { getMicrosoftLoginUrlFn } from '@/server/auth.functions';
 import { cn } from '@/lib/utils';
 
 const STATUS_DOT: Record<LandingStatusLevel, string> = {
@@ -25,6 +28,17 @@ const STATUS_DOT: Record<LandingStatusLevel, string> = {
   error: 'bg-rose-500 shadow-[0_0_0_3px] shadow-rose-500/25',
   neutral: 'bg-muted-foreground/40',
 };
+
+function MicrosoftIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <rect x="1" y="1" width="10.5" height="10.5" rx="1" fill="#f35325" />
+      <rect x="12.5" y="1" width="10.5" height="10.5" rx="1" fill="#81bc06" />
+      <rect x="1" y="12.5" width="10.5" height="10.5" rx="1" fill="#00a4ef" />
+      <rect x="12.5" y="12.5" width="10.5" height="10.5" rx="1" fill="#ffba08" />
+    </svg>
+  );
+}
 
 function StatusRow({ label, value, level }: { label: string; value: string; level: LandingStatusLevel }) {
   return (
@@ -132,8 +146,10 @@ const steps = [
 ];
 
 export function LandingPage() {
+  const navigate = useNavigate();
   const [showNav, setShowNav] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setShowNav(window.scrollY > 80);
@@ -144,6 +160,24 @@ export function LandingPage() {
   const scrollToHowItWorks = () => {
     setMobileNavOpen(false);
     document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSignIn = async () => {
+    if (import.meta.env.DEV) {
+      void navigate({ to: '/login' });
+      return;
+    }
+
+    setSigningIn(true);
+    try {
+      const { url, state } = await getMicrosoftLoginUrlFn();
+      sessionStorage.setItem(MICROSOFT_OAUTH_STATE_KEY, state);
+      window.location.href = url;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sign-in unavailable';
+      toast.error(message);
+      setSigningIn(false);
+    }
   };
 
   return (
@@ -210,12 +244,24 @@ export function LandingPage() {
                   This system is designed to help IT Department manage inventory effectively and efficiently.
                 </p>
                 <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:gap-4">
-                  <Link
-                    to="/login"
-                    className="group inline-flex items-center justify-center gap-2 rounded-[10px] bg-lavender px-8 py-3 text-base font-semibold text-foreground transition-all hover:shadow-lg hover:shadow-lavender/25"
+                  <button
+                    type="button"
+                    disabled={signingIn}
+                    onClick={() => void handleSignIn()}
+                    className="group inline-flex items-center justify-center gap-2 rounded-[10px] bg-lavender px-8 py-3 text-base font-semibold text-foreground transition-all hover:shadow-lg hover:shadow-lavender/25 disabled:opacity-70"
                   >
-                    Sign in
-                  </Link>
+                    {signingIn ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Redirecting…
+                      </>
+                    ) : (
+                      <>
+                        <MicrosoftIcon />
+                        Sign in with Microsoft
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
               <div className="w-full max-w-md lg:max-w-lg flex-shrink-0">

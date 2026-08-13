@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -39,17 +39,11 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!import.meta.env.DEV);
   const [devRole, setDevRole] = useState<'technician' | 'admin' | 'user' | null>(null);
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
-
-  useEffect(() => {
-    void getLoginMaintenanceModeFn()
-      .then(({ enabled }) => setMaintenanceEnabled(enabled))
-      .catch(() => setMaintenanceEnabled(false))
-      .finally(() => setMaintenanceLoading(false));
-  }, []);
+  const microsoftStarted = useRef(false);
 
   const handleMicrosoftSignIn = async () => {
     setIsLoading(true);
@@ -64,6 +58,20 @@ function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      void getLoginMaintenanceModeFn()
+        .then(({ enabled }) => setMaintenanceEnabled(enabled))
+        .catch(() => setMaintenanceEnabled(false))
+        .finally(() => setMaintenanceLoading(false));
+      return;
+    }
+
+    if (microsoftStarted.current) return;
+    microsoftStarted.current = true;
+    void handleMicrosoftSignIn();
+  }, []);
 
   const handleDevLogin = async (role: 'technician' | 'admin' | 'user') => {
     setDevRole(role);
@@ -93,6 +101,49 @@ function LoginPage() {
     }
   };
 
+  if (!import.meta.env.DEV) {
+    return (
+      <div className="relative min-h-screen bg-background">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-[200px] right-[10%] h-[600px] w-[600px] rounded-full bg-lavender/[0.12] blur-[100px]" />
+          <div className="absolute -top-[100px] -left-[200px] h-[500px] w-[500px] rounded-full bg-[oklch(0.65_0.20_350)]/[0.08] blur-[80px]" />
+        </div>
+        <div className="relative flex min-h-screen items-center justify-center px-4 py-8">
+          <div className="w-full max-w-sm space-y-6 rounded-[20px] border border-border/60 bg-card p-8 shadow-xl shadow-lavender/5">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <NimsLogo size="lg" variant="light" />
+              <div>
+                <h1 className="text-xl font-bold leading-[0.96] tracking-[-0.02em] text-foreground sm:text-2xl">
+                  Welcome to NIMS
+                </h1>
+                <p className="mt-2 text-sm leading-[1.5] text-muted-foreground">
+                  Redirecting to Microsoft sign-in…
+                </p>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="flex h-11 items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Redirecting to Microsoft…
+              </div>
+            ) : (
+              <Button
+                type="button"
+                className="h-11 w-full gap-2 rounded-[8px] bg-foreground font-semibold text-background hover:opacity-90"
+                onClick={() => void handleMicrosoftSignIn()}
+              >
+                <MicrosoftIcon />
+                Sign in with Microsoft
+              </Button>
+            )}
+          </div>
+        </div>
+        <Toaster />
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-background">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -116,9 +167,7 @@ function LoginPage() {
                 Welcome to NIMS
               </h1>
               <p className="mt-2 text-sm leading-[1.5] text-muted-foreground">
-                {import.meta.env.DEV
-                  ? 'Use a development account to sign in locally.'
-                  : 'Sign in with your organization Microsoft account.'}
+                Use a development account to sign in locally.
               </p>
             </div>
           </div>
@@ -136,54 +185,38 @@ function LoginPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {!import.meta.env.DEV && (
-                <Button
-                  type="button"
-                  className="h-11 w-full gap-2 rounded-[8px] bg-foreground font-semibold text-background hover:opacity-90"
-                  disabled={isLoading}
-                  onClick={() => void handleMicrosoftSignIn()}
-                >
-                  <MicrosoftIcon />
-                  {isLoading ? 'Redirecting to Microsoft…' : 'Sign in with Microsoft'}
-                </Button>
-              )}
-
-              {import.meta.env.DEV && (
-                <>
-                  <p className="text-center text-xs font-medium text-muted-foreground">
-                    Development only
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 w-full rounded-[8px] border-dashed font-medium"
-                    disabled={isLoading}
-                    onClick={() => void handleDevLogin('user')}
-                  >
-                    {devRole === 'user' && isLoading ? 'Signing in…' : 'Login as User'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 w-full rounded-[8px] border-dashed font-medium"
-                    disabled={isLoading}
-                    onClick={() => void handleDevLogin('technician')}
-                  >
-                    {devRole === 'technician' && isLoading
-                      ? 'Signing in…'
-                      : 'Login as Technician'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 w-full rounded-[8px] border-dashed font-medium"
-                    disabled={isLoading}
-                    onClick={() => void handleDevLogin('admin')}
-                  >
-                    {devRole === 'admin' && isLoading ? 'Signing in…' : 'Login as Admin'}
-                  </Button>
-                </>
-              )}
+              <p className="text-center text-xs font-medium text-muted-foreground">
+                Development only
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-[8px] border-dashed font-medium"
+                disabled={isLoading}
+                onClick={() => void handleDevLogin('user')}
+              >
+                {devRole === 'user' && isLoading ? 'Signing in…' : 'Login as User'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-[8px] border-dashed font-medium"
+                disabled={isLoading}
+                onClick={() => void handleDevLogin('technician')}
+              >
+                {devRole === 'technician' && isLoading
+                  ? 'Signing in…'
+                  : 'Login as Technician'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-[8px] border-dashed font-medium"
+                disabled={isLoading}
+                onClick={() => void handleDevLogin('admin')}
+              >
+                {devRole === 'admin' && isLoading ? 'Signing in…' : 'Login as Admin'}
+              </Button>
             </div>
           )}
 
