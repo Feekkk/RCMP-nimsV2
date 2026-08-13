@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { TechSideBar } from '@/components/ui/techSideBar';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, getPostLoginPath, hasTechnicianSession, isAdminRole, isDisposalUnitRole, readPrivilegedSession } from '@/lib/auth-session';
+import { clearAllSessions, hasTechnicianSession, isAdminRole, isDisposalUnitRole, readPrivilegedSession } from '@/lib/auth-session';
 import { AssetLookupButton } from '@/technician/asset-lookup';
 
 export function TechnicianShell({ children }: { children: ReactNode }) {
@@ -41,34 +41,28 @@ export function TechnicianShell({ children }: { children: ReactNode }) {
       <TechSideBar className="sticky top-0 z-40 hidden h-svh shrink-0 md:flex" onSignOut={handleSignOut} />
 
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md">
-          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0 rounded-[8px] md:hidden"
-                    type="button"
-                    aria-label="Open navigation menu"
-                  >
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="flex h-full w-[min(20rem,85vw)] flex-col p-0">
-                  <TechSideBar embedded className="min-h-0 flex-1 overflow-hidden" onSignOut={handleSignOut} />
-                </SheetContent>
-              </Sheet>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">Technician</p>
-                <p className="truncate text-sm font-bold text-foreground">Asset Management System</p>
-              </div>
-            </div>
+        <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md md:hidden">
+          <div className="flex h-14 items-center px-4">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 rounded-[8px]"
+                  type="button"
+                  aria-label="Open navigation menu"
+                >
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex h-full w-[min(20rem,85vw)] flex-col p-0">
+                <TechSideBar embedded className="min-h-0 flex-1 overflow-hidden" onSignOut={handleSignOut} />
+              </SheetContent>
+            </Sheet>
           </div>
         </header>
 
-        <main className="relative mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-6">{children}</main>
+        <main className="relative mx-auto w-full max-w-6xl flex-1 px-4 pb-5 pt-8 sm:px-6 sm:pb-6 sm:pt-10">{children}</main>
       </div>
       <AssetLookupButton />
       <Toaster />
