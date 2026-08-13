@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeft, ChevronDown, ExternalLink, History, MapPin, Truck, User } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ExternalLink, History, MapPin, Package, Truck, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AssetDetail, AssetDetailResponse, AssetKind, AssetTrailEvent } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH } from '@/lib/inventory-schema';
 import type { OpenReturnContext } from '@/lib/deploy-return-schema';
@@ -313,6 +314,7 @@ export function AssetViewContent({
   const [data, setData] = useState<AssetDetailResponse | null>(null);
   const [deployment, setDeployment] = useState<OpenReturnContext | null>(null);
   const [loading, setLoading] = useState(true);
+  const [section, setSection] = useState<'details' | 'activity'>('details');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -366,7 +368,7 @@ export function AssetViewContent({
         </Card>
       ) : (
         <>
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {ASSET_KIND_LABEL[kind]}
@@ -375,9 +377,9 @@ export function AssetViewContent({
                 Asset <code className="text-lg">#{asset.assetId}</code>
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">{assetHeaderSubtitle(asset)}</p>
+              {assetAge ? <p className="mt-1 text-sm text-muted-foreground">{assetAge}</p> : null}
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {assetAge && <p className="text-sm text-muted-foreground">{assetAge}</p>}
               {readOnly ? (
                 <AssetStatusBadge statusId={asset.statusId} />
               ) : (
@@ -391,69 +393,90 @@ export function AssetViewContent({
             </div>
           </div>
 
-          <div className="mb-6 grid gap-4 lg:grid-cols-2">
-            <Card className="rounded-[14px]">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Specifications</CardTitle>
-                <CardDescription>Core fields from the inventory record</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-2 sm:grid-cols-2">
-                <AssetSpecs asset={asset} />
-                <DetailItem label="Remarks" value={asset.remarks} />
-              </CardContent>
-            </Card>
+          <Tabs
+            value={section}
+            onValueChange={(v) => setSection(v as 'details' | 'activity')}
+            className="w-full"
+          >
+            <TabsList className="mb-6 grid w-full grid-cols-2 sm:w-auto sm:inline-grid">
+              <TabsTrigger value="details" className="gap-1.5">
+                <Package className="h-3.5 w-3.5" />
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-1.5">
+                <History className="h-3.5 w-3.5" />
+                Activity trail
+              </TabsTrigger>
+            </TabsList>
 
-            <Card className="rounded-[14px]">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Procurement</CardTitle>
-                <CardDescription>PO, delivery, and invoice details</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-2 sm:grid-cols-2">
-                <PurchaseBlock asset={asset} />
-              </CardContent>
-            </Card>
+            <TabsContent value="details" className="mt-0">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Card className="rounded-[14px]">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Specifications</CardTitle>
+                    <CardDescription>Core fields from the inventory record</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-2 sm:grid-cols-2">
+                    <AssetSpecs asset={asset} />
+                    <DetailItem label="Remarks" value={asset.remarks} />
+                  </CardContent>
+                </Card>
 
-            <Card className="rounded-[14px] lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <DeploymentIcon deployment={deployment} />
-                  {deploymentCardTitle(deployment)}
-                </CardTitle>
-                <CardDescription>{deploymentSummaryLabel(deployment)}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <DeploymentDetails deployment={deployment} />
-              </CardContent>
-            </Card>
-          </div>
+                <Card className="rounded-[14px]">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Procurement</CardTitle>
+                    <CardDescription>PO, delivery, and invoice details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-2 sm:grid-cols-2">
+                    <PurchaseBlock asset={asset} />
+                  </CardContent>
+                </Card>
 
-          <Card className="rounded-[14px]">
-            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
-              <div className="space-y-1.5">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <History className="h-4 w-4" />
-                  Activity trail
-                </CardTitle>
-                <CardDescription>
-                  Handovers, deployments, borrow requests, repairs, and warranty events
-                </CardDescription>
+                <Card className="rounded-[14px] lg:col-span-2">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <DeploymentIcon deployment={deployment} />
+                      {deploymentCardTitle(deployment)}
+                    </CardTitle>
+                    <CardDescription>{deploymentSummaryLabel(deployment)}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <DeploymentDetails deployment={deployment} />
+                  </CardContent>
+                </Card>
               </div>
-              {!readOnly ? (
-                <Button variant="outline" size="sm" className="shrink-0 rounded-[8px]" asChild>
-                  <Link to="/technician/history">
-                    Full history
-                    <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              <p className="mb-3 text-xs text-muted-foreground">
-                Click a row to view full event details.
-              </p>
-              <TrailsTable trails={data.trails} readOnly={readOnly} />
-            </CardContent>
-          </Card>
+            </TabsContent>
+
+            <TabsContent value="activity" className="mt-0">
+              <Card className="rounded-[14px]">
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+                  <div className="space-y-1.5">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <History className="h-4 w-4" />
+                      Activity trail
+                    </CardTitle>
+                    <CardDescription>
+                      Handovers, deployments, borrow requests, repairs, and warranty events
+                    </CardDescription>
+                  </div>
+                  {!readOnly ? (
+                    <Button variant="outline" size="sm" className="shrink-0 rounded-[8px]" asChild>
+                      <Link to="/technician/history">
+                        Full history
+                        <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+                  ) : null}
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Click a row to view full event details.
+                  </p>
+                  <TrailsTable trails={data.trails} readOnly={readOnly} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </>
