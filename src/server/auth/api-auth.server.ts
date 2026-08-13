@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { RowDataPacket } from 'mysql2';
-import { isAdminRole, isStaffRole } from '@/lib/auth-session';
+import { isAdminRole, isDisposalUnitRole, isStaffRole } from '@/lib/auth-session';
 import type { AuthUserRow } from '@/server/auth/auth-repo.server';
 import { apiError } from '@/server/core/api-response.server';
 import { assertAdminRole } from '@/server/auth/admin-auth.server';
@@ -178,7 +178,7 @@ export async function requireAdmin(request: Request): Promise<ApiAuthContext | R
 export async function requireUser(request: Request): Promise<ApiAuthContext | Response> {
   const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;
-  if (isStaffRole(auth.roleId)) {
+  if (isStaffRole(auth.roleId) || isDisposalUnitRole(auth.roleId)) {
     return apiError('This endpoint is for user accounts only.', 403, 'forbidden');
   }
   return auth;
@@ -194,5 +194,6 @@ export function authUserPayload(user: AuthUserRow) {
     phone: user.phone,
     isStaff: isStaffRole(user.roleId),
     isAdmin: isAdminRole(user.roleId),
+    isDisposalUnit: isDisposalUnitRole(user.roleId),
   };
 }

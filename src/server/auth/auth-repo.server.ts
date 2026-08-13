@@ -1,5 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
-import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
+import { ROLE_ADMIN, ROLE_DISPOSAL_UNIT, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
 import { resolveAccountProfile } from '@/server/core/azure-directory.server';
 import { getDbPool } from '@/server/core/db';
 
@@ -173,6 +173,7 @@ const DEV_ROLE_LABELS: Record<number, string> = {
   [ROLE_TECHNICIAN]: 'technician',
   [ROLE_ADMIN]: 'admin',
   [ROLE_USER]: 'user',
+  [ROLE_DISPOSAL_UNIT]: 'disposal unit',
 };
 
 async function devLoginAsRole(roleId: number): Promise<AuthUserRow> {
@@ -196,6 +197,10 @@ export async function devLoginAsAdmin(): Promise<AuthUserRow> {
 
 export async function devLoginAsUser(): Promise<AuthUserRow> {
   return devLoginAsRole(ROLE_USER);
+}
+
+export async function devLoginAsDisposalUnit(): Promise<AuthUserRow> {
+  return devLoginAsRole(ROLE_DISPOSAL_UNIT);
 }
 
 export type UpdateUserProfileInput = {

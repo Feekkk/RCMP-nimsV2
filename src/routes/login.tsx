@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { isAdminRole, persistSession } from '@/lib/auth-session';
+import { persistSession, getPostLoginPath } from '@/lib/auth-session';
 import {
   devLoginAsAdminFn,
   devLoginAsTechnicianFn,
   devLoginAsUserFn,
+  devLoginAsDisposalUnitFn,
   getMicrosoftLoginUrlFn,
 } from '@/server/auth/auth.functions';
 import { getLoginMaintenanceModeFn } from '@/server/operations/system-settings.functions';
@@ -40,7 +41,7 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(!import.meta.env.DEV);
-  const [devRole, setDevRole] = useState<'technician' | 'admin' | 'user' | null>(null);
+  const [devRole, setDevRole] = useState<'technician' | 'admin' | 'user' | 'disposal-unit' | null>(null);
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
   const microsoftStarted = useRef(false);
@@ -73,7 +74,7 @@ function LoginPage() {
     void handleMicrosoftSignIn();
   }, []);
 
-  const handleDevLogin = async (role: 'technician' | 'admin' | 'user') => {
+  const handleDevLogin = async (role: 'technician' | 'admin' | 'user' | 'disposal-unit') => {
     setDevRole(role);
     setIsLoading(true);
 
@@ -83,16 +84,12 @@ function LoginPage() {
           ? await devLoginAsAdminFn()
           : role === 'technician'
             ? await devLoginAsTechnicianFn()
-            : await devLoginAsUserFn();
+            : role === 'disposal-unit'
+              ? await devLoginAsDisposalUnitFn()
+              : await devLoginAsUserFn();
       persistSession(user);
       toast.success(`Dev sign-in as ${user.fullName}`);
-      void navigate({
-        to: isAdminRole(user.roleId)
-          ? '/admin/dashboard'
-          : role === 'user'
-            ? '/user/request'
-            : '/technician/dashboard',
-      });
+      void navigate({ to: getPostLoginPath(user.roleId) });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Dev sign-in unavailable';
       toast.error(message);
@@ -216,6 +213,17 @@ function LoginPage() {
                 onClick={() => void handleDevLogin('admin')}
               >
                 {devRole === 'admin' && isLoading ? 'Signing in…' : 'Login as Admin'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-[8px] border-dashed font-medium"
+                disabled={isLoading}
+                onClick={() => void handleDevLogin('disposal-unit')}
+              >
+                {devRole === 'disposal-unit' && isLoading
+                  ? 'Signing in…'
+                  : 'Login as Disposal unit'}
               </Button>
             </div>
           )}

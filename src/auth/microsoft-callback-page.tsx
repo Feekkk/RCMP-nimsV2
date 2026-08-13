@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { isAdminRole, isStaffRole, persistSession } from '@/lib/auth-session';
+import { getPostLoginPath, persistSession } from '@/lib/auth-session';
 import { completeMicrosoftLoginFn } from '@/server/auth/auth.functions';
 
 export const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
@@ -45,12 +45,7 @@ export function MicrosoftCallbackPage() {
         } else {
           toast.success(`Signed in as ${user.fullName}`);
         }
-        const to = isStaffRole(user.roleId)
-          ? isAdminRole(user.roleId)
-            ? '/admin/dashboard'
-            : '/technician/dashboard'
-          : '/user/request';
-        void navigate({ to });
+        void navigate({ to: getPostLoginPath(user.roleId) });
       })
       .catch((err) => {
         const message = err instanceof Error ? err.message : 'Microsoft sign-in failed';

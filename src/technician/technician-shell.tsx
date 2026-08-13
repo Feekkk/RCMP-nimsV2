@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { TechSideBar } from '@/components/ui/techSideBar';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, hasTechnicianSession, isAdminRole, readTechnicianSession } from '@/lib/auth-session';
+import { clearAllSessions, getPostLoginPath, hasTechnicianSession, isAdminRole, isDisposalUnitRole, readPrivilegedSession } from '@/lib/auth-session';
 import { AssetLookupButton } from '@/technician/asset-lookup';
 
 export function TechnicianShell({ children }: { children: ReactNode }) {
@@ -13,7 +13,11 @@ export function TechnicianShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const user = readTechnicianSession();
+    const user = readPrivilegedSession();
+    if (user && isDisposalUnitRole(user.roleId)) {
+      void navigate({ to: '/disposal-unit/dashboard' });
+      return;
+    }
     if (user && isAdminRole(user.roleId)) {
       void navigate({ to: '/admin/dashboard' });
       return;

@@ -29,7 +29,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { AdminUserRow } from '@/lib/admin-users-schema';
-import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER, readAdminSession } from '@/lib/auth-session';
+import { ROLE_ADMIN, ROLE_DISPOSAL_UNIT, ROLE_TECHNICIAN, ROLE_USER, readAdminSession } from '@/lib/auth-session';
 import { createAdminUserFn, listAdminUsersFn, updateAdminUserFn } from '@/server/admin/admin-users.functions';
 
 type UserFormState = {
@@ -226,6 +226,7 @@ export function AdminUsersPage() {
                   <SelectItem value={String(ROLE_USER)}>user</SelectItem>
                   <SelectItem value={String(ROLE_TECHNICIAN)}>technician</SelectItem>
                   <SelectItem value={String(ROLE_ADMIN)}>admin</SelectItem>
+                  <SelectItem value={String(ROLE_DISPOSAL_UNIT)}>disposal unit</SelectItem>
                 </SelectContent>
               </Select>
             </div>

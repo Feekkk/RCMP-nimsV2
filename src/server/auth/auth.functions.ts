@@ -51,6 +51,14 @@ export const devLoginAsUserFn = createServerFn({ method: 'POST' }).handler(async
   return user;
 });
 
+export const devLoginAsDisposalUnitFn = createServerFn({ method: 'POST' }).handler(async () => {
+  assertDevLoginAllowed();
+  const { devLoginAsDisposalUnit } = await import('@/server/auth/auth-repo.server');
+  const user = await devLoginAsDisposalUnit();
+  await establishSession(user);
+  return user;
+});
+
 export const getUserProfileFn = createServerFn({ method: 'POST' })
   .middleware([sessionMiddleware])
   .handler(async ({ context }) => {

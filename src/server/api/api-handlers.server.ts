@@ -1,4 +1,4 @@
-import { isStaffRole } from '@/lib/auth-session';
+import { isDisposalUnitRole, isStaffRole } from '@/lib/auth-session';
 import type { AssetKind } from '@/lib/inventory-schema';
 import {
   authUserPayload,
@@ -27,7 +27,7 @@ type RefreshBody = {
 };
 
 type DevLoginBody = {
-  role?: 'technician' | 'admin' | 'user';
+  role?: 'technician' | 'admin' | 'user' | 'disposal-unit';
 };
 
 export async function handleMicrosoftStart(request: Request): Promise<Response> {
@@ -115,12 +115,13 @@ export async function handleDevLogin(request: Request): Promise<Response> {
     const body = await readJsonBody<DevLoginBody>(request);
     if (body instanceof Response) return body;
     const role = body.role ?? 'technician';
-    const { devLoginAsTechnician, devLoginAsAdmin, devLoginAsUser } = await import(
+    const { devLoginAsTechnician, devLoginAsAdmin, devLoginAsUser, devLoginAsDisposalUnit } = await import(
       '@/server/auth/auth-repo.server'
     );
     let user;
     if (role === 'admin') user = await devLoginAsAdmin();
     else if (role === 'technician') user = await devLoginAsTechnician();
+    else if (role === 'disposal-unit') user = await devLoginAsDisposalUnit();
     else user = await devLoginAsUser();
     const tokens = issueTokenPair(user);
     return apiOk({ ...tokens, user: authUserPayload(user) });
@@ -139,10 +140,13 @@ export async function handleGetProfile(request: Request): Promise<Response> {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof Response) return auth;
-    const { getStaffProfile, getUserProfile } = await import('@/server/auth/auth-repo.server');
+    const { getStaffProfile, getUserProfile, getAuthUserByStaffId } = await import('@/server/auth/auth-repo.server');
     const profile = isStaffRole(auth.roleId)
       ? await getStaffProfile(auth.staffId)
-      : await getUserProfile(auth.staffId);
+      : isDisposalUnitRole(auth.roleId)
+        ? await getAuthUserByStaffId(auth.staffId)
+        : await getUserProfile(auth.staffId);
+    if (!profile) return apiError('Account not found.', 404, 'not_found');
     return apiOk(profile);
   } catch (error) {
     return handleApiError(error);
@@ -155,7 +159,12 @@ export async function handlePatchProfile(request: Request): Promise<Response> {
     if (auth instanceof Response) return auth;
     const body = await readJsonBody<ProfilePatchBody>(request);
     if (body instanceof Response) return body;
-    const { updateStaffProfile, updateUserProfile } = await import('@/server/auth/auth-repo.server');
+    const { updateStaffProfile, updateUserProfile, getAuthUserByStaffId } = await import('@/server/auth/auth-repo.server');
+    if (isDisposalUnitRole(auth.roleId)) {
+      const profile = await getAuthUserByStaffId(auth.staffId);
+      if (!profile) return apiError('Account not found.', 404, 'not_found');
+      return apiOk(profile);
+    }
     const profile = isStaffRole(auth.roleId)
       ? await updateStaffProfile({
           staffId: auth.staffId,

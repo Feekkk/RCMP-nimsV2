@@ -36,6 +36,7 @@ import { Route as TechnicianDashboardRouteImport } from './routes/technician/das
 import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bulk-import'
 import { Route as TechnicianAvRouteImport } from './routes/technician/av'
 import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
+import { Route as DisposalUnitDashboardRouteImport } from './routes/disposal-unit/dashboard'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminRequestRouteImport } from './routes/admin/request'
@@ -210,6 +211,11 @@ const TechnicianAvRoute = TechnicianAvRouteImport.update({
 const TechnicianAddAssetRoute = TechnicianAddAssetRouteImport.update({
   id: '/technician/add-asset',
   path: '/technician/add-asset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisposalUnitDashboardRoute = DisposalUnitDashboardRouteImport.update({
+  id: '/disposal-unit/dashboard',
+  path: '/disposal-unit/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -426,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/disposal-unit/dashboard': typeof DisposalUnitDashboardRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
@@ -494,6 +501,7 @@ export interface FileRoutesByTo {
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/disposal-unit/dashboard': typeof DisposalUnitDashboardRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
@@ -563,6 +571,7 @@ export interface FileRoutesById {
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/disposal-unit/dashboard': typeof DisposalUnitDashboardRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
   '/technician/bulk-import': typeof TechnicianBulkImportRoute
@@ -633,6 +642,7 @@ export interface FileRouteTypes {
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
+    | '/disposal-unit/dashboard'
     | '/technician/add-asset'
     | '/technician/av'
     | '/technician/bulk-import'
@@ -701,6 +711,7 @@ export interface FileRouteTypes {
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
+    | '/disposal-unit/dashboard'
     | '/technician/add-asset'
     | '/technician/av'
     | '/technician/bulk-import'
@@ -769,6 +780,7 @@ export interface FileRouteTypes {
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
+    | '/disposal-unit/dashboard'
     | '/technician/add-asset'
     | '/technician/av'
     | '/technician/bulk-import'
@@ -838,6 +850,7 @@ export interface RootRouteChildren {
   AdminRequestRoute: typeof AdminRequestRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
+  DisposalUnitDashboardRoute: typeof DisposalUnitDashboardRoute
   TechnicianAddAssetRoute: typeof TechnicianAddAssetRoute
   TechnicianAvRoute: typeof TechnicianAvRoute
   TechnicianBulkImportRoute: typeof TechnicianBulkImportRoute
@@ -1082,6 +1095,13 @@ declare module '@tanstack/react-router' {
       path: '/technician/add-asset'
       fullPath: '/technician/add-asset'
       preLoaderRoute: typeof TechnicianAddAssetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disposal-unit/dashboard': {
+      id: '/disposal-unit/dashboard'
+      path: '/disposal-unit/dashboard'
+      fullPath: '/disposal-unit/dashboard'
+      preLoaderRoute: typeof DisposalUnitDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -1385,6 +1405,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRequestRoute: AdminRequestRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
+  DisposalUnitDashboardRoute: DisposalUnitDashboardRoute,
   TechnicianAddAssetRoute: TechnicianAddAssetRoute,
   TechnicianAvRoute: TechnicianAvRoute,
   TechnicianBulkImportRoute: TechnicianBulkImportRoute,

@@ -1,5 +1,5 @@
 import { createMiddleware } from '@tanstack/react-start';
-import { isAdminRole, isStaffRole } from '@/lib/auth-session';
+import { isAdminRole, isDisposalUnitRole, isStaffRole } from '@/lib/auth-session';
 
 export type SessionContext = {
   staffId: string;
@@ -38,11 +38,21 @@ export const adminMiddleware = createMiddleware({ type: 'function' })
     return next();
   });
 
-/** "Requester" accounts only (not staff) — mirrors the mobile API's requireUser guard. */
+/** Disposal unit accounts only. */
+export const disposalUnitMiddleware = createMiddleware({ type: 'function' })
+  .middleware([sessionMiddleware])
+  .server(async ({ next, context }) => {
+    if (!isDisposalUnitRole(context.roleId)) {
+      throw new Error('Disposal unit access is required. Sign in with a disposal unit account to continue.');
+    }
+    return next();
+  });
+
+/** "Requester" accounts only (not staff or disposal unit) — mirrors the mobile API's requireUser guard. */
 export const requesterMiddleware = createMiddleware({ type: 'function' })
   .middleware([sessionMiddleware])
   .server(async ({ next, context }) => {
-    if (isStaffRole(context.roleId)) {
+    if (isStaffRole(context.roleId) || isDisposalUnitRole(context.roleId)) {
       throw new Error('This action is for user accounts only.');
     }
     return next();

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AdminSideBar } from '@/components/ui/adminSidebar';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, hasAdminSession, isStaffRole, readTechnicianSession } from '@/lib/auth-session';
+import { clearAllSessions, getPostLoginPath, hasAdminSession, readPrivilegedSession } from '@/lib/auth-session';
 import { AssetLookupButton } from '@/technician/asset-lookup';
 import { AskAiLink } from '@/components/ask-ai-link';
 
@@ -14,10 +14,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const user = readTechnicianSession();
+    const user = readPrivilegedSession();
     if (!hasAdminSession()) {
-      if (user && isStaffRole(user.roleId)) {
-        void navigate({ to: '/technician/dashboard' });
+      if (user) {
+        void navigate({ to: getPostLoginPath(user.roleId) });
       } else {
         void navigate({ to: '/login' });
       }

@@ -1,6 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AdminUserRow, CreateAdminUserInput, UpdateAdminUserInput } from '@/lib/admin-users-schema';
-import { ROLE_ADMIN, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
+import { ROLE_ADMIN, ROLE_DISPOSAL_UNIT, ROLE_TECHNICIAN, ROLE_USER } from '@/lib/auth-session';
 import { getDirectoryUserByEmail, getDirectoryUsersByOids } from '@/server/core/azure-directory.server';
 import { getDbPool } from '@/server/core/db';
 
@@ -27,8 +27,13 @@ function emailLocalPart(email: string): string {
 }
 
 function assertValidRoleId(roleId: number): void {
-  if (roleId !== ROLE_TECHNICIAN && roleId !== ROLE_ADMIN && roleId !== ROLE_USER) {
-    throw new Error('The selected role is not valid. Choose User, Technician, or Administrator.');
+  if (
+    roleId !== ROLE_TECHNICIAN &&
+    roleId !== ROLE_ADMIN &&
+    roleId !== ROLE_USER &&
+    roleId !== ROLE_DISPOSAL_UNIT
+  ) {
+    throw new Error('The selected role is not valid. Choose User, Technician, Administrator, or Disposal unit.');
   }
 }
 
