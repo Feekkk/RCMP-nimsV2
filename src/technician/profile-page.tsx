@@ -59,9 +59,9 @@ export function TechnicianProfilePage() {
 
   const initials = useMemo(() => profileInitials(fullName || session?.fullName || ''), [fullName, session]);
 
-  const handleSignOut = () => {
-    clearAllSessions();
-    void navigate({ to: '/login' });
+  const handleSignOut = async () => {
+    await clearAllSessions();
+    void navigate({ to: '/' });
   };
 
   if (!session) {

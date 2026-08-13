@@ -24,9 +24,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
     }
   }, [navigate]);
 
-  const handleSignOut = () => {
-    clearAllSessions();
-    void navigate({ to: '/login' });
+  const handleSignOut = async () => {
+    await clearAllSessions();
+    void navigate({ to: '/' });
   };
 
   const todayLabel = new Intl.DateTimeFormat(undefined, {

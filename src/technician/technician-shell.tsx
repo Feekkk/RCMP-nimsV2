@@ -23,9 +23,9 @@ export function TechnicianShell({ children }: { children: ReactNode }) {
     }
   }, [navigate]);
 
-  const handleSignOut = () => {
-    clearAllSessions();
-    void navigate({ to: '/login' });
+  const handleSignOut = async () => {
+    await clearAllSessions();
+    void navigate({ to: '/' });
   };
 
   return (

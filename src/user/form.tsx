@@ -135,9 +135,9 @@ export function UserRequestFormPage() {
     return true;
   }, [step, slaAccepted, borrowDate, returnDate, programType, usageLocation, items]);
 
-  const handleSignOut = () => {
-    clearAllSessions();
-    void navigate({ to: '/login' });
+  const handleSignOut = async () => {
+    await clearAllSessions();
+    void navigate({ to: '/' });
   };
 
   const setItemQuantity = (assetType: string, quantity: number) => {

@@ -68,12 +68,17 @@ export function readUserSession(): SessionUser | null {
   }
 }
 
-/** Clears the local UI cache and the server-side session cookie. Fire-and-forget on the network call. */
-export function clearAllSessions(): void {
+/** Clears the local UI cache and the server-side session cookie. */
+export async function clearAllSessions(): Promise<void> {
   if (typeof window === 'undefined') return;
   sessionStorage.removeItem(TECHNICIAN_SESSION_KEY);
   sessionStorage.removeItem(USER_SESSION_KEY);
-  void import('@/server/auth.functions').then(({ logoutFn }) => logoutFn()).catch(() => {});
+  try {
+    const { logoutFn } = await import('@/server/auth.functions');
+    await logoutFn();
+  } catch {
+    // no-op
+  }
 }
 
 export function hasTechnicianSession(): boolean {

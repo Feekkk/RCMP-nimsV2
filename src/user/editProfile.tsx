@@ -47,9 +47,9 @@ export function UserEditProfilePage() {
       .finally(() => setLoading(false));
   }, [navigate]);
 
-  const handleSignOut = () => {
-    clearAllSessions();
-    void navigate({ to: '/login' });
+  const handleSignOut = async () => {
+    await clearAllSessions();
+    void navigate({ to: '/' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
