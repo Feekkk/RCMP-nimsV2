@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Laptop, Search, Tv } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Laptop, Search, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -19,12 +20,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { isoToLocalDate, localDateToIso } from '@/lib/date-format';
+import { usePagination } from '@/hooks/use-pagination';
+import { formatDateLabel, isoToLocalDate, localDateToIso } from '@/lib/date-format';
 import type { RequestLogAssignment, RequestLogEntry } from '@/lib/request-schema';
+import { cn } from '@/lib/utils';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
+import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { DatePickerField } from '@/technician/deploy-return-fields';
-import { TechnicianShell } from '@/technician/technician-shell';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
+import { TechnicianShell } from '@/technician/technician-shell';
 import { listRequestLogFn } from '@/server/requests/request.functions';
 
 type LogEvent = {
@@ -91,7 +95,6 @@ function buildLogEvents(entry: RequestLogEntry): LogEvent[] {
   return events.sort((x, y) => y.sortKey - x.sortKey);
 }
 
-/** Inclusive borrow-period overlap with optional from/to ISO dates. */
 function requestMatchesDateFilter(entry: RequestLogEntry, fromIso: string, toIso: string): boolean {
   if (!fromIso && !toIso) return true;
   if (fromIso && entry.returnDate < fromIso) return false;
@@ -99,15 +102,93 @@ function requestMatchesDateFilter(entry: RequestLogEntry, fromIso: string, toIso
   return true;
 }
 
-function logStatusLabel(entry: RequestLogEntry): { text: string; variant: 'default' | 'destructive' | 'outline' | 'secondary' } {
-  if (entry.rejectedAt) return { text: 'Rejected', variant: 'destructive' };
+function logStatusLabel(entry: RequestLogEntry): { text: string; className: string } {
+  if (entry.rejectedAt) {
+    return {
+      text: 'Rejected',
+      className: 'border-transparent bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200',
+    };
+  }
   const totalQty = entry.items.reduce((n, i) => n + i.quantity, 0);
   const totalReturned = entry.items.reduce((n, i) => n + i.returnedCount, 0);
-  if (totalQty > 0 && totalReturned >= totalQty) return { text: 'Completed', variant: 'default' };
+  if (totalQty > 0 && totalReturned >= totalQty) {
+    return {
+      text: 'Completed',
+      className:
+        'border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+    };
+  }
   const open = entry.assignments.filter((a) => !a.returnedAt);
-  if (open.some((a) => a.checkoutAt)) return { text: 'In use', variant: 'outline' };
-  if (open.length > 0) return { text: 'Preparing', variant: 'secondary' };
-  return { text: 'Submitted', variant: 'outline' };
+  if (open.some((a) => a.checkoutAt)) {
+    return {
+      text: 'In use',
+      className: 'border-transparent bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
+    };
+  }
+  if (open.length > 0) {
+    return {
+      text: 'Preparing',
+      className:
+        'border-transparent bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200',
+    };
+  }
+  return {
+    text: 'Submitted',
+    className: 'border-transparent bg-muted text-muted-foreground',
+  };
+}
+
+function eventBadgeClass(label: string): string {
+  switch (label) {
+    case 'Rejected':
+      return 'border-transparent bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200';
+    case 'Returned':
+      return 'border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200';
+    case 'Checked out':
+      return 'border-transparent bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200';
+    case 'Booked':
+      return 'border-transparent bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200';
+    default:
+      return 'border-transparent bg-muted text-muted-foreground';
+  }
+}
+
+function dayHeading(iso: string): string {
+  const date = isoToLocalDate(iso);
+  if (!date) return iso;
+  const todayIso = localDateToIso(new Date());
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (iso === todayIso) return 'Today';
+  if (iso === localDateToIso(yesterday)) return 'Yesterday';
+  return date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function formatDateTime(at: string): string {
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return at;
+  return d.toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function groupByBorrowDate(entries: RequestLogEntry[]): [string, RequestLogEntry[]][] {
+  const map = new Map<string, RequestLogEntry[]>();
+  for (const entry of entries) {
+    const list = map.get(entry.borrowDate);
+    if (list) list.push(entry);
+    else map.set(entry.borrowDate, [entry]);
+  }
+  return [...map.entries()];
 }
 
 export function TechnicianRequestLogPage() {
@@ -116,7 +197,7 @@ export function TechnicianRequestLogPage() {
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const dateRangeInvalid = useMemo(() => {
     if (!dateFrom || !dateTo) return false;
@@ -145,25 +226,46 @@ export function TechnicianRequestLogPage() {
   const filtered = useMemo(() => {
     if (dateRangeInvalid) return [];
     const q = search.trim().toLowerCase();
-    return entries.filter((e) => {
-      if (!requestMatchesDateFilter(e, dateFrom, dateTo)) return false;
-      if (!q) return true;
-      return [
-        String(e.requestId),
-        e.requesterName,
-        e.requestedBy,
-        e.programType,
-        e.usageLocation,
-        e.remarks,
-        ...e.items.map((i) => i.assetType),
-        ...e.assignments.map((a) => assetLabel(a)),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(q);
-    });
+    return entries
+      .filter((e) => {
+        if (!requestMatchesDateFilter(e, dateFrom, dateTo)) return false;
+        if (!q) return true;
+        return [
+          String(e.requestId),
+          e.requesterName,
+          e.requestedBy,
+          e.programType,
+          e.usageLocation,
+          e.remarks,
+          ...e.items.map((i) => i.assetType),
+          ...e.assignments.map((a) => assetLabel(a)),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(q);
+      })
+      .sort((a, b) => {
+        const byDate = b.borrowDate.localeCompare(a.borrowDate);
+        if (byDate !== 0) return byDate;
+        return b.requestId - a.requestId;
+      });
   }, [entries, search, dateFrom, dateTo, dateRangeInvalid]);
+
+  const pagination = usePagination(filtered, {
+    pageSize: 15,
+    resetKey: `${search}|${dateFrom}|${dateTo}|${filtered.length}`,
+  });
+
+  const grouped = useMemo(
+    () => groupByBorrowDate(pagination.paginatedItems),
+    [pagination.paginatedItems],
+  );
+
+  const selected = useMemo(
+    () => entries.find((e) => e.requestId === selectedId) ?? null,
+    [entries, selectedId],
+  );
 
   return (
     <TechnicianShell>
@@ -171,8 +273,7 @@ export function TechnicianRequestLogPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Request log</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Full audit trail of user requests — booking, checkout, and return events with asset
-            details.
+            Requests grouped by borrow date. Open a row for booking, checkout, and return details.
           </p>
         </div>
         <RequestToolbarActions />
@@ -248,163 +349,227 @@ export function TechnicianRequestLogPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+      </Card>
+
+      <Card className="mb-4 overflow-hidden rounded-[14px] border-border shadow-sm">
+        <CardContent className="p-0">
           {loading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
-          ) : filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No requests found.</p>
+            <p className="py-16 text-center text-sm text-muted-foreground">Loading…</p>
+          ) : grouped.length === 0 ? (
+            <p className="py-16 text-center text-sm text-muted-foreground">No requests found.</p>
           ) : (
-            filtered.map((entry) => {
-              const isOpen = openId === entry.requestId;
-              const status = logStatusLabel(entry);
-              const events = buildLogEvents(entry);
-
-              return (
-                <Collapsible
-                  key={entry.requestId}
-                  open={isOpen}
-                  onOpenChange={(open) => setOpenId(open ? entry.requestId : null)}
-                  className="rounded-[12px] border border-border"
-                >
-                  <CollapsibleTrigger className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-secondary/40">
-                    <ChevronDown
-                      className={`mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold">{entry.requesterName}</span>
-                        <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
-                          #{entry.requestId}
-                        </Badge>
-                        <Badge variant={status.variant} className="rounded-[6px] text-[10px]">
-                          {status.text}
-                        </Badge>
-                        <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
-                          {events.length} event{events.length === 1 ? '' : 's'}
-                        </Badge>
-                      </div>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {entry.borrowDate} → {entry.returnDate} · {entry.programType} ·{' '}
-                        {entry.usageLocation}
-                      </p>
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="border-t border-border px-4 py-4">
-                    {entry.remarks && (
-                      <p className="mb-3 text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">Remarks:</span> {entry.remarks}
-                      </p>
-                    )}
-
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Categories requested
-                    </p>
-                    <ul className="mb-4 space-y-1">
-                      {entry.items.map((i) => (
-                        <li
-                          key={i.requestItemId}
-                          className="flex justify-between rounded-[8px] border border-border/80 px-3 py-1.5 text-sm"
-                        >
-                          <span>{i.assetType}</span>
-                          <span className="text-muted-foreground">
-                            × {i.quantity}
-                            {i.returnedCount > 0 && ` · ${i.returnedCount} returned`}
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="h-9 text-xs">Request</TableHead>
+                    <TableHead className="h-9 text-xs">Status</TableHead>
+                    <TableHead className="hidden h-9 text-xs sm:table-cell">Period</TableHead>
+                    <TableHead className="hidden h-9 text-xs md:table-cell">Program</TableHead>
+                    <TableHead className="hidden h-9 text-right text-xs lg:table-cell">
+                      Events
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {grouped.map(([day, dayEntries]) => (
+                    <Fragment key={day}>
+                      <TableRow className="bg-muted/40 hover:bg-muted/40">
+                        <TableCell colSpan={5} className="py-2 text-xs font-medium text-muted-foreground">
+                          {dayHeading(day)}
+                          <span className="ml-2 tabular-nums">
+                            ({dayEntries.length} request{dayEntries.length === 1 ? '' : 's'})
                           </span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Event log
-                    </p>
-                    <div className="overflow-x-auto rounded-[10px] border border-border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-44">When</TableHead>
-                            <TableHead className="w-32">Event</TableHead>
-                            <TableHead>Details</TableHead>
+                        </TableCell>
+                      </TableRow>
+                      {dayEntries.map((entry) => {
+                        const status = logStatusLabel(entry);
+                        const events = buildLogEvents(entry);
+                        return (
+                          <TableRow
+                            key={entry.requestId}
+                            className="cursor-pointer hover:bg-muted/30"
+                            onClick={() => setSelectedId(entry.requestId)}
+                          >
+                            <TableCell className="py-3">
+                              <p className="font-medium text-foreground">{entry.requesterName}</p>
+                              <p className="text-xs tabular-nums text-muted-foreground">
+                                #{entry.requestId}
+                                <span className="sm:hidden">
+                                  {' · '}
+                                  {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}
+                                </span>
+                              </p>
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <Badge variant="secondary" className={cn('rounded-[6px] text-[10px]', status.className)}>
+                                {status.text}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden py-3 text-sm text-muted-foreground sm:table-cell">
+                              {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}
+                            </TableCell>
+                            <TableCell className="hidden py-3 md:table-cell">
+                              <p className="text-sm">{entry.programType}</p>
+                              <p className="text-xs text-muted-foreground">{entry.usageLocation}</p>
+                            </TableCell>
+                            <TableCell className="hidden py-3 text-right text-xs tabular-nums text-muted-foreground lg:table-cell">
+                              {events.length}
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {events.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={3} className="text-sm text-muted-foreground">
-                                No assignment events yet.
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            events.map((ev, idx) => (
-                              <TableRow key={`${ev.label}-${ev.at}-${idx}`}>
-                                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                                  {new Date(ev.at).toLocaleString()}
-                                </TableCell>
-                                <TableCell className="text-sm font-medium">{ev.label}</TableCell>
-                                <TableCell className="text-sm">{ev.detail}</TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    {entry.assignments.length > 0 && (
-                      <>
-                        <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Assignments
-                        </p>
-                        <div className="overflow-x-auto rounded-[10px] border border-border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="hover:bg-transparent">
-                                <TableHead>Asset</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Booked</TableHead>
-                                <TableHead>Checkout</TableHead>
-                                <TableHead>Returned</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {entry.assignments.map((a) => (
-                                <TableRow key={a.assignmentId}>
-                                  <TableCell>
-                                    <span className="inline-flex items-center gap-1.5 text-sm">
-                                      {a.kind === 'laptop' ? (
-                                        <Laptop className="h-3.5 w-3.5 text-muted-foreground" />
-                                      ) : (
-                                        <Tv className="h-3.5 w-3.5 text-muted-foreground" />
-                                      )}
-                                      {assetLabel(a)}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="text-sm">{a.assetType ?? '—'}</TableCell>
-                                  <TableCell>
-                                    <AssetStatusBadge statusId={a.assetStatusId} />
-                                  </TableCell>
-                                  <TableCell className="text-xs text-muted-foreground">
-                                    {a.assignedAt ? new Date(a.assignedAt).toLocaleString() : '—'}
-                                  </TableCell>
-                                  <TableCell className="text-xs text-muted-foreground">
-                                    {a.checkoutAt ? new Date(a.checkoutAt).toLocaleString() : '—'}
-                                  </TableCell>
-                                  <TableCell className="text-xs text-muted-foreground">
-                                    {a.returnedAt ? new Date(a.returnedAt).toLocaleString() : '—'}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </>
-                    )}
-                  </CollapsibleContent>
-                </Collapsible>
-              );
-            })
+                        );
+                      })}
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+              <AssetTablePagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                pageSize={pagination.pageSize}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                totalItems={pagination.totalItems}
+                totalLoaded={entries.length}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
+              />
+            </>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={selected != null} onOpenChange={(open) => !open && setSelectedId(null)}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto rounded-[14px]">
+          {selected && <RequestLogDetail entry={selected} />}
+        </DialogContent>
+      </Dialog>
     </TechnicianShell>
+  );
+}
+
+function RequestLogDetail({ entry }: { entry: RequestLogEntry }) {
+  const status = logStatusLabel(entry);
+  const events = buildLogEvents(entry);
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex flex-wrap items-center gap-2">
+          <span>{entry.requesterName}</span>
+          <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
+            #{entry.requestId}
+          </Badge>
+          <Badge variant="secondary" className={cn('rounded-[6px] text-[10px]', status.className)}>
+            {status.text}
+          </Badge>
+        </DialogTitle>
+        <DialogDescription>
+          {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)} · {entry.programType}{' '}
+          · {entry.usageLocation}
+        </DialogDescription>
+      </DialogHeader>
+
+      {entry.remarks && (
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Remarks:</span> {entry.remarks}
+        </p>
+      )}
+
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Categories requested
+        </p>
+        <ul className="space-y-1">
+          {entry.items.map((i) => (
+            <li
+              key={i.requestItemId}
+              className="flex justify-between rounded-[8px] border border-border/80 px-3 py-1.5 text-sm"
+            >
+              <span>{i.assetType}</span>
+              <span className="text-muted-foreground">
+                × {i.quantity}
+                {i.returnedCount > 0 && ` · ${i.returnedCount} returned`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Event log
+        </p>
+        {events.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No assignment events yet.</p>
+        ) : (
+          <ol className="space-y-3 border-l border-border pl-4">
+            {events.map((ev, idx) => (
+              <li key={`${ev.label}-${ev.at}-${idx}`} className="relative">
+                <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-muted-foreground/50" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary" className={cn('rounded-[6px] text-[10px]', eventBadgeClass(ev.label))}>
+                    {ev.label}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">{formatDateTime(ev.at)}</span>
+                </div>
+                <p className="mt-1 text-sm">{ev.detail}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      {entry.assignments.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Assignments
+          </p>
+          <div className="overflow-x-auto rounded-[10px] border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Asset</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Booked</TableHead>
+                  <TableHead>Checkout</TableHead>
+                  <TableHead>Returned</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {entry.assignments.map((a) => (
+                  <TableRow key={a.assignmentId}>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-1.5 text-sm">
+                        {a.kind === 'laptop' ? (
+                          <Laptop className="h-3.5 w-3.5 text-muted-foreground" />
+                        ) : (
+                          <Tv className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        {assetLabel(a)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm">{a.assetType ?? '—'}</TableCell>
+                    <TableCell>
+                      <AssetStatusBadge statusId={a.assetStatusId} />
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {a.assignedAt ? formatDateTime(a.assignedAt) : '—'}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {a.checkoutAt ? formatDateTime(a.checkoutAt) : '—'}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {a.returnedAt ? formatDateTime(a.returnedAt) : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
