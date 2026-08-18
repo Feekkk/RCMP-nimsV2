@@ -16,6 +16,8 @@ const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read'];
 type OAuthStatePayload = {
   nonce: string;
   exp: number;
+  /** Set for React Native callers so the web callback page forwards the code to the app. */
+  mobile?: true;
 };
 
 type TokenResponse = {
@@ -38,10 +40,11 @@ function stateSecret(config: MicrosoftAuthConfig): string {
   return config.clientSecret;
 }
 
-export function createMicrosoftOAuthState(config: MicrosoftAuthConfig): string {
+export function createMicrosoftOAuthState(config: MicrosoftAuthConfig, mobile = false): string {
   const payload: OAuthStatePayload = {
     nonce: randomBytes(16).toString('hex'),
     exp: Date.now() + OAUTH_STATE_TTL_MS,
+    ...(mobile ? { mobile: true as const } : {}),
   };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = createHmac('sha256', stateSecret(config)).update(body).digest('base64url');
@@ -185,6 +188,7 @@ function setOAuthNonceCookie(nonce: string): void {
 export function getMicrosoftLoginRedirect(
   redirectUri?: string | null,
   bindBrowserCookie = false,
+  mobile = false,
 ): { url: string; state: string } {
   const config = getMicrosoftAuthConfig();
   if (!config) {
@@ -193,7 +197,7 @@ export function getMicrosoftLoginRedirect(
     );
   }
   const resolvedRedirect = resolveMicrosoftRedirectUri(config, redirectUri);
-  const state = createMicrosoftOAuthState(config);
+  const state = createMicrosoftOAuthState(config, mobile);
   if (bindBrowserCookie) {
     const payload = parseOAuthStatePayload(config, state);
     if (payload) setOAuthNonceCookie(payload.nonce);

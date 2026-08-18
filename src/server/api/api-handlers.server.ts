@@ -35,7 +35,7 @@ export async function handleMicrosoftStart(request: Request): Promise<Response> 
     const body = request.method === 'POST' ? await readJsonBody<MicrosoftStartBody>(request) : null;
     const redirectUri = body && !(body instanceof Response) ? body.redirectUri : undefined;
     const { getMicrosoftLoginRedirect } = await import('@/server/auth/microsoft-auth.server');
-    const result = getMicrosoftLoginRedirect(redirectUri);
+    const result = getMicrosoftLoginRedirect(redirectUri, false, true);
     return apiOk(result);
   } catch (error) {
     return handleApiError(error);
