@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { INVENTORY_STATUSES } from '@/lib/inventory-schema';
+import { INVENTORY_STATUSES, ACC_CODE_OPTIONS } from '@/lib/inventory-schema';
 import { STATUS_ID } from '@/lib/asset-status-actions';
 import { emptyPurchaseFormState, purchaseFormToInput } from '@/lib/purchase-field-utils';
 import { emptyWarrantyFormState, warrantyFormToInput } from '@/lib/warranty-field-utils';
@@ -136,9 +136,11 @@ function AssetForm({
   createNetwork: (input: CreateNetworkInput) => Promise<unknown>;
 }) {
   const [saving, setSaving] = useState(false);
+  const [accCode, setAccCode] = useState('');
   const [model, setModel] = useState('');
   const [brand, setBrand] = useState('');
   const [serialNum, setSerialNum] = useState('');
+  const [supplier, setSupplier] = useState('');
   const statusId = STATUS_ID.NEW;
   const [remarks, setRemarks] = useState('');
   const [purchase, setPurchase] = useState(emptyPurchaseFormState);
@@ -200,10 +202,12 @@ function AssetForm({
         }
         await createLaptop({
           assetId: id,
+          accCode: accCode.trim() || null,
           serialNum: serialNum.trim(),
           category: category.trim(),
           brand: brand.trim() || null,
           model: model.trim() || null,
+          supplier: supplier.trim() || null,
           partNumber: partNumber.trim() || null,
           processor: processor.trim() || null,
           memory: memory.trim() || null,
@@ -218,10 +222,12 @@ function AssetForm({
       } else if (kind === 'av') {
         await createAv({
           assetId: id,
+          accCode: accCode.trim() || null,
           assetIdOld: assetIdOld.trim() || null,
           category: avCategory.trim() || null,
           brand: brand.trim() || null,
           model: model.trim() || null,
+          supplier: supplier.trim() || null,
           serialNum: serialNum.trim() || null,
           ...purchaseInput,
           statusId,
@@ -231,10 +237,12 @@ function AssetForm({
       } else {
         await createNetwork({
           assetId: id,
+          accCode: accCode.trim() || null,
           category: networkCategory.trim() || null,
           serialNum: serialNum.trim() || null,
           brand: brand.trim() || null,
           model: model.trim() || null,
+          supplier: supplier.trim() || null,
           macAddress: macAddress.trim() || null,
           ipAddress: ipAddress.trim() || null,
           ...purchaseInput,
@@ -301,6 +309,20 @@ function AssetForm({
                     )}
                   </div>
                 </Field>
+                <Field label="Account code">
+                  <Select value={accCode || undefined} onValueChange={setAccCode}>
+                    <SelectTrigger className="rounded-[8px]">
+                      <SelectValue placeholder="Select account code" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACC_CODE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.value} ({opt.label})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
                 <Field label="Status" required>
                   <div className="flex h-10 items-center rounded-[8px] border border-input bg-muted/40 px-3 text-sm capitalize text-muted-foreground">
                     {statusId} — {INVENTORY_STATUSES.find((s) => s.statusId === statusId)?.name ?? 'new'}
@@ -311,6 +333,9 @@ function AssetForm({
                 </Field>
                 <Field label="Model">
                   <Input value={model} onChange={(e) => setModel(e.target.value)} className="rounded-[8px]" placeholder="ThinkPad X1 Carbon, HP EliteBook 840 G8, etc." />
+                </Field>
+                <Field label="Supplier">
+                  <Input value={supplier} onChange={(e) => setSupplier(e.target.value)} className="rounded-[8px]" placeholder="Enter supplier name" />
                 </Field>
                 <Field label="Serial number" required={kind === 'laptop'}>
                   <Input

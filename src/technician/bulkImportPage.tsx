@@ -22,6 +22,7 @@ import { IMPORT_DATE_FORMAT_HINT, PURCHASE_DATE_COLUMNS } from '@/lib/date-forma
 import { INVENTORY_STATUSES, formatStatusLabel } from '@/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, type AssetKind } from '@/hooks/assets';
 import {
+  ACC_CODE_OPTIONS,
   BULK_IMPORT_REQUIRED,
   BULK_IMPORT_STATUS_DEPLOY,
   bulkImportDeployColumns,
@@ -282,6 +283,27 @@ function BulkImportWorkspace({
               </div>
             </div>
 
+            <div className="space-y-2 rounded-[10px] border border-border/70 bg-muted/40 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                acc_code values
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {ACC_CODE_OPTIONS.map((opt) => (
+                  <div
+                    key={opt.value}
+                    className="flex items-center justify-between gap-3 rounded-[8px] border border-border/60 bg-background px-2.5 py-2 text-xs"
+                  >
+                    <span className="font-mono font-medium text-foreground">{opt.value}</span>
+                    <span className="shrink-0 text-[10px] text-muted-foreground">{opt.label}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Store the code in the CSV (<code className="text-[10px]">200-0500</code> or{' '}
+                <code className="text-[10px]">992-000</code>). The labels are for reference only.
+              </p>
+            </div>
+
             {kind === 'laptop' ? (
               <div className="space-y-2 rounded-[10px] border border-border/70 bg-muted/40 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -465,8 +487,10 @@ function BulkImportWorkspace({
                     <TableHeader>
                       <TableRow>
                         <TableHead className="font-semibold">Asset ID</TableHead>
+                        <TableHead className="font-semibold">Acc code</TableHead>
                         <TableHead className="font-semibold">Model</TableHead>
                         <TableHead className="font-semibold">Brand</TableHead>
+                        <TableHead className="font-semibold">Supplier</TableHead>
                         <TableHead className="font-semibold">Serial</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
                         <TableHead className="font-semibold">Deploy</TableHead>
@@ -478,8 +502,12 @@ function BulkImportWorkspace({
                           <TableCell>
                             <code className="text-xs">{row.assetId ?? 'auto'}</code>
                           </TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {row.accCode ?? '—'}
+                          </TableCell>
                           <TableCell className="font-medium">{row.model}</TableCell>
                           <TableCell className="text-muted-foreground">{'brand' in row ? row.brand ?? '—' : '—'}</TableCell>
+                          <TableCell className="text-muted-foreground">{row.supplier ?? '—'}</TableCell>
                           <TableCell className="text-muted-foreground">{row.serialNum ?? '—'}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="rounded-[6px] text-[10px]">

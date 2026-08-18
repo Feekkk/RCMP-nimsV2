@@ -198,9 +198,11 @@ type PurchaseRow = {
 type LaptopRow = RowDataPacket &
   PurchaseRow & {
     asset_id: number;
+    acc_code: string | null;
     serial_num: string | null;
     brand: string | null;
     model: string | null;
+    supplier: string | null;
     category: string | null;
     part_number: string | null;
     processor: string | null;
@@ -221,10 +223,12 @@ type LaptopRow = RowDataPacket &
 type AvRow = RowDataPacket &
   PurchaseRow & {
     asset_id: number;
+    acc_code: string | null;
     asset_id_old: string | null;
     category: string | null;
     brand: string | null;
     model: string | null;
+    supplier: string | null;
     serial_num: string | null;
     status_id: number;
     remarks: string | null;
@@ -233,10 +237,12 @@ type AvRow = RowDataPacket &
 type NetworkRow = RowDataPacket &
   PurchaseRow & {
     asset_id: number;
+    acc_code: string | null;
     category: string | null;
     serial_num: string | null;
     brand: string | null;
     model: string | null;
+    supplier: string | null;
     mac_address: string | null;
     ip_address: string | null;
     status_id: number;
@@ -280,9 +286,11 @@ function mapLaptop(row: LaptopRow): LaptopAsset {
   return {
     kind: 'laptop',
     assetId: row.asset_id,
+    accCode: row.acc_code,
     serialNum: row.serial_num,
     brand: row.brand,
     model: row.model,
+    supplier: row.supplier,
     category: row.category,
     partNumber: row.part_number,
     processor: row.processor,
@@ -308,10 +316,12 @@ function mapAv(row: AvRow): AvAsset {
   return {
     kind: 'av',
     assetId: row.asset_id,
+    accCode: row.acc_code,
     assetIdOld: row.asset_id_old,
     category: row.category,
     brand: row.brand,
     model: row.model,
+    supplier: row.supplier,
     serialNum: row.serial_num,
     statusId: row.status_id,
     remarks: row.remarks,
@@ -324,10 +334,12 @@ function mapNetwork(row: NetworkRow): NetworkAsset {
   return {
     kind: 'network',
     assetId: row.asset_id,
+    accCode: row.acc_code,
     category: row.category,
     serialNum: row.serial_num,
     brand: row.brand,
     model: row.model,
+    supplier: row.supplier,
     macAddress: row.mac_address,
     ipAddress: row.ip_address,
     statusId: row.status_id,
@@ -388,30 +400,32 @@ function attachOpenPlace<T extends AvAsset | NetworkAsset>(
 }
 
 const LAPTOP_INSERT = `INSERT INTO laptop (
-  asset_id, serial_num, brand, model, category, part_number,
+  asset_id, acc_code, serial_num, brand, model, supplier, category, part_number,
   processor, memory, os, storage, gpu,
   PO_DATE, PO_NUM, DO_DATE, DO_NUM, INVOICE_DATE, INVOICE_NUM, PURCHASE_COST,
   status_id, remarks
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 const AV_INSERT = `INSERT INTO av (
-  asset_id, asset_id_old, category, brand, model, serial_num,
+  asset_id, acc_code, asset_id_old, category, brand, model, supplier, serial_num,
   PO_DATE, PO_NUM, DO_DATE, DO_NUM, INVOICE_DATE, INVOICE_NUM, PURCHASE_COST,
   status_id, remarks
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 const NETWORK_INSERT = `INSERT INTO network (
-  asset_id, category, serial_num, brand, model, mac_address, ip_address,
+  asset_id, acc_code, category, serial_num, brand, model, supplier, mac_address, ip_address,
   PO_DATE, PO_NUM, DO_DATE, DO_NUM, INVOICE_DATE, INVOICE_NUM, PURCHASE_COST,
   status_id, remarks
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function laptopParams(input: CreateLaptopInput) {
   return [
     input.assetId,
+    input.accCode ?? null,
     input.serialNum,
     input.brand ?? null,
     input.model ?? null,
+    input.supplier ?? null,
     input.category,
     input.partNumber ?? null,
     input.processor ?? null,
@@ -428,10 +442,12 @@ function laptopParams(input: CreateLaptopInput) {
 function avParams(input: CreateAvInput) {
   return [
     input.assetId,
+    input.accCode ?? null,
     input.assetIdOld ?? null,
     input.category ?? null,
     input.brand ?? null,
     input.model ?? null,
+    input.supplier ?? null,
     input.serialNum ?? null,
     ...purchaseSqlParams(input),
     input.statusId,
@@ -442,10 +458,12 @@ function avParams(input: CreateAvInput) {
 function networkParams(input: CreateNetworkInput) {
   return [
     input.assetId,
+    input.accCode ?? null,
     input.category ?? null,
     input.serialNum ?? null,
     input.brand ?? null,
     input.model ?? null,
+    input.supplier ?? null,
     input.macAddress ?? null,
     input.ipAddress ?? null,
     ...purchaseSqlParams(input),

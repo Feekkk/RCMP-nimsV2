@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AssetDetail, AssetDetailResponse, AssetKind, AssetTrailEvent } from '@/lib/inventory-schema';
-import { ASSET_KIND_LABEL, ASSET_LIST_PATH } from '@/lib/inventory-schema';
+import { ASSET_KIND_LABEL, ASSET_LIST_PATH, formatAccCodeDisplay } from '@/lib/inventory-schema';
 import type { OpenReturnContext } from '@/lib/deploy-return-schema';
 import { formatAssetAge, formatDateLabel, formatPurchaseDateLabel, parseDdMmYyToIso } from '@/lib/date-format';
 import { formatPurchaseCost } from '@/lib/purchase-field-utils';
@@ -138,10 +138,12 @@ function AssetSpecs({ asset }: { asset: AssetDetail }) {
   if (asset.kind === 'laptop') {
     return (
       <>
+        <DetailItem label="Account code" value={formatAccCodeDisplay(asset.accCode)} />
         <DetailItem label="Category" value={asset.category} />
         <DetailItem label="Serial" value={asset.serialNum} />
         <DetailItem label="Brand" value={asset.brand} />
         <DetailItem label="Model" value={asset.model} />
+        <DetailItem label="Supplier" value={asset.supplier} />
         <DetailItem label="Part number" value={asset.partNumber} />
         <DetailItem label="Processor" value={asset.processor} />
         <DetailItem label="Memory" value={asset.memory} />
@@ -154,19 +156,23 @@ function AssetSpecs({ asset }: { asset: AssetDetail }) {
   if (asset.kind === 'av') {
     return (
       <>
+        <DetailItem label="Account code" value={formatAccCodeDisplay(asset.accCode)} />
         <DetailItem label="Legacy ID" value={asset.assetIdOld} />
         <DetailItem label="Category" value={asset.category} />
         <DetailItem label="Brand" value={asset.brand} />
         <DetailItem label="Model" value={asset.model} />
+        <DetailItem label="Supplier" value={asset.supplier} />
         <DetailItem label="Serial" value={asset.serialNum} />
       </>
     );
   }
   return (
     <>
+      <DetailItem label="Account code" value={formatAccCodeDisplay(asset.accCode)} />
       <DetailItem label="Category" value={asset.category} />
       <DetailItem label="Brand" value={asset.brand} />
       <DetailItem label="Model" value={asset.model} />
+      <DetailItem label="Supplier" value={asset.supplier} />
       <DetailItem label="Serial" value={asset.serialNum} />
       <DetailItem label="IP address" value={asset.ipAddress} />
       <DetailItem label="MAC address" value={asset.macAddress} />

@@ -40,6 +40,23 @@ export type PurchaseFields = {
   purchaseCost?: number | null;
 };
 
+export const ACC_CODE_OPTIONS = [
+  { value: '200-0500', label: 'IT & AV - asset' },
+  { value: '992-000', label: 'IT & Audio - inventory' },
+] as const;
+
+export type AccCode = (typeof ACC_CODE_OPTIONS)[number]['value'];
+
+export function isValidAccCode(value: string): value is AccCode {
+  return ACC_CODE_OPTIONS.some((opt) => opt.value === value);
+}
+
+export function formatAccCodeDisplay(code: string | null | undefined): string | null {
+  if (!code?.trim()) return null;
+  const opt = ACC_CODE_OPTIONS.find((o) => o.value === code);
+  return opt ? `${opt.value} (${opt.label})` : code;
+}
+
 /** CSV / form fields marked required in schema COMMENT */
 /** asset_id omitted — auto-generated when CSV cell is blank (see assetid-flow.md). */
 export const BULK_IMPORT_REQUIRED: Record<AssetKind, readonly string[]> = {
@@ -72,9 +89,11 @@ export function formatStatusLabel(statusId: number): string {
 export type LaptopAsset = {
   kind: 'laptop';
   assetId: number;
+  accCode: string | null;
   serialNum: string | null;
   brand: string | null;
   model: string | null;
+  supplier: string | null;
   category: string | null;
   partNumber: string | null;
   processor: string | null;
@@ -117,10 +136,12 @@ export type PlaceFields = {
 export type AvAsset = {
   kind: 'av';
   assetId: number;
+  accCode: string | null;
   assetIdOld: string | null;
   category: string | null;
   brand: string | null;
   model: string | null;
+  supplier: string | null;
   serialNum: string | null;
   statusId: number;
   remarks: string | null;
@@ -130,10 +151,12 @@ export type AvAsset = {
 export type NetworkAsset = {
   kind: 'network';
   assetId: number;
+  accCode: string | null;
   category: string | null;
   serialNum: string | null;
   brand: string | null;
   model: string | null;
+  supplier: string | null;
   macAddress: string | null;
   ipAddress: string | null;
   statusId: number;
@@ -143,9 +166,11 @@ export type NetworkAsset = {
 
 export type CreateLaptopInput = {
   assetId: number;
+  accCode?: string | null;
   serialNum: string;
   brand?: string | null;
   model?: string | null;
+  supplier?: string | null;
   category: string;
   partNumber?: string | null;
   processor?: string | null;
@@ -160,10 +185,12 @@ export type CreateLaptopInput = {
 
 export type CreateAvInput = {
   assetId: number;
+  accCode?: string | null;
   assetIdOld?: string | null;
   category?: string | null;
   brand?: string | null;
   model?: string | null;
+  supplier?: string | null;
   serialNum?: string | null;
   statusId: number;
   remarks?: string | null;
@@ -172,10 +199,12 @@ export type CreateAvInput = {
 
 export type CreateNetworkInput = {
   assetId: number;
+  accCode?: string | null;
   category?: string | null;
   serialNum?: string | null;
   brand?: string | null;
   model?: string | null;
+  supplier?: string | null;
   macAddress?: string | null;
   ipAddress?: string | null;
   statusId: number;
@@ -258,9 +287,11 @@ export type BulkPlaceDeploymentImport = {
 export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
   laptop: [
     'asset_id',
+    'acc_code',
     'serial_num',
     'brand',
     'model',
+    'supplier',
     'category',
     'part_number',
     'processor',
@@ -278,10 +309,12 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
   ],
   av: [
     'asset_id',
+    'acc_code',
     'asset_id_old',
     'category',
     'brand',
     'model',
+    'supplier',
     'serial_num',
     ...PURCHASE_FIELD_COLUMNS,
     'status_id',
@@ -293,10 +326,12 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
   ],
   network: [
     'asset_id',
+    'acc_code',
     'category',
     'serial_num',
     'brand',
     'model',
+    'supplier',
     'mac_address',
     'ip_address',
     ...PURCHASE_FIELD_COLUMNS,
