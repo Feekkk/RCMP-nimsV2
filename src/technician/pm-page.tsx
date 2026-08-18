@@ -101,31 +101,63 @@ function StatusBadge({ status }: { status: PmLogStatus }) {
   );
 }
 
+const STAT_TONES = {
+  sky: {
+    card: 'border-sky-200/70 bg-sky-50/70 dark:border-sky-900/80 dark:bg-sky-950/30',
+    badge: 'bg-sky-400 text-sky-950',
+    watermark: 'text-sky-400/25 dark:text-sky-300/15',
+  },
+  emerald: {
+    card: 'border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-900/80 dark:bg-emerald-950/30',
+    badge: 'bg-emerald-400 text-emerald-950',
+    watermark: 'text-emerald-400/25 dark:text-emerald-300/15',
+  },
+  amber: {
+    card: 'border-amber-200/70 bg-amber-50/70 dark:border-amber-900/80 dark:bg-amber-950/30',
+    badge: 'bg-amber-400 text-amber-950',
+    watermark: 'text-amber-400/25 dark:text-amber-300/15',
+  },
+  violet: {
+    card: 'border-violet-200/70 bg-violet-50/70 dark:border-violet-900/80 dark:bg-violet-950/30',
+    badge: 'bg-violet-400 text-violet-950',
+    watermark: 'text-violet-400/25 dark:text-violet-300/15',
+  },
+} as const;
+
 function StatCard({
   icon: Icon,
   label,
   value,
   hint,
-  tint,
+  tone,
 }: {
   icon: typeof Wrench;
   label: string;
   value: number;
   hint: string;
-  tint: string;
+  tone: keyof typeof STAT_TONES;
 }) {
+  const colors = STAT_TONES[tone];
   return (
-    <div className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div
+      className={cn(
+        'relative flex h-full min-h-[148px] flex-col overflow-hidden rounded-3xl border p-5 shadow-sm transition-shadow hover:shadow-md',
+        colors.card,
+      )}
+    >
+      <div className="relative z-10 flex items-center gap-2.5">
+        <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', colors.badge)}>
+          <Icon className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+        </span>
+        <p className="text-sm text-muted-foreground">{label}</p>
       </div>
-      <div>
-        <p className="text-3xl font-bold tabular-nums tracking-tight text-foreground">{value}</p>
-        <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
-      </div>
+      <p className="relative z-10 mt-4 font-serif text-4xl leading-none tracking-tight text-foreground">{value}</p>
+      <p className="relative z-10 mt-2 text-xs text-muted-foreground">{hint}</p>
+      <Icon
+        className={cn('pointer-events-none absolute -bottom-3 -right-2 h-28 w-28', colors.watermark)}
+        strokeWidth={1.15}
+        aria-hidden
+      />
     </div>
   );
 }
@@ -259,28 +291,28 @@ export function PMpage() {
           label="This month"
           value={stats.thisMonth}
           hint="Maintenance checklists logged"
-          tint="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200"
+          tone="sky"
         />
         <StatCard
           icon={CheckCircle2}
           label="Passed"
           value={stats.passed}
           hint="All checklist items OK"
-          tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+          tone="emerald"
         />
         <StatCard
           icon={AlertTriangle}
           label="Issues found"
           value={stats.issues}
           hint="Failed or partial this month"
-          tint="bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          tone="amber"
         />
         <StatCard
           icon={ClipboardList}
           label="Assets covered"
           value={stats.assetsCovered}
           hint="Unique assets maintained"
-          tint="bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+          tone="violet"
         />
       </div>
 

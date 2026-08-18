@@ -1140,27 +1140,30 @@ export function TechnicianRequestPage() {
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <QueueStatCard
           label="Pending"
+          hint="Awaiting action"
           count={queues.pending.length}
           icon={ClipboardList}
           active={viewFilter === 'pending'}
           onClick={() => setViewFilter('pending')}
-          className="border-violet-200/80 bg-violet-50/50 dark:border-violet-900 dark:bg-violet-950/30"
+          tone="violet"
         />
         <QueueStatCard
           label="To return"
+          hint="Checked out"
           count={queues.toReturn.length}
           icon={PackageCheck}
           active={viewFilter === 'to_return'}
           onClick={() => setViewFilter('to_return')}
-          className="border-sky-200/80 bg-sky-50/50 dark:border-sky-900 dark:bg-sky-950/30"
+          tone="sky"
         />
         <QueueStatCard
           label="Overdue"
+          hint="Past due"
           count={queues.overdue.length}
           icon={AlertTriangle}
           active={viewFilter === 'overdue'}
           onClick={() => setViewFilter('overdue')}
-          className="border-rose-200/80 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/30"
+          tone="rose"
         />
       </div>
 
@@ -1326,36 +1329,66 @@ export function TechnicianRequestPage() {
   );
 }
 
+const QUEUE_STAT_TONES = {
+  violet: {
+    card: 'border-violet-200/70 bg-violet-50/70 dark:border-violet-900/80 dark:bg-violet-950/30',
+    badge: 'bg-violet-400 text-violet-950',
+    watermark: 'text-violet-400/25 dark:text-violet-300/15',
+  },
+  sky: {
+    card: 'border-sky-200/70 bg-sky-50/70 dark:border-sky-900/80 dark:bg-sky-950/30',
+    badge: 'bg-sky-400 text-sky-950',
+    watermark: 'text-sky-400/25 dark:text-sky-300/15',
+  },
+  rose: {
+    card: 'border-rose-200/70 bg-rose-50/70 dark:border-rose-900/80 dark:bg-rose-950/30',
+    badge: 'bg-rose-400 text-rose-950',
+    watermark: 'text-rose-400/25 dark:text-rose-300/15',
+  },
+} as const;
+
 function QueueStatCard({
   label,
+  hint,
   count,
   icon: Icon,
   active,
   onClick,
-  className,
+  tone,
 }: {
   label: string;
+  hint: string;
   count: number;
   icon: typeof ClipboardList;
   active: boolean;
   onClick: () => void;
-  className?: string;
+  tone: keyof typeof QUEUE_STAT_TONES;
 }) {
+  const colors = QUEUE_STAT_TONES[tone];
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
-        'rounded-[12px] border p-4 text-left transition-colors hover:opacity-90',
+        'relative overflow-hidden rounded-3xl border p-5 text-left shadow-sm transition-all hover:opacity-90',
+        colors.card,
         active && 'ring-2 ring-[oklch(0.45_0.12_290)]/40',
-        className,
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+      <div className="relative z-10 flex items-center gap-2.5">
+        <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', colors.badge)}>
+          <Icon className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+        </span>
+        <span className="text-sm text-muted-foreground">{label}</span>
       </div>
-      <p className="mt-1 text-2xl font-bold tabular-nums">{count}</p>
+      <p className="relative z-10 mt-3 font-serif text-4xl leading-none tracking-tight text-foreground">{count}</p>
+      <p className="relative z-10 mt-2 text-xs text-muted-foreground">{hint}</p>
+      <Icon
+        className={cn('pointer-events-none absolute -bottom-3 -right-2 h-28 w-28', colors.watermark)}
+        strokeWidth={1.15}
+        aria-hidden
+      />
     </button>
   );
 }
