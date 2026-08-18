@@ -20,6 +20,7 @@ import { currentCalendarMonth } from '@/dashboard/dashboard-widgets';
 const EMPTY_REQUEST_STATS: DashboardRequestStats = {
   total: 0,
   byWorkflow: DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => ({ key, count: 0 })),
+  byStatus: [],
   poolByKind: [],
 };
 

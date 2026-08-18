@@ -78,6 +78,7 @@ export type DashboardRequestKindCount = {
 export type DashboardRequestStats = {
   total: number;
   byWorkflow: DashboardRequestWorkflowCount[];
+  byStatus: DashboardStatusCount[];
   poolByKind: DashboardRequestKindCount[];
 };
 

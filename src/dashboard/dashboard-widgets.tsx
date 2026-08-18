@@ -4,7 +4,6 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
   Loader2,
   MoreVertical,
 } from 'lucide-react';
@@ -15,16 +14,12 @@ import {
   DASHBOARD_ASSET_DEPLOY_STATUS_IDS,
   DASHBOARD_ASSET_STORE_STATUS_IDS,
   DASHBOARD_REQUEST_STATUS_LABEL,
-  DASHBOARD_REQUEST_WORKFLOW_KEYS,
-  DASHBOARD_REQUEST_WORKFLOW_LABEL,
   type DashboardAssetKindStats,
-  type DashboardRequestKindCount,
-  type DashboardRequestStats,
   type DashboardRequestStatus,
   type DashboardStatusCount,
   type DashboardTimetableEntry,
 } from '@/lib/dashboard-schema';
-import { ASSET_KIND_LABEL, formatStatusLabel } from '@/lib/inventory-schema';
+import { formatStatusLabel } from '@/lib/inventory-schema';
 import { formatDateLabel, localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 
@@ -180,103 +175,6 @@ export function InventoryStatCard({
       ) : (
         <StatusBreakdown items={stats.byStatus} statusIds={INVENTORY_VIEW_STATUS_IDS[view]} />
       )}
-    </StatCardShell>
-  );
-}
-
-function RequestWorkflowBreakdown({
-  items,
-}: {
-  items: DashboardRequestStats['byWorkflow'];
-}) {
-  const countByKey = new Map(items.map((item) => [item.key, item.count]));
-
-  return (
-    <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
-      {DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => (
-        <li
-          key={key}
-          className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
-        >
-          <span className="min-w-0 truncate">{DASHBOARD_REQUEST_WORKFLOW_LABEL[key]}</span>
-          <span className="shrink-0 tabular-nums font-medium text-foreground">
-            {countByKey.get(key) ?? 0}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function KindBreakdown({
-  title,
-  items,
-}: {
-  title: string;
-  items: DashboardRequestKindCount[];
-}) {
-  const kinds = ['laptop', 'av', 'network'] as const;
-  const countByKind = new Map(items.map((item) => [item.kind, item.count]));
-
-  return (
-    <div className="border-t border-border/60 pt-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
-      <ul className="mt-2 space-y-1">
-        {kinds.map((kind) => (
-          <li
-            key={kind}
-            className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
-          >
-            <span className="min-w-0 truncate">{ASSET_KIND_LABEL[kind]}</span>
-            <span className="shrink-0 tabular-nums font-medium text-foreground">
-              {countByKind.get(kind) ?? 0}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export function TotalRequestStatCard({
-  stats,
-  href,
-}: {
-  stats: DashboardRequestStats;
-  href?: string;
-}) {
-  const header = (
-    <div className="flex items-center gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-lavender/15 text-[oklch(0.45_0.12_290)]">
-        <ClipboardList className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total request</p>
-        <p className="text-[11px] text-muted-foreground">Equipment requests</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <StatCardShell>
-      {href ? (
-        <Link
-          to={href}
-          className="-m-1 block rounded-xl p-1 outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {header}
-        </Link>
-      ) : (
-        header
-      )}
-
-      <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Open requests</p>
-        <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">{stats.total}</p>
-      </div>
-
-      <RequestWorkflowBreakdown items={stats.byWorkflow} />
-      <KindBreakdown title="Assets in pool" items={stats.poolByKind} />
     </StatCardShell>
   );
 }

@@ -2,9 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Laptop, Network, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  DASHBOARD_REQUEST_WORKFLOW_KEYS,
   type DashboardAssetKindStats,
-  type DashboardRequestStats,
   type TechnicianDashboardData,
 } from '@/lib/dashboard-schema';
 import { ASSET_KIND_LABEL } from '@/lib/inventory-schema';
@@ -12,7 +10,6 @@ import { getTechnicianDashboardFn } from '@/server/operations/dashboard.function
 import {
   InventoryStatCard,
   RequestTimetable,
-  TotalRequestStatCard,
   useDashboardMonthState,
 } from '@/dashboard/dashboard-widgets';
 import { TechnicianShell } from '@/technician/technician-shell';
@@ -23,12 +20,6 @@ const EMPTY_ASSET_STATS: DashboardAssetKindStats = {
   total: 0,
   registeredTotal: 0,
   byStatus: [],
-};
-
-const EMPTY_REQUEST_STATS: DashboardRequestStats = {
-  total: 0,
-  byWorkflow: DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => ({ key, count: 0 })),
-  poolByKind: [],
 };
 
 export function TechnicianDashboardPage() {
@@ -69,7 +60,7 @@ export function TechnicianDashboardPage() {
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <InventoryStatCard
           icon={Laptop}
           label={ASSET_KIND_LABEL.laptop}
@@ -90,10 +81,6 @@ export function TechnicianDashboardPage() {
           stats={stats?.network ?? EMPTY_ASSET_STATS}
           tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
           href="/technician/network"
-        />
-        <TotalRequestStatCard
-          stats={stats?.totalRequest ?? EMPTY_REQUEST_STATS}
-          href="/technician/requests"
         />
       </div>
 

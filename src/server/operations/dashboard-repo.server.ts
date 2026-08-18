@@ -290,6 +290,7 @@ async function loadRequestStats(pool: ReturnType<typeof getDbPool>): Promise<Das
   }
 
   const poolByKind: DashboardRequestStats['poolByKind'] = [];
+  const requestStatusCounts = new Map<number, number>();
   for (const { kind, table } of [
     { kind: 'laptop' as const, table: 'laptop' },
     { kind: 'av' as const, table: 'av' },
@@ -300,7 +301,23 @@ async function loadRequestStats(pool: ReturnType<typeof getDbPool>): Promise<Das
       [REQUEST_STATUS_ACTIVE],
     );
     poolByKind.push({ kind, count: Number(rows[0]?.cnt ?? 0) });
+
+    const [statusRows] = await pool.query<(RowDataPacket & { status_id: number; cnt: number })[]>(
+      `SELECT status_id, COUNT(*) AS cnt
+       FROM \`${table}\`
+       WHERE status_id IN (${DASHBOARD_REQUEST_STATUS_IDS.join(',')})
+       GROUP BY status_id`,
+    );
+    for (const row of statusRows) {
+      const statusId = Number(row.status_id);
+      requestStatusCounts.set(statusId, (requestStatusCounts.get(statusId) ?? 0) + Number(row.cnt));
+    }
   }
+
+  const byStatus = DASHBOARD_REQUEST_STATUS_IDS.map((statusId) => ({
+    statusId,
+    count: requestStatusCounts.get(statusId) ?? 0,
+  }));
 
   const byWorkflow = DASHBOARD_REQUEST_WORKFLOW_KEYS.map((key) => ({
     key,
@@ -310,7 +327,7 @@ async function loadRequestStats(pool: ReturnType<typeof getDbPool>): Promise<Das
     .filter((row) => row.key !== 'completed')
     .reduce((sum, row) => sum + row.count, 0);
 
-  return { total, byWorkflow, poolByKind };
+  return { total, byWorkflow, byStatus, poolByKind };
 }
 
 export async function getTechnicianDashboard(
