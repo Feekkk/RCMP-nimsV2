@@ -14,10 +14,10 @@ export const ASSET_ID_PREFIX = {
 } as const;
 
 /** Categories that use prefix 12 (Notebook). Matched case-insensitively. */
-export const LAPTOP_NOTEBOOK_CATEGORIES = ['Notebook', 'Notebook standby'] as const;
+export const LAPTOP_NOTEBOOK_CATEGORIES = ['Notebook', 'Notebook standby', 'Leasing Laptop'] as const;
 
 /** Categories that use prefix 14 (Desktop). Matched case-insensitively. */
-export const LAPTOP_DESKTOP_CATEGORIES = ['Desktop AIO', 'Desktop IO sharing'] as const;
+export const LAPTOP_DESKTOP_CATEGORIES = ['Desktop AIO', 'Desktop IO sharing', 'Leasing Desktop'] as const;
 
 export const ASSET_ID_SEQUENCE_MIN = 1;
 export const ASSET_ID_SEQUENCE_MAX = 999;
@@ -55,7 +55,7 @@ export function getLaptopAssetIdPrefix(category: string): typeof ASSET_ID_PREFIX
     return ASSET_ID_PREFIX.laptop;
   }
   throw new Error(
-    `Unknown laptop category "${category}". Use: Notebook, Notebook standby, Desktop AIO, or Desktop IO sharing.`,
+    `Unknown laptop category "${category}". Use: Notebook, Notebook standby, Leasing Laptop, Desktop AIO, Desktop IO sharing, or Leasing Desktop.`,
   );
 }
 

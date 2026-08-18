@@ -17,9 +17,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { INVENTORY_STATUSES } from '@/lib/inventory-schema';
 import { STATUS_ID } from '@/lib/asset-status-actions';
-import { readTechnicianSession } from '@/lib/auth-session';
-import { normalizeToIsoDate } from '@/lib/date-format';
-import type { StaffRecipient } from '@/lib/deploy-return-schema';
 import { emptyPurchaseFormState, purchaseFormToInput } from '@/lib/purchase-field-utils';
 import { emptyWarrantyFormState, warrantyFormToInput } from '@/lib/warranty-field-utils';
 import {
@@ -27,13 +24,7 @@ import {
   LAPTOP_CATEGORY_OPTIONS,
   useNextAssetId,
 } from '@/hooks/assetid-generator';
-import {
-  bulkCreateAvImportFn,
-  bulkCreateLaptopsImportFn,
-  bulkCreateNetworkImportFn,
-} from '@/server/assets/assets.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { AddAssetDeployFields, type LaptopDeployMode } from '@/technician/add-asset-deploy-fields';
 import { PurchaseFieldsSection } from '@/technician/asset-purchase-fields';
 import { WarrantyFieldsSection } from '@/technician/warranty-fields';
 import {
@@ -148,7 +139,7 @@ function AssetForm({
   const [model, setModel] = useState('');
   const [brand, setBrand] = useState('');
   const [serialNum, setSerialNum] = useState('');
-  const [statusId, setStatusId] = useState('1');
+  const statusId = STATUS_ID.NEW;
   const [remarks, setRemarks] = useState('');
   const [purchase, setPurchase] = useState(emptyPurchaseFormState);
   const [warranty, setWarranty] = useState(emptyWarrantyFormState);
@@ -168,19 +159,6 @@ function AssetForm({
   const [ipAddress, setIpAddress] = useState('');
   const [networkCategory, setNetworkCategory] = useState('');
 
-  const [laptopDeployMode, setLaptopDeployMode] = useState<LaptopDeployMode>('staff');
-  const [deployRecipient, setDeployRecipient] = useState<StaffRecipient | null>(null);
-  const [handoverDate, setHandoverDate] = useState('');
-  const [handoverRemarks, setHandoverRemarks] = useState('');
-  const [deployBuilding, setDeployBuilding] = useState('');
-  const [deployLevel, setDeployLevel] = useState('');
-  const [deployZone, setDeployZone] = useState('');
-  const [deployHandler, setDeployHandler] = useState('');
-  const [deploymentDate, setDeploymentDate] = useState('');
-  const [deploymentRemarks, setDeploymentRemarks] = useState('');
-
-  const isDeployStatus = statusId === String(STATUS_ID.DEPLOY);
-
   const {
     assetId: generatedAssetId,
     isLoading: assetIdLoading,
@@ -196,12 +174,6 @@ function AssetForm({
       return;
     }
 
-    const parsedStatusId = Number(statusId);
-    if (Number.isNaN(parsedStatusId)) {
-      toast.error('Select a status for this asset before saving.');
-      return;
-    }
-
     const purchaseInput = purchaseFormToInput(purchase);
     const hasWarrantyPartial =
       Boolean(warranty.startDate.trim()) ||
@@ -211,89 +183,6 @@ function AssetForm({
     if (hasWarrantyPartial && !warrantyInput) {
       toast.error('Warranty requires both a start date and an end date. Fill in both or leave warranty blank.');
       return;
-    }
-
-    let deployHandover: {
-      handoverStaffEmail: string;
-      handoverDate: string;
-      handoverRemarks: string | null;
-      employeeNo: string | null;
-      building?: string | null;
-      level?: string | null;
-      zone?: string | null;
-      handler?: string | null;
-    } | null = null;
-    let deployPlacement: {
-      deploymentStaffEmail: string;
-      building: string;
-      level: string;
-      zone: string;
-      deploymentDate: string;
-      deploymentRemarks: string | null;
-    } | null = null;
-
-    if (isDeployStatus) {
-      const session = readTechnicianSession();
-      if (!session?.email?.trim()) {
-        toast.error('Your technician session could not be verified. Sign out and sign in again.');
-        return;
-      }
-      const staffEmail = session.email.trim().toLowerCase();
-
-      if (kind === 'laptop') {
-        const isoHandoverDate = normalizeToIsoDate(handoverDate);
-        if (!isoHandoverDate) {
-          toast.error('Select a handover date');
-          return;
-        }
-        if (laptopDeployMode === 'staff') {
-          if (!deployRecipient) {
-            toast.error('Select a staff recipient');
-            return;
-          }
-          if (!deployRecipient.email?.trim().includes('@')) {
-            toast.error('Selected staff has no email in the directory — add email before handover');
-            return;
-          }
-        } else {
-          if (!deployBuilding.trim()) {
-            toast.error('Building is required');
-            return;
-          }
-          if (!deployHandler.trim()) {
-            toast.error('Handler is required');
-            return;
-          }
-        }
-        deployHandover = {
-          handoverStaffEmail: staffEmail,
-          handoverDate: isoHandoverDate,
-          handoverRemarks: handoverRemarks.trim() || null,
-          employeeNo: laptopDeployMode === 'staff' ? deployRecipient!.employeeNo : null,
-          building: laptopDeployMode === 'place' ? deployBuilding.trim() : null,
-          level: laptopDeployMode === 'place' ? deployLevel.trim() || null : null,
-          zone: laptopDeployMode === 'place' ? deployZone.trim() || null : null,
-          handler: laptopDeployMode === 'place' ? deployHandler.trim() : null,
-        };
-      } else {
-        const isoDeploymentDate = normalizeToIsoDate(deploymentDate);
-        if (!isoDeploymentDate) {
-          toast.error('Select a deployment date');
-          return;
-        }
-        if (!deployBuilding.trim() || !deployLevel.trim() || !deployZone.trim()) {
-          toast.error('Building, level, and zone are required');
-          return;
-        }
-        deployPlacement = {
-          deploymentStaffEmail: staffEmail,
-          building: deployBuilding.trim(),
-          level: deployLevel.trim(),
-          zone: deployZone.trim(),
-          deploymentDate: isoDeploymentDate,
-          deploymentRemarks: deploymentRemarks.trim() || null,
-        };
-      }
     }
 
     setSaving(true);
@@ -309,7 +198,7 @@ function AssetForm({
           setSaving(false);
           return;
         }
-        const laptopInput = {
+        await createLaptop({
           assetId: id,
           serialNum: serialNum.trim(),
           category: category.trim(),
@@ -322,17 +211,12 @@ function AssetForm({
           storage: storage.trim() || null,
           gpu: gpu.trim() || null,
           ...purchaseInput,
-          statusId: parsedStatusId,
+          statusId,
           remarks: remarks.trim() || null,
           warranty: warrantyInput,
-        };
-        if (isDeployStatus && deployHandover) {
-          await bulkCreateLaptopsImportFn({ data: [{ ...laptopInput, handover: deployHandover }] });
-        } else {
-          await createLaptop(laptopInput);
-        }
+        });
       } else if (kind === 'av') {
-        const avInput = {
+        await createAv({
           assetId: id,
           assetIdOld: assetIdOld.trim() || null,
           category: avCategory.trim() || null,
@@ -340,17 +224,12 @@ function AssetForm({
           model: model.trim() || null,
           serialNum: serialNum.trim() || null,
           ...purchaseInput,
-          statusId: parsedStatusId,
+          statusId,
           remarks: remarks.trim() || null,
           warranty: warrantyInput,
-        };
-        if (isDeployStatus && deployPlacement) {
-          await bulkCreateAvImportFn({ data: [{ ...avInput, deployment: deployPlacement }] });
-        } else {
-          await createAv(avInput);
-        }
+        });
       } else {
-        const networkInput = {
+        await createNetwork({
           assetId: id,
           category: networkCategory.trim() || null,
           serialNum: serialNum.trim() || null,
@@ -359,15 +238,10 @@ function AssetForm({
           macAddress: macAddress.trim() || null,
           ipAddress: ipAddress.trim() || null,
           ...purchaseInput,
-          statusId: parsedStatusId,
+          statusId,
           remarks: remarks.trim() || null,
           warranty: warrantyInput,
-        };
-        if (isDeployStatus && deployPlacement) {
-          await bulkCreateNetworkImportFn({ data: [{ ...networkInput, deployment: deployPlacement }] });
-        } else {
-          await createNetwork(networkInput);
-        }
+        });
       }
       onCreated(kind);
     } catch (err) {
@@ -427,19 +301,10 @@ function AssetForm({
                     )}
                   </div>
                 </Field>
-                <Field label="Choose status" required>
-                  <Select value={statusId} onValueChange={setStatusId}>
-                    <SelectTrigger className="rounded-[8px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INVENTORY_STATUSES.map((s) => (
-                        <SelectItem key={s.statusId} value={String(s.statusId)}>
-                          {s.statusId} — {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <Field label="Status" required>
+                  <div className="flex h-10 items-center rounded-[8px] border border-input bg-muted/40 px-3 text-sm capitalize text-muted-foreground">
+                    {statusId} — {INVENTORY_STATUSES.find((s) => s.statusId === statusId)?.name ?? 'new'}
+                  </div>
                 </Field>
                 <Field label="Brand">
                   <Input value={brand} onChange={(e) => setBrand(e.target.value)} className="rounded-[8px]" placeholder="Lenovo, HP, Dell, etc." />
@@ -466,32 +331,6 @@ function AssetForm({
                 </Field>
               </div>
             </section>
-
-            {isDeployStatus && (
-              <AddAssetDeployFields
-                kind={kind}
-                laptopMode={laptopDeployMode}
-                onLaptopModeChange={setLaptopDeployMode}
-                recipient={deployRecipient}
-                onRecipientChange={setDeployRecipient}
-                handoverDate={handoverDate}
-                onHandoverDateChange={setHandoverDate}
-                handoverRemarks={handoverRemarks}
-                onHandoverRemarksChange={setHandoverRemarks}
-                building={deployBuilding}
-                onBuildingChange={setDeployBuilding}
-                level={deployLevel}
-                onLevelChange={setDeployLevel}
-                zone={deployZone}
-                onZoneChange={setDeployZone}
-                handler={deployHandler}
-                onHandlerChange={setDeployHandler}
-                deploymentDate={deploymentDate}
-                onDeploymentDateChange={setDeploymentDate}
-                deploymentRemarks={deploymentRemarks}
-                onDeploymentRemarksChange={setDeploymentRemarks}
-              />
-            )}
 
             {kind === 'laptop' && (
               <section className="space-y-4">

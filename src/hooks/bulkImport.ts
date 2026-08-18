@@ -13,7 +13,7 @@ import {
   type CreateLaptopInput,
   type CreateNetworkInput,
 } from '@/lib/inventory-schema';
-import { getLaptopAssetIdPrefix } from '@/hooks/assetid-generator';
+import { getLaptopAssetIdPrefix, LAPTOP_CATEGORY_OPTIONS } from '@/hooks/assetid-generator';
 import { parseOptionalDate, parsePurchaseFromRow } from '@/lib/purchase-field-utils';
 import { parseWarrantyFromRow } from '@/lib/warranty-field-utils';
 import {
@@ -59,6 +59,7 @@ export {
   BULK_IMPORT_STATUS_DEPLOY,
   bulkImportDeployColumns,
   bulkImportDeployRequiredColumns,
+  LAPTOP_CATEGORY_OPTIONS,
 };
 
 const VALID_STATUS_IDS = new Set(INVENTORY_STATUSES.map((s) => s.statusId));
@@ -66,7 +67,9 @@ const VALID_STATUS_IDS = new Set(INVENTORY_STATUSES.map((s) => s.statusId));
 const MOCK_CSV: Record<AssetKind, string> = {
   laptop: `asset_id,serial_num,brand,model,category,part_number,processor,memory,os,storage,gpu,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,handover_staff_id,handover_date,handover_remarks,employee_no
 ,DL-5450-001,Dell,Latitude 5450,Notebook,PN-5450,Intel i5-1345U,16GB,Windows 11,512GB,,15/1/24,PO-2024-001,1/2/24,DO-9001,10/2/24,INV-7788,1299.00,1,HQ staging (auto 12-xx-xxx),,,,
-,HP-DEPLOY-01,HP,EliteBook 840,Notebook,,Intel i7,16GB,Windows 11,512GB,,,,,,,,,3,With user,tech@example.com,15/1/26,Issued for project,EMP10001`,
+,HP-DEPLOY-01,HP,EliteBook 840,Notebook,,Intel i7,16GB,Windows 11,512GB,,,,,,,,,3,With user,tech@example.com,15/1/26,Issued for project,EMP10001
+,LN-LEASE-001,Lenovo,ThinkPad T14,Leasing Laptop,,Intel i7,16GB,Windows 11,512GB,,1/3/25,PO-LEASE-01,,,,,1099.00,1,Leased fleet (auto 12-xx-xxx),,,,
+,DT-LEASE-001,Dell,OptiPlex 7090,Leasing Desktop,,Intel i5,8GB,Windows 11,256GB,,1/3/25,PO-LEASE-02,,,,,899.00,1,Leased desktop (auto 14-xx-xxx),,,,`,
   av: `asset_id,asset_id_old,category,brand,model,serial_num,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
 ,AV-LEG-001,display,Samsung,QM65C,SM-QM65-100,1/6/23,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx),,,,,,
 ,AV-DEPLOY-01,AV-DEP-88,projector,Epson,EB-L200F,EPS-L200F-99,,,,,,,,3,Training room,tech@example.com,Main,-,-,15/1/26,Installed in room`,

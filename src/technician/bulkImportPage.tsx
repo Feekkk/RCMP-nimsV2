@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, Download, FileSpreadsheet, Laptop, Network, Tv, Upload } from 'lucide-react';
+import { ArrowLeft, Download, Laptop, Network, Tv, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { IMPORT_DATE_FORMAT_HINT, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
 import { INVENTORY_STATUSES, formatStatusLabel } from '@/lib/inventory-schema';
@@ -26,8 +27,10 @@ import {
   bulkImportDeployColumns,
   bulkImportDeployRequiredColumns,
   downloadCsvFile,
+  LAPTOP_CATEGORY_OPTIONS,
   useBulkImport,
 } from '@/hooks/bulkImport';
+import { ASSET_ID_PREFIX, getLaptopAssetIdPrefix } from '@/hooks/assetid-generator';
 
 type BulkImportSearch = { kind?: AssetKind };
 
@@ -119,8 +122,7 @@ function BulkImportWorkspace({
   const [csvText, setCsvText] = useState('');
   const [importing, setImporting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const { preview, isParsing, parseText, loadMockSample, clearPreview, commit, getTemplate, getMockCsv, columns } =
-    useBulkImport();
+  const { preview, isParsing, parseText, clearPreview, commit, getTemplate, columns } = useBulkImport();
   const requiredSet = new Set(BULK_IMPORT_REQUIRED[kind]);
   const deployRequiredSet = new Set(bulkImportDeployRequiredColumns(kind));
 
@@ -210,33 +212,16 @@ function BulkImportWorkspace({
                   </CardDescription>
                 </div>
               </div>
-              <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-[8px] gap-1.5"
-                  onClick={() => downloadCsvFile(`${kind}-template.csv`, getTemplate(kind))}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Template
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-[8px] gap-1.5"
-                  onClick={() => {
-                    const sample = getMockCsv(kind);
-                    setCsvText(sample);
-                    clearPreview();
-                    toast.message('Sample CSV loaded — click Parse preview');
-                  }}
-                >
-                  <FileSpreadsheet className="h-3.5 w-3.5" />
-                  Sample
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 rounded-[8px] gap-1.5"
+                onClick={() => downloadCsvFile(`${kind}-template.csv`, getTemplate(kind))}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Template
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -247,31 +232,35 @@ function BulkImportWorkspace({
                 </p>
                 <div className="flex gap-3 text-[11px] text-muted-foreground">
                   <span>
-                    <span className="font-semibold text-foreground">*</span> required
+                    <span className="font-semibold text-destructive">*</span> required
                   </span>
                   <span>
-                    <span className="font-semibold text-foreground">†</span> required for deploy
-                    (status {BULK_IMPORT_STATUS_DEPLOY})
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">†</span> required
+                    for deploy (status {BULK_IMPORT_STATUS_DEPLOY})
                   </span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {columns[kind].map((col) => (
-                  <Badge
-                    key={col}
-                    variant={
-                      requiredSet.has(col)
-                        ? 'default'
-                        : deployRequiredSet.has(col)
-                          ? 'outline'
-                          : 'secondary'
-                    }
-                    className="rounded-[6px] font-mono text-[10px]"
-                  >
-                    {col}
-                    {requiredSet.has(col) ? ' *' : deployRequiredSet.has(col) ? ' †' : ''}
-                  </Badge>
-                ))}
+                {columns[kind].map((col) => {
+                  const isRequired = requiredSet.has(col);
+                  const isDeployRequired = deployRequiredSet.has(col);
+                  return (
+                    <Badge
+                      key={col}
+                      variant="secondary"
+                      className={cn(
+                        'rounded-[6px] font-mono text-[10px]',
+                        isRequired &&
+                          'border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/10',
+                        isDeployRequired &&
+                          'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-950',
+                      )}
+                    >
+                      {col}
+                      {isRequired ? ' *' : isDeployRequired ? ' †' : ''}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
 
@@ -292,6 +281,32 @@ function BulkImportWorkspace({
                 ))}
               </div>
             </div>
+
+            {kind === 'laptop' ? (
+              <div className="space-y-2 rounded-[10px] border border-border/70 bg-muted/40 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  category values
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {LAPTOP_CATEGORY_OPTIONS.map((category) => {
+                    const prefix = getLaptopAssetIdPrefix(category);
+                    return (
+                      <div key={category} className="flex items-center justify-between gap-3 rounded-[8px] border border-border/60 bg-background px-2.5 py-2 text-xs">
+                        <span className="font-medium text-foreground">{category}</span>
+                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                          prefix {prefix}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Notebook categories use prefix {ASSET_ID_PREFIX.laptop}; desktop categories use prefix{' '}
+                  {ASSET_ID_PREFIX.desktop}. Leave <code className="text-[10px]">asset_id</code> blank to
+                  auto-generate from category.
+                </p>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -389,11 +404,11 @@ function BulkImportWorkspace({
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              className="rounded-[8px] bg-foreground text-background hover:opacity-90"
+              className="rounded-[8px] bg-emerald-600 text-white hover:bg-emerald-600/90 dark:bg-emerald-700 dark:hover:bg-emerald-700/90"
               disabled={isParsing}
               onClick={handleParse}
             >
-              {isParsing ? 'Parsing…' : 'Parse preview'}
+              {isParsing ? 'Processing…' : 'Import Bulk'}
             </Button>
             {preview && (
               <Button
