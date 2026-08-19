@@ -19,13 +19,14 @@ import {
   type DashboardStatusCount,
   type DashboardTimetableEntry,
 } from '@/lib/dashboard-schema';
+import { InsightStatCard, type InsightCardTone } from '@/components/insight-stat-card';
 import { formatStatusLabel } from '@/lib/inventory-schema';
 import { formatDateLabel, localDateToIso } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 
 function BreakdownList({ rows }: { rows: { label: string; count: number }[] }) {
   return (
-    <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
+    <ul className="relative z-10 mt-3 space-y-1 border-t border-border/60 pt-2">
       {rows.map(({ label, count }) => (
         <li
           key={label}
@@ -62,29 +63,19 @@ const INVENTORY_VIEW_STATUS_IDS: Record<InventoryStatView, readonly number[]> = 
   deploy: DASHBOARD_ASSET_DEPLOY_STATUS_IDS,
 };
 
-function StatCardShell({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
-      {children}
-    </div>
-  );
-}
+export type InventoryCardTone = InsightCardTone;
 
 export function InventoryStatCard({
-  icon: Icon,
+  icon,
   label,
   stats,
-  tint,
+  tone,
   href,
 }: {
   icon: ElementType;
   label: string;
   stats: DashboardAssetKindStats;
-  tint: string;
+  tone: InventoryCardTone;
   href?: string;
 }) {
   const [view, setView] = useState<InventoryStatView>('store');
@@ -101,31 +92,15 @@ export function InventoryStatCard({
 
   const totalCount = stats.store + deployCount;
 
-  const header = (
-    <div className="flex items-center gap-3">
-      <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="text-[11px] text-muted-foreground">{totalCount} total assets</p>
-      </div>
-    </div>
-  );
-
   return (
-    <StatCardShell>
-      {href ? (
-        <Link
-          to={href}
-          className="-m-1 block rounded-xl p-1 outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {header}
-        </Link>
-      ) : (
-        header
-      )}
-
+    <InsightStatCard
+      icon={icon}
+      label={label}
+      value={totalCount}
+      hint={`${totalCount} total assets`}
+      tone={tone}
+      href={href}
+    >
       <div className="grid grid-cols-2 gap-2">
         {(['store', 'deploy'] as const).map((key) => {
           const count = key === 'store' ? stats.store : deployCount;
@@ -137,16 +112,16 @@ export function InventoryStatCard({
               type="button"
               onClick={() => setView(key)}
               className={cn(
-                'rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'rounded-2xl px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isActive
-                  ? 'border-[oklch(0.55_0.14_290)]/40 bg-lavender/10 shadow-sm'
-                  : 'border-border/70 bg-muted/30 hover:bg-muted/50',
+                  ? 'bg-muted font-medium text-foreground'
+                  : 'bg-muted/40 text-foreground hover:bg-muted/70',
               )}
             >
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 {key === 'store' ? 'Store' : 'Deploy'}
               </p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{count}</p>
+              <p className="mt-0.5 text-xl font-semibold tabular-nums">{count}</p>
             </button>
           );
         })}
@@ -168,14 +143,14 @@ export function InventoryStatCard({
             }))}
           />
         ) : (
-          <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">
+          <ul className="relative z-10 mt-3 space-y-1 border-t border-border/60 pt-2">
             <li className="py-1 text-xs text-muted-foreground">No deployed assets yet.</li>
           </ul>
         )
       ) : (
         <StatusBreakdown items={stats.byStatus} statusIds={INVENTORY_VIEW_STATUS_IDS[view]} />
       )}
-    </StatCardShell>
+    </InsightStatCard>
   );
 }
 

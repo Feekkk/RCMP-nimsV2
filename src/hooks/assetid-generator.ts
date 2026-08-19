@@ -46,6 +46,21 @@ export function isDesktopCategory(category: string | null | undefined): boolean 
   return categoryInList(LAPTOP_DESKTOP_CATEGORIES, normalizeCategory(category));
 }
 
+export const LAPTOP_LEASING_CATEGORIES = ['Leasing Laptop', 'Leasing Desktop'] as const;
+
+export function isLeasingCategory(category: string | null | undefined): boolean {
+  if (!category?.trim()) return false;
+  return categoryInList(LAPTOP_LEASING_CATEGORIES, normalizeCategory(category));
+}
+
+export function isOwnedNotebookCategory(category: string | null | undefined): boolean {
+  return isNotebookCategory(category) && !isLeasingCategory(category);
+}
+
+export function isOwnedDesktopCategory(category: string | null | undefined): boolean {
+  return isDesktopCategory(category) && !isLeasingCategory(category);
+}
+
 export function getLaptopAssetIdPrefix(category: string): typeof ASSET_ID_PREFIX.laptop | typeof ASSET_ID_PREFIX.desktop {
   const key = normalizeCategory(category);
   if (categoryInList(LAPTOP_DESKTOP_CATEGORIES, key)) {

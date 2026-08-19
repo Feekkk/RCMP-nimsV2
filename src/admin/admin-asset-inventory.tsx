@@ -23,8 +23,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { InsightStatCard, type InsightCardTone } from '@/components/insight-stat-card';
 import { useAssets } from '@/hooks/assets';
-import { isDesktopCategory, isNotebookCategory } from '@/hooks/assetid-generator';
+import { isLeasingCategory, isOwnedDesktopCategory, isOwnedNotebookCategory } from '@/hooks/assetid-generator';
 import {
   DASHBOARD_ASSET_STORE_STATUS_IDS,
 } from '@/lib/dashboard-schema';
@@ -50,7 +51,7 @@ import { formatAssetLifespan } from '@/lib/date-format';
 import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@/lib/deploy-return-schema';
 import { cn } from '@/lib/utils';
 
-type FormFactor = 'laptop' | 'desktop';
+type FormFactor = 'laptop' | 'desktop' | 'leasing';
 
 type HandoverInsightFilter =
   | { kind: 'status'; formFactor: FormFactor; statusId: number }
@@ -65,7 +66,9 @@ function isSameHandoverFilter(a: HandoverInsightFilter | null, b: HandoverInsigh
 }
 
 function matchesFormFactor(category: string | null, formFactor: FormFactor) {
-  return formFactor === 'laptop' ? isNotebookCategory(category) : isDesktopCategory(category);
+  if (formFactor === 'leasing') return isLeasingCategory(category);
+  if (formFactor === 'laptop') return isOwnedNotebookCategory(category);
+  return isOwnedDesktopCategory(category);
 }
 
 function getHandoverAssetIds(
@@ -84,7 +87,8 @@ function getHandoverAssetIds(
 }
 
 function handoverFilterLabel(filter: HandoverInsightFilter): string {
-  const formLabel = filter.formFactor === 'laptop' ? 'Laptop' : 'Desktop';
+  const formLabel =
+    filter.formFactor === 'laptop' ? 'Laptop' : filter.formFactor === 'desktop' ? 'Desktop' : 'Leasing';
   if (filter.kind === 'status') {
     return `${formLabel} · ${formatStatusLabel(filter.statusId)}`;
   }
@@ -193,15 +197,13 @@ function AssetBucketSummaryCard({
   label,
   items,
   statusIds,
-  accent,
-  iconTint,
+  tone,
 }: {
   icon: ElementType;
   label: string;
   items: PlaceAsset[];
   statusIds: readonly number[];
-  accent: string;
-  iconTint: string;
+  tone: InsightCardTone;
 }) {
   const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
 
@@ -222,30 +224,23 @@ function AssetBucketSummaryCard({
   }, [bucketItems, statusIds]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      <div className={cn('flex items-center justify-between gap-3 px-4 py-3', accent)}>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">{label}</p>
-          <p className="text-3xl font-bold tabular-nums leading-none text-foreground">{bucketItems.length}</p>
-        </div>
-        <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full', iconTint)}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-      <ul className="space-y-0.5 border-t border-border/60 px-2.5 py-2">
-        {statusCounts.map(({ statusId, count }) => (
-          <li key={statusId}>
-            <button
-              type="button"
-              onClick={() => setSelectedStatusId(statusId)}
-              className="flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            >
-              <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
-              <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="h-full">
+      <InsightStatCard icon={Icon} label={label} value={bucketItems.length} tone={tone}>
+        <ul className="space-y-0.5 border-t border-border/60 pt-2">
+          {statusCounts.map(({ statusId, count }) => (
+            <li key={statusId}>
+              <button
+                type="button"
+                onClick={() => setSelectedStatusId(statusId)}
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              >
+                <span className="min-w-0 truncate capitalize">{formatStatusLabel(statusId)}</span>
+                <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </InsightStatCard>
       <PlaceStatusAssetsDialog
         label={label}
         statusId={selectedStatusId}
@@ -363,30 +358,23 @@ function AssetDeployBuildingSummaryCard({ items }: { items: PlaceAsset[] }) {
   }, [deployItems]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="flex items-center justify-between gap-3 bg-sky-50 px-4 py-3 dark:bg-sky-950/40">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">Deploy</p>
-          <p className="text-3xl font-bold tabular-nums leading-none text-foreground">{deployItems.length}</p>
-        </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-700 dark:text-sky-300">
-          <Truck className="h-5 w-5" />
-        </div>
-      </div>
-      <ul className="space-y-0.5 border-t border-border/60 px-2.5 py-2">
-        {buildingCounts.map(({ building, count }) => (
-          <li key={building}>
-            <button
-              type="button"
-              onClick={() => setSelectedBuilding(building)}
-              className="flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            >
-              <span className="min-w-0 truncate">{building}</span>
-              <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="h-full">
+      <InsightStatCard icon={Truck} label="Deploy" value={deployItems.length} tone="sky">
+        <ul className="space-y-0.5 border-t border-border/60 pt-2">
+          {buildingCounts.map(({ building, count }) => (
+            <li key={building}>
+              <button
+                type="button"
+                onClick={() => setSelectedBuilding(building)}
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              >
+                <span className="min-w-0 truncate">{building}</span>
+                <span className="shrink-0 tabular-nums font-semibold text-foreground">{count}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </InsightStatCard>
       <PlaceBuildingAssetsDialog
         building={selectedBuilding}
         items={deployItems}
@@ -404,8 +392,7 @@ function AssetStockDeploySummary({ items }: { items: PlaceAsset[] }) {
         label="Store"
         items={items}
         statusIds={DASHBOARD_ASSET_STORE_STATUS_IDS}
-        accent="bg-emerald-50 dark:bg-emerald-950/40"
-        iconTint="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+        tone="emerald"
       />
       <AssetDeployBuildingSummaryCard items={items} />
     </div>
@@ -422,16 +409,20 @@ function LaptopFormFactorSummary({
   onSelectFilter: (filter: HandoverInsightFilter | null) => void;
 }) {
   const laptopItems = useMemo(
-    () => items.filter((item) => isNotebookCategory(item.category)),
+    () => items.filter((item) => isOwnedNotebookCategory(item.category)),
     [items],
   );
   const desktopItems = useMemo(
-    () => items.filter((item) => isDesktopCategory(item.category)),
+    () => items.filter((item) => isOwnedDesktopCategory(item.category)),
+    [items],
+  );
+  const leasingItems = useMemo(
+    () => items.filter((item) => isLeasingCategory(item.category)),
     [items],
   );
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
       <FormFactorSummaryCard
         icon={LaptopIcon}
         label="Laptop"
@@ -439,8 +430,7 @@ function LaptopFormFactorSummary({
         items={laptopItems}
         selectedFilter={selectedFilter}
         onSelectFilter={onSelectFilter}
-        accent="bg-sky-50 dark:bg-sky-950/40"
-        iconTint="bg-sky-500/15 text-sky-700 dark:text-sky-300"
+        tone="lime"
       />
       <FormFactorSummaryCard
         icon={Monitor}
@@ -449,8 +439,16 @@ function LaptopFormFactorSummary({
         items={desktopItems}
         selectedFilter={selectedFilter}
         onSelectFilter={onSelectFilter}
-        accent="bg-violet-50 dark:bg-violet-950/40"
-        iconTint="bg-violet-500/15 text-violet-700 dark:text-violet-300"
+        tone="violet"
+      />
+      <FormFactorSummaryCard
+        icon={Layers}
+        label="Leasing"
+        formFactor="leasing"
+        items={leasingItems}
+        selectedFilter={selectedFilter}
+        onSelectFilter={onSelectFilter}
+        tone="amber"
       />
     </div>
   );
@@ -463,8 +461,7 @@ function FormFactorSummaryCard({
   items,
   selectedFilter,
   onSelectFilter,
-  accent,
-  iconTint,
+  tone,
 }: {
   icon: ElementType;
   label: string;
@@ -472,8 +469,7 @@ function FormFactorSummaryCard({
   items: LaptopAsset[];
   selectedFilter: HandoverInsightFilter | null;
   onSelectFilter: (filter: HandoverInsightFilter | null) => void;
-  accent: string;
-  iconTint: string;
+  tone: InsightCardTone;
 }) {
   const { statusRows, divisionRows } = useMemo(() => {
     const statusMap = new Map<number, number>();
@@ -536,22 +532,13 @@ function FormFactorSummaryCard({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      <div className={cn('flex items-center justify-between gap-3 px-4 py-3', accent)}>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">{label}</p>
-          <p className="text-3xl font-bold tabular-nums leading-none text-foreground">{total}</p>
-        </div>
-        <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full', iconTint)}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-      <ul className="space-y-0.5 border-t border-border/60 px-2.5 py-2">
+    <InsightStatCard icon={Icon} label={label} value={total} tone={tone}>
+      <ul className="space-y-0.5 border-t border-border/60 pt-2">
         {divisionRows.map(renderRow)}
         <li aria-hidden className="my-1.5 border-t border-border/60" />
         {statusRows.map(renderRow)}
       </ul>
-    </div>
+    </InsightStatCard>
   );
 }
 
@@ -586,16 +573,18 @@ function countDepartmentFormFactors(
 ) {
   let laptop = 0;
   let desktop = 0;
+  let leasing = 0;
 
   for (const member of staff) {
     for (const assetId of member.assetIds) {
       const category = assetCategoryById.get(assetId) ?? null;
-      if (isNotebookCategory(category)) laptop += 1;
-      else if (isDesktopCategory(category)) desktop += 1;
+      if (isLeasingCategory(category)) leasing += 1;
+      else if (isOwnedNotebookCategory(category)) laptop += 1;
+      else if (isOwnedDesktopCategory(category)) desktop += 1;
     }
   }
 
-  return { laptop, desktop };
+  return { laptop, desktop, leasing };
 }
 
 type StaffHandoverRow = LaptopDepartmentStaffHandover & {
@@ -1192,7 +1181,7 @@ function LaptopInsightsSections({
             <ScrollArea className="h-[min(520px,60vh)] rounded-xl border border-border/70">
               <Accordion type="multiple" className="p-2">
                 {filteredDepartments.map((department) => {
-                  const { laptop, desktop } = countDepartmentFormFactors(
+                  const { laptop, desktop, leasing } = countDepartmentFormFactors(
                     department.staff,
                     assetCategoryById,
                   );
@@ -1208,7 +1197,7 @@ function LaptopInsightsSections({
                             {department.department}
                           </span>
                           <span className="shrink-0 text-[11px] font-medium tabular-nums text-muted-foreground">
-                            Laptop: {laptop} · Desktop: {desktop}
+                            Laptop: {laptop} · Desktop: {desktop} · Leasing: {leasing}
                           </span>
                         </div>
                       </AccordionTrigger>

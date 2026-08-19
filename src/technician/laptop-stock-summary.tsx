@@ -8,6 +8,7 @@ import {
   type LaptopAsset,
   type LaptopAssignmentBucket,
 } from '@/lib/inventory-schema';
+import { InsightStatCard } from '@/components/insight-stat-card';
 import { cn } from '@/lib/utils';
 
 export type LaptopFormFactorFilter = 'all' | 'laptop' | 'desktop';
@@ -112,8 +113,7 @@ function FormFactorCard({
   value,
   statusRows,
   divisionRows,
-  accent,
-  iconTint,
+  tone,
   statusFilter,
   formFactorFilter,
   divisionFilter,
@@ -126,8 +126,7 @@ function FormFactorCard({
   value: number;
   statusRows: StatusCount[];
   divisionRows: LabelCount[];
-  accent: string;
-  iconTint: string;
+  tone: 'lime' | 'violet';
   statusFilter: number | null;
   formFactorFilter: LaptopFormFactorFilter;
   divisionFilter: LaptopAssignmentBucket | null;
@@ -135,18 +134,8 @@ function FormFactorCard({
   onDivisionClick: (formFactor: 'laptop' | 'desktop', division: LaptopAssignmentBucket) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
-      <div className={cn('flex items-center justify-between gap-3 px-4 py-3', accent)}>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">{label}</p>
-          <p className="text-3xl font-bold tabular-nums leading-none text-foreground">{value}</p>
-        </div>
-        <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full', iconTint)}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-
-      <div className="space-y-3 p-4">
+    <InsightStatCard icon={Icon} label={label} value={value} tone={tone}>
+      <div className="space-y-3">
         <div>
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             By status
@@ -173,7 +162,7 @@ function FormFactorCard({
           />
         </div>
       </div>
-    </div>
+    </InsightStatCard>
   );
 }
 
@@ -225,8 +214,7 @@ export function LaptopAssetStockSummary({
         value={laptopItems.length}
         statusRows={countStatusRows(laptopItems)}
         divisionRows={countDivisionRows(laptopItems)}
-        accent="bg-sky-50 dark:bg-sky-950/40"
-        iconTint="bg-sky-500/15 text-sky-700 dark:text-sky-300"
+        tone="lime"
         statusFilter={statusFilter}
         formFactorFilter={formFactorFilter}
         divisionFilter={divisionFilter}
@@ -240,8 +228,7 @@ export function LaptopAssetStockSummary({
         value={desktopItems.length}
         statusRows={countStatusRows(desktopItems)}
         divisionRows={countDivisionRows(desktopItems)}
-        accent="bg-violet-50 dark:bg-violet-950/40"
-        iconTint="bg-violet-500/15 text-violet-700 dark:text-violet-300"
+        tone="violet"
         statusFilter={statusFilter}
         formFactorFilter={formFactorFilter}
         divisionFilter={divisionFilter}

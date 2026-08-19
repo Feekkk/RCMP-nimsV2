@@ -4,6 +4,7 @@ import { countStockAssets, type StockStatusCount } from '@/hooks/assets';
 import { STATUS_ID } from '@/lib/asset-status-actions';
 import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@/lib/deploy-return-schema';
 import { formatStatusLabel, OUTSTOCK_STATUS_IDS, type AssetKind } from '@/lib/inventory-schema';
+import { InsightStatCard } from '@/components/insight-stat-card';
 import { cn } from '@/lib/utils';
 
 export type AssetStockBreakdownFilter =
@@ -188,7 +189,7 @@ function StockCountCard({
   label,
   value,
   sections,
-  tint,
+  tone,
   activeFilter,
   onFilterClick,
 }: {
@@ -196,27 +197,18 @@ function StockCountCard({
   label: string;
   value: number;
   sections: { title?: string; rows: BreakdownRow[] }[];
-  tint: string;
+  tone: 'emerald' | 'rose';
   activeFilter: AssetStockBreakdownFilter | null;
   onFilterClick: (filter: AssetStockBreakdownFilter) => void;
 }) {
   return (
-    <div className="rounded-[14px] border border-border bg-card p-4">
-      <div className="flex items-start gap-3">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${tint}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className="text-xl font-bold tabular-nums text-foreground">{value}</p>
-        </div>
-      </div>
+    <InsightStatCard icon={Icon} label={label} value={value} tone={tone}>
       <BreakdownList
         sections={sections}
         activeFilter={activeFilter}
         onFilterClick={onFilterClick}
       />
-    </div>
+    </InsightStatCard>
   );
 }
 
@@ -252,7 +244,7 @@ export function AssetStockSummary({
         label="In stock"
         value={instock}
         sections={[{ rows: statusRowsToBreakdown(instockByStatus) }]}
-        tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+        tone="emerald"
         activeFilter={activeFilter}
         onFilterClick={onFilterClick}
       />
@@ -264,7 +256,7 @@ export function AssetStockSummary({
           { title: 'Place', rows: outstockSections.place },
           { title: 'Status', rows: outstockSections.status },
         ]}
-        tint="bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200"
+        tone="rose"
         activeFilter={activeFilter}
         onFilterClick={onFilterClick}
       />

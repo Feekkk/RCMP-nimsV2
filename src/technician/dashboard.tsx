@@ -65,21 +65,21 @@ export function TechnicianDashboardPage() {
           icon={Laptop}
           label={ASSET_KIND_LABEL.laptop}
           stats={stats?.laptop ?? EMPTY_ASSET_STATS}
-          tint="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200"
+          tone="lime"
           href="/technician/laptop"
         />
         <InventoryStatCard
           icon={Tv}
           label={ASSET_KIND_LABEL.av}
           stats={stats?.av ?? EMPTY_ASSET_STATS}
-          tint="bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200"
+          tone="sky"
           href="/technician/av"
         />
         <InventoryStatCard
           icon={Network}
           label={ASSET_KIND_LABEL.network}
           stats={stats?.network ?? EMPTY_ASSET_STATS}
-          tint="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+          tone="violet"
           href="/technician/network"
         />
       </div>
