@@ -67,60 +67,266 @@ export {
 
 const VALID_STATUS_IDS = new Set(INVENTORY_STATUSES.map((s) => s.statusId));
 
+function csvEscape(value: string): string {
+  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
+function toCsv(columns: readonly string[], records: Record<string, string>[]): string {
+  const header = columns.join(',');
+  const lines = records.map((record) => columns.map((col) => csvEscape(record[col] ?? '')).join(','));
+  return [header, ...lines].join('\n');
+}
+
 const MOCK_CSV: Record<AssetKind, string> = {
-  laptop: `asset_id,acc_code,serial_num,brand,model,supplier,category,part_number,processor,memory,os,storage,gpu,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,handover_staff_id,handover_date,handover_remarks,employee_no
-,200-0500,DL-5450-001,Dell,Latitude 5450,Dell,Notebook,PN-5450,Intel i5-1345U,16GB,Windows 11,512GB,,15/1/24,PO-2024-001,1/2/24,DO-9001,10/2/24,INV-7788,1299.00,1,HQ staging (auto 12-xx-xxx),,,,
-,200-0500,HP-DEPLOY-01,HP,EliteBook 840,HP,Notebook,,Intel i7,16GB,Windows 11,512GB,,,,,,,,,3,With user,tech@example.com,15/1/26,Issued for project,EMP10001
-,992-000,LN-LEASE-001,Lenovo,ThinkPad T14,Lenovo,Leasing Laptop,,Intel i7,16GB,Windows 11,512GB,,1/3/25,PO-LEASE-01,,,,,1099.00,1,Leased fleet (auto 12-xx-xxx),,,,
-,992-000,DT-LEASE-001,Dell,OptiPlex 7090,Dell,Leasing Desktop,,Intel i5,8GB,Windows 11,256GB,,1/3/25,PO-LEASE-02,,,,,899.00,1,Leased desktop (auto 14-xx-xxx),,,,`,
-  av: `asset_id,acc_code,asset_id_old,category,brand,model,supplier,serial_num,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
-,200-0500,AV-LEG-001,display,Samsung,QM65C,Samsung,SM-QM65-100,1/6/23,PO-AV-100,,,,,899.00,1,Briefing B (auto 88-xx-xxx),,,,,,
-,992-000,AV-DEPLOY-01,AV-DEP-88,projector,Epson,Epson,EB-L200F,EPS-L200F-99,,,,,,,,3,Training room,tech@example.com,Main,-,-,15/1/26,Installed in room`,
-  network: `asset_id,acc_code,category,serial_num,brand,model,supplier,mac_address,ip_address,po_date,po_num,do_date,do_num,invoice_date,invoice_num,purchase_cost,status_id,remarks,deployment_staff_id,building,level,zone,deployment_date,deployment_remarks
-,200-0500,switch,CS-9200-24P,Cisco,C9200-24P,Cisco,00:11:22:33:44:55,10.10.1.20,10/3/23,PO-NET-55,1/4/23,DO-N-12,,,4500.00,7,Rack 2 (auto 24-xx-xxx),,,,,,
-,992-000,AP,SW-DEPLOY-01,Aruba,AP-505,Aruba,00:aa:bb:cc:dd:ee,10.10.2.60,,,,,,,,3,IDF East,tech@example.com,Annex,-,-,1/2/26,East wing`,
+  laptop: toCsv(BULK_IMPORT_COLUMNS.laptop, [
+    {
+      acc_code: '200-0500',
+      serial_num: 'DL-5450-001',
+      brand: 'Dell',
+      model: 'Latitude 5450',
+      supplier: 'Dell',
+      category: 'Notebook',
+      part_number: 'PN-5450',
+      processor: 'Intel i5-1345U',
+      memory: '16GB',
+      os: 'Windows 11',
+      storage: '512GB',
+      po_date: '15/1/24',
+      po_num: 'PO-2024-001',
+      do_date: '1/2/24',
+      do_num: 'DO-9001',
+      invoice_date: '10/2/24',
+      invoice_num: 'INV-7788',
+      purchase_cost: '1299.00',
+      status_id: '1',
+      remarks: 'HQ staging (auto 12-xx-xxx)',
+    },
+    {
+      acc_code: '200-0500',
+      serial_num: 'HP-DEPLOY-01',
+      brand: 'HP',
+      model: 'EliteBook 840',
+      supplier: 'HP',
+      category: 'Notebook',
+      processor: 'Intel i7',
+      memory: '16GB',
+      os: 'Windows 11',
+      storage: '512GB',
+      status_id: '3',
+      remarks: 'With user',
+      handover_staff_id: 'tech@example.com',
+      handover_date: '15/1/26',
+      handover_remarks: 'Issued for project',
+      employee_no: 'EMP10001',
+    },
+    {
+      acc_code: '992-000',
+      serial_num: 'LN-LEASE-001',
+      brand: 'Lenovo',
+      model: 'ThinkPad T14',
+      supplier: 'Lenovo',
+      category: 'Leasing Laptop',
+      processor: 'Intel i7',
+      memory: '16GB',
+      os: 'Windows 11',
+      storage: '512GB',
+      po_date: '1/3/25',
+      po_num: 'PO-LEASE-01',
+      purchase_cost: '1099.00',
+      status_id: '1',
+      remarks: 'Leased fleet (auto 12-xx-xxx)',
+    },
+    {
+      acc_code: '992-000',
+      serial_num: 'DT-LEASE-001',
+      brand: 'Dell',
+      model: 'OptiPlex 7090',
+      supplier: 'Dell',
+      category: 'Leasing Desktop',
+      processor: 'Intel i5',
+      memory: '8GB',
+      os: 'Windows 11',
+      storage: '256GB',
+      po_date: '1/3/25',
+      po_num: 'PO-LEASE-02',
+      purchase_cost: '899.00',
+      status_id: '1',
+      remarks: 'Leased desktop (auto 14-xx-xxx)',
+    },
+  ]),
+  av: toCsv(BULK_IMPORT_COLUMNS.av, [
+    {
+      acc_code: '200-0500',
+      asset_id_old: 'AV-LEG-001',
+      category: 'display',
+      brand: 'Samsung',
+      model: 'QM65C',
+      supplier: 'Samsung',
+      serial_num: 'SM-QM65-100',
+      po_date: '1/6/23',
+      po_num: 'PO-AV-100',
+      purchase_cost: '899.00',
+      status_id: '1',
+      remarks: 'Briefing B (auto 88-xx-xxx)',
+    },
+    {
+      acc_code: '992-000',
+      asset_id_old: 'AV-DEP-88',
+      category: 'projector',
+      brand: 'Epson',
+      model: 'EB-L200F',
+      supplier: 'Epson',
+      serial_num: 'EPS-L200F-99',
+      status_id: '3',
+      remarks: 'Training room',
+      deployment_staff_id: 'tech@example.com',
+      building: 'Main',
+      level: '-',
+      zone: '-',
+      deployment_date: '15/1/26',
+      deployment_remarks: 'Installed in room',
+    },
+  ]),
+  network: toCsv(BULK_IMPORT_COLUMNS.network, [
+    {
+      acc_code: '200-0500',
+      category: 'switch',
+      serial_num: 'CS-9200-24P',
+      brand: 'Cisco',
+      model: 'C9200-24P',
+      supplier: 'Cisco',
+      mac_address: '00:11:22:33:44:55',
+      ip_address: '10.10.1.20',
+      po_date: '10/3/23',
+      po_num: 'PO-NET-55',
+      do_date: '1/4/23',
+      do_num: 'DO-N-12',
+      purchase_cost: '4500.00',
+      status_id: '7',
+      remarks: 'Rack 2 (auto 24-xx-xxx)',
+    },
+    {
+      acc_code: '992-000',
+      category: 'AP',
+      serial_num: 'SW-DEPLOY-01',
+      brand: 'Aruba',
+      model: 'AP-505',
+      supplier: 'Aruba',
+      mac_address: '00:aa:bb:cc:dd:ee',
+      ip_address: '10.10.2.60',
+      status_id: '3',
+      remarks: 'IDF East',
+      deployment_staff_id: 'tech@example.com',
+      building: 'Annex',
+      level: '-',
+      zone: '-',
+      deployment_date: '1/2/26',
+      deployment_remarks: 'East wing',
+    },
+  ]),
+};
+
+const HEADER_ALIASES: Record<string, string> = {
+  acccode: 'acc_code',
+  accountcode: 'acc_code',
+  assetid: 'asset_id',
+  assetidold: 'asset_id_old',
+  serialnum: 'serial_num',
+  serialnumber: 'serial_num',
+  partnumber: 'part_number',
+  podate: 'po_date',
+  ponum: 'po_num',
+  ponumber: 'po_num',
+  dodate: 'do_date',
+  donum: 'do_num',
+  invoicedate: 'invoice_date',
+  invoicenum: 'invoice_num',
+  invoicenumber: 'invoice_num',
+  purchasecost: 'purchase_cost',
+  statusid: 'status_id',
+  warrantystartdate: 'warranty_start_date',
+  warrantyenddate: 'warranty_end_date',
+  warrantyremarks: 'warranty_remarks',
+  handoverstaffid: 'handover_staff_id',
+  handoverdate: 'handover_date',
+  handoverremarks: 'handover_remarks',
+  employeeno: 'employee_no',
+  employeenumber: 'employee_no',
+  deploymentstaffid: 'deployment_staff_id',
+  deploymentdate: 'deployment_date',
+  deploymentremarks: 'deployment_remarks',
+  macaddress: 'mac_address',
+  ipaddress: 'ip_address',
 };
 
 function normalizeHeader(h: string) {
-  return h.trim().toLowerCase().replace(/\s+/g, '');
+  const n = h.trim().toLowerCase().replace(/\s+/g, '');
+  return HEADER_ALIASES[n] ?? n;
+}
+
+function detectDelimiter(text: string): ',' | ';' {
+  let commas = 0;
+  let semicolons = 0;
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (!inQuotes && (ch === '\n' || ch === '\r')) {
+      break;
+    } else if (!inQuotes && ch === ',') {
+      commas += 1;
+    } else if (!inQuotes && ch === ';') {
+      semicolons += 1;
+    }
+  }
+  return semicolons > commas ? ';' : ',';
 }
 
 function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-  const lines = text
-    .replace(/^\uFEFF/, '')
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  const src = text.replace(/^\uFEFF/, '');
+  if (!src.trim()) return { headers: [], rows: [] };
 
-  if (lines.length === 0) return { headers: [], rows: [] };
+  const delimiter = detectDelimiter(src);
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cur = '';
+  let inQuotes = false;
 
-  const parseLine = (line: string): string[] => {
-    const out: string[] = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          cur += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (ch === ',' && !inQuotes) {
-        out.push(cur.trim());
-        cur = '';
-      } else {
-        cur += ch;
-      }
-    }
-    out.push(cur.trim());
-    return out;
+  const pushRow = () => {
+    row.push(cur.trim());
+    cur = '';
+    if (row.some((cell) => cell.length > 0)) rows.push(row);
+    row = [];
   };
 
-  const headers = parseLine(lines[0]);
-  const rows = lines.slice(1).map(parseLine);
-  return { headers, rows };
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '"') {
+      if (inQuotes && src[i + 1] === '"') {
+        cur += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === delimiter && !inQuotes) {
+      row.push(cur.trim());
+      cur = '';
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && src[i + 1] === '\n') i += 1;
+      pushRow();
+    } else if (ch === '\r' || ch === '\n') {
+      cur += ' ';
+    } else {
+      cur += ch;
+    }
+  }
+  pushRow();
+
+  if (rows.length === 0) return { headers: [], rows: [] };
+  const [headers, ...data] = rows;
+  return { headers, rows: data };
 }
 
 function parseStatusId(raw: string, row: number, errors: BulkImportRowError[]): number | null {
@@ -186,6 +392,22 @@ function buildColumnIndex(headers: string[], expected: readonly string[], errors
     }
   }
   return index;
+}
+
+function warnIfColumnsShifted(
+  row: string[],
+  col: Map<string, number>,
+  rowNum: number,
+  errors: BulkImportRowError[],
+) {
+  const statusIdx = col.get('status_id');
+  if (statusIdx === undefined) return;
+  if (row.length > statusIdx) return;
+  errors.push({
+    row: rowNum,
+    message:
+      'This row has fewer columns than the header, so status_id (and later fields) are empty. Quote any commas inside text, keep acc_code and supplier as their own columns, and re-download the latest template.',
+  });
 }
 
 function rowHasErrors(errors: BulkImportRowError[], rowNum: number) {
@@ -333,6 +555,7 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
+    warnIfColumnsShifted(row, col, rowNum, errors);
     const assetId = parseOptionalAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
     const accCode = parseAccCode(row[col.get('acc_code')!] ?? '', rowNum, errors);
     const serialNum = requireCell(row, col.get('serial_num')!, 'serial_num', rowNum, errors);
@@ -394,6 +617,7 @@ function parseAvRows(headers: string[], rows: string[][]) {
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
+    warnIfColumnsShifted(row, col, rowNum, errors);
     const assetId = parseOptionalAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
     const accCode = parseAccCode(row[col.get('acc_code')!] ?? '', rowNum, errors);
     const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
@@ -437,6 +661,7 @@ function parseNetworkRows(headers: string[], rows: string[][]) {
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
+    warnIfColumnsShifted(row, col, rowNum, errors);
     const assetId = parseOptionalAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
     const accCode = parseAccCode(row[col.get('acc_code')!] ?? '', rowNum, errors);
     const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
