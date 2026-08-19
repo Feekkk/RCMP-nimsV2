@@ -3,6 +3,7 @@ import type { RowDataPacket } from 'mysql2';
 import { isAdminRole, isDisposalUnitRole, isStaffRole } from '@/lib/auth-session';
 import type { AuthUserRow } from '@/server/auth/auth-repo.server';
 import { apiError } from '@/server/core/api-response.server';
+import { loadServerEnv } from '@/server/core/env.server';
 import { assertAdminRole } from '@/server/auth/admin-auth.server';
 import { assertStaffRole } from '@/server/auth/technician-auth.server';
 
@@ -33,7 +34,8 @@ export type TokenPair = {
 };
 
 function jwtSecret(): string {
-  const secret = process.env.API_JWT_SECRET?.trim();
+  loadServerEnv();
+  const secret = process.env.API_JWT_SECRET?.trim() || process.env.SESSION_SECRET?.trim();
   if (!secret) {
     throw new Error('API authentication is not configured. Set API_JWT_SECRET on the server.');
   }
