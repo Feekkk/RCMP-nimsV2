@@ -240,13 +240,16 @@ export type AssetDetailResponse = {
 /** status_id = deploy — handover / deployment columns become required on import */
 export const BULK_IMPORT_STATUS_DEPLOY = 3;
 
-/** Laptop handover (`handover` table) — required when status_id is 3 */
+/** Laptop staff handover (`handover` + `handover_staff`) — used when status_id is 3 */
 export const BULK_LAPTOP_HANDOVER_COLUMNS = [
   'handover_staff_id',
   'handover_date',
   'handover_remarks',
   'employee_no',
 ] as const;
+
+/** Laptop facility / place handover (`handover.building` / `handler`) — used when status_id is 3 */
+export const BULK_LAPTOP_PLACE_COLUMNS = ['building', 'level', 'zone', 'handler'] as const;
 
 /** AV / network deployment — required when status_id is 3 */
 export const BULK_PLACE_DEPLOYMENT_COLUMNS = [
@@ -306,6 +309,7 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
     'warranty_end_date',
     'warranty_remarks',
     ...BULK_LAPTOP_HANDOVER_COLUMNS,
+    ...BULK_LAPTOP_PLACE_COLUMNS,
   ],
   av: [
     'asset_id',
@@ -345,11 +349,72 @@ export const BULK_IMPORT_COLUMNS: Record<AssetKind, readonly string[]> = {
 };
 
 export function bulkImportDeployColumns(kind: AssetKind): readonly string[] {
-  return kind === 'laptop' ? BULK_LAPTOP_HANDOVER_COLUMNS : BULK_PLACE_DEPLOYMENT_COLUMNS;
+  return kind === 'laptop'
+    ? [...BULK_LAPTOP_HANDOVER_COLUMNS, ...BULK_LAPTOP_PLACE_COLUMNS]
+    : BULK_PLACE_DEPLOYMENT_COLUMNS;
 }
 
 export function bulkImportDeployRequiredColumns(kind: AssetKind): readonly string[] {
-  return kind === 'laptop' ? BULK_LAPTOP_HANDOVER_REQUIRED : BULK_PLACE_DEPLOYMENT_REQUIRED;
+  if (kind !== 'laptop') return BULK_PLACE_DEPLOYMENT_REQUIRED;
+  return [
+    ...BULK_LAPTOP_HANDOVER_REQUIRED,
+    'employee_no',
+    ...BULK_LAPTOP_PLACE_COLUMNS.filter((column) => column === 'building' || column === 'handler'),
+  ];
+}
+
+/** Columns for importing assets without creating a handover / deployment record. */
+export function bulkImportAssetOnlyColumns(kind: AssetKind): readonly string[] {
+  const deployColumns = new Set<string>(bulkImportDeployColumns(kind));
+  return BULK_IMPORT_COLUMNS[kind].filter((column) => !deployColumns.has(column));
+}
+
+export function bulkImportHandoverTemplateColumns(kind: AssetKind): readonly string[] {
+  if (kind !== 'laptop') return BULK_IMPORT_COLUMNS[kind];
+  const place = new Set<string>(BULK_LAPTOP_PLACE_COLUMNS);
+  return BULK_IMPORT_COLUMNS.laptop.filter((column) => !place.has(column));
+}
+
+export function bulkImportPlaceTemplateColumns(kind: AssetKind): readonly string[] {
+  if (kind !== 'laptop') return BULK_IMPORT_COLUMNS[kind];
+  const staffOnly = new Set<string>(['employee_no']);
+  return BULK_IMPORT_COLUMNS.laptop.filter((column) => !staffOnly.has(column));
+}
+
+export type BulkImportTemplateVariant = 'asset' | 'deploy' | 'place';
+
+export function bulkImportTemplateColumns(
+  kind: AssetKind,
+  variant: BulkImportTemplateVariant,
+): readonly string[] {
+  if (variant === 'place') return bulkImportPlaceTemplateColumns(kind);
+  if (variant === 'deploy') return bulkImportHandoverTemplateColumns(kind);
+  return bulkImportAssetOnlyColumns(kind);
+}
+
+export function bulkImportTemplateStatusId(variant: BulkImportTemplateVariant): number {
+  return variant === 'asset' ? 1 : BULK_IMPORT_STATUS_DEPLOY;
+}
+
+export function bulkImportTemplateRequiredColumns(
+  kind: AssetKind,
+  variant: BulkImportTemplateVariant,
+): readonly string[] {
+  const required = new Set<string>(BULK_IMPORT_REQUIRED[kind]);
+  if (variant === 'deploy') {
+    if (kind === 'laptop') {
+      for (const column of BULK_LAPTOP_HANDOVER_REQUIRED) required.add(column);
+      required.add('employee_no');
+    } else {
+      for (const column of BULK_PLACE_DEPLOYMENT_REQUIRED) required.add(column);
+    }
+  }
+  if (variant === 'place') {
+    for (const column of BULK_LAPTOP_HANDOVER_REQUIRED) required.add(column);
+    required.add('building');
+    required.add('handler');
+  }
+  return [...required];
 }
 
 /** In stock — on-site / available (new, return, or reserved for a request). */

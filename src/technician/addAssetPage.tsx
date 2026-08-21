@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, Laptop, Network, Tv } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,13 +17,23 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { INVENTORY_STATUSES, ACC_CODE_OPTIONS } from '@/lib/inventory-schema';
 import { STATUS_ID } from '@/lib/asset-status-actions';
-import { emptyPurchaseFormState, purchaseFormToInput } from '@/lib/purchase-field-utils';
-import { emptyWarrantyFormState, warrantyFormToInput } from '@/lib/warranty-field-utils';
 import {
-  formatAssetIdDisplay,
+  emptyPurchaseFormState,
+  purchaseFormToInput,
+  type PurchaseFormState,
+} from '@/lib/purchase-field-utils';
+import {
+  emptyWarrantyFormState,
+  warrantyFormToInput,
+  type WarrantyFormState,
+} from '@/lib/warranty-field-utils';
+import {
+  ASSET_ID_PREFIX,
+  getAssetIdYearDigits,
+  getLaptopAssetIdPrefix,
   LAPTOP_CATEGORY_OPTIONS,
-  useNextAssetId,
 } from '@/hooks/assetid-generator';
+import { cn } from '@/lib/utils';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { PurchaseFieldsSection } from '@/technician/asset-purchase-fields';
 import { WarrantyFieldsSection } from '@/technician/warranty-fields';
@@ -39,6 +49,28 @@ import {
 
 type AddAssetSearch = { kind?: AssetKind };
 
+type AssetEntry = {
+  key: string;
+  accCode: string;
+  brand: string;
+  model: string;
+  supplier: string;
+  serialNum: string;
+  remarks: string;
+  category: string;
+  partNumber: string;
+  processor: string;
+  memory: string;
+  os: string;
+  storage: string;
+  gpu: string;
+  assetIdOld: string;
+  macAddress: string;
+  ipAddress: string;
+  purchase: PurchaseFormState;
+  warranty: WarrantyFormState;
+};
+
 const KIND_OPTIONS: { kind: AssetKind; icon: typeof Laptop; description: string }[] = [
   { kind: 'laptop', icon: Laptop, description: 'Full laptop table incl. PO / DO / invoice fields' },
   { kind: 'av', icon: Tv, description: 'Full av table incl. asset_id_old & procurement' },
@@ -47,6 +79,48 @@ const KIND_OPTIONS: { kind: AssetKind; icon: typeof Laptop; description: string 
 
 function isAssetKind(value: unknown): value is AssetKind {
   return value === 'laptop' || value === 'av' || value === 'network';
+}
+
+function newEntry(kind: AssetKind): AssetEntry {
+  return {
+    key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    accCode: '',
+    brand: '',
+    model: '',
+    supplier: '',
+    serialNum: '',
+    remarks: '',
+    category: kind === 'laptop' ? LAPTOP_CATEGORY_OPTIONS[0] : '',
+    partNumber: '',
+    processor: '',
+    memory: '',
+    os: '',
+    storage: '',
+    gpu: '',
+    assetIdOld: '',
+    macAddress: '',
+    ipAddress: '',
+    purchase: emptyPurchaseFormState(),
+    warranty: emptyWarrantyFormState(),
+  };
+}
+
+function assetIdHint(kind: AssetKind, category: string): string {
+  const year = String(getAssetIdYearDigits()).padStart(2, '0');
+  if (kind === 'av') return `${ASSET_ID_PREFIX.av}-${year}-xxx`;
+  if (kind === 'network') return `${ASSET_ID_PREFIX.network}-${year}-xxx`;
+  try {
+    return `${getLaptopAssetIdPrefix(category)}-${year}-xxx`;
+  } catch {
+    return 'Select a category';
+  }
+}
+
+function entrySummary(entry: AssetEntry, index: number): { title: string; subtitle: string } {
+  const title = entry.serialNum.trim() || entry.model.trim() || `Asset ${index + 1}`;
+  const bits = [entry.brand, entry.model, entry.category].map((v) => v.trim()).filter(Boolean);
+  const subtitle = bits.filter((bit) => bit !== title).join(' · ') || 'No details yet';
+  return { title, subtitle };
 }
 
 export function TechnicianAddAssetPage() {
@@ -84,7 +158,7 @@ export function TechnicianAddAssetPage() {
               <CardContent className="flex flex-col gap-2 pt-0">
                 <Button variant="outline" size="sm" className="w-full rounded-[8px]" asChild>
                   <Link to="/technician/add-asset" search={{ kind: k }}>
-                    Single asset
+                    Register assets
                   </Link>
                 </Button>
                 <Button variant="secondary" size="sm" className="w-full rounded-[8px]" asChild>
@@ -108,13 +182,17 @@ export function TechnicianAddAssetPage() {
           setSelectedKind(null);
           void navigate({ to: '/technician/add-asset', search: {} });
         }}
-        onCreated={(createdKind) => {
-          toast.success(`${ASSET_KIND_LABEL[createdKind]} registered`);
+        onCreated={(createdKind, count) => {
+          toast.success(
+            count === 1
+              ? `${ASSET_KIND_LABEL[createdKind]} registered`
+              : `Registered ${count} ${ASSET_KIND_LABEL[createdKind].toLowerCase()} assets`,
+          );
           void navigate({ to: ASSET_LIST_PATH[createdKind] });
         }}
-        createLaptop={laptop.create}
-        createAv={av.create}
-        createNetwork={network.create}
+        bulkCreateLaptop={laptop.bulkCreate}
+        bulkCreateAv={av.bulkCreate}
+        bulkCreateNetwork={network.bulkCreate}
       />
     </TechnicianShell>
   );
@@ -124,136 +202,147 @@ function AssetForm({
   kind,
   onBack,
   onCreated,
-  createLaptop,
-  createAv,
-  createNetwork,
+  bulkCreateLaptop,
+  bulkCreateAv,
+  bulkCreateNetwork,
 }: {
   kind: AssetKind;
   onBack: () => void;
-  onCreated: (kind: AssetKind) => void;
-  createLaptop: (input: CreateLaptopInput) => Promise<unknown>;
-  createAv: (input: CreateAvInput) => Promise<unknown>;
-  createNetwork: (input: CreateNetworkInput) => Promise<unknown>;
+  onCreated: (kind: AssetKind, count: number) => void;
+  bulkCreateLaptop: (
+    rows: Array<Omit<CreateLaptopInput, 'assetId'> & { assetId?: number }>,
+  ) => Promise<number>;
+  bulkCreateAv: (rows: Array<Omit<CreateAvInput, 'assetId'> & { assetId?: number }>) => Promise<number>;
+  bulkCreateNetwork: (
+    rows: Array<Omit<CreateNetworkInput, 'assetId'> & { assetId?: number }>,
+  ) => Promise<number>;
 }) {
   const [saving, setSaving] = useState(false);
-  const [accCode, setAccCode] = useState('');
-  const [model, setModel] = useState('');
-  const [brand, setBrand] = useState('');
-  const [serialNum, setSerialNum] = useState('');
-  const [supplier, setSupplier] = useState('');
+  const [entries, setEntries] = useState<AssetEntry[]>(() => [newEntry(kind)]);
+  const [selectedKey, setSelectedKey] = useState(entries[0].key);
   const statusId = STATUS_ID.NEW;
-  const [remarks, setRemarks] = useState('');
-  const [purchase, setPurchase] = useState(emptyPurchaseFormState);
-  const [warranty, setWarranty] = useState(emptyWarrantyFormState);
+  const selectedIndex = entries.findIndex((entry) => entry.key === selectedKey);
+  const selected = entries[selectedIndex] ?? entries[0];
 
-  const [category, setCategory] = useState<string>(LAPTOP_CATEGORY_OPTIONS[0]);
-  const [partNumber, setPartNumber] = useState('');
-  const [processor, setProcessor] = useState('');
-  const [memory, setMemory] = useState('');
-  const [os, setOs] = useState('');
-  const [storage, setStorage] = useState('');
-  const [gpu, setGpu] = useState('');
+  const updateEntry = (key: string, patch: Partial<AssetEntry>) => {
+    setEntries((current) => current.map((entry) => (entry.key === key ? { ...entry, ...patch } : entry)));
+  };
 
-  const [assetIdOld, setAssetIdOld] = useState('');
-  const [avCategory, setAvCategory] = useState('');
+  const addEntry = () => {
+    const next = newEntry(kind);
+    setEntries((current) => [...current, next]);
+    setSelectedKey(next.key);
+  };
 
-  const [macAddress, setMacAddress] = useState('');
-  const [ipAddress, setIpAddress] = useState('');
-  const [networkCategory, setNetworkCategory] = useState('');
-
-  const {
-    assetId: generatedAssetId,
-    isLoading: assetIdLoading,
-    error: assetIdError,
-    refetch: refetchAssetId,
-  } = useNextAssetId(kind, kind === 'laptop' ? category : undefined);
+  const removeEntry = (key: string) => {
+    setEntries((current) => {
+      const index = current.findIndex((entry) => entry.key === key);
+      const remaining = current.filter((entry) => entry.key !== key);
+      const fallback = remaining[Math.max(0, index - 1)] ?? remaining[0];
+      if (fallback) setSelectedKey(fallback.key);
+      return remaining;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = await refetchAssetId();
-    if (id == null || id <= 0) {
-      toast.error(assetIdError ?? 'A new asset ID could not be generated. Try again or refresh the page.');
+    if (entries.length === 0) {
+      toast.error('Add at least one asset.');
       return;
     }
 
-    const purchaseInput = purchaseFormToInput(purchase);
-    const hasWarrantyPartial =
-      Boolean(warranty.startDate.trim()) ||
-      Boolean(warranty.endDate.trim()) ||
-      Boolean(warranty.remarks.trim());
-    const warrantyInput = warrantyFormToInput(warranty);
-    if (hasWarrantyPartial && !warrantyInput) {
-      toast.error('Warranty requires both a start date and an end date. Fill in both or leave warranty blank.');
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      if (kind === 'laptop' && !entry.serialNum.trim()) {
+        toast.error(`Serial number is required for asset ${i + 1}.`);
+        setSelectedKey(entry.key);
+        return;
+      }
+      if (kind === 'laptop' && !entry.category.trim()) {
+        toast.error(`Category is required for asset ${i + 1}.`);
+        setSelectedKey(entry.key);
+        return;
+      }
+      const hasWarrantyPartial =
+        Boolean(entry.warranty.startDate.trim()) ||
+        Boolean(entry.warranty.endDate.trim()) ||
+        Boolean(entry.warranty.remarks.trim());
+      if (hasWarrantyPartial && !warrantyFormToInput(entry.warranty)) {
+        toast.error(
+          `Warranty on asset ${i + 1} needs both a start date and an end date, or leave warranty blank.`,
+        );
+        setSelectedKey(entry.key);
+        return;
+      }
+    }
+
+    const serials = entries.map((entry) => entry.serialNum.trim().toLowerCase()).filter(Boolean);
+    const duplicate = serials.find((serial, index) => serials.indexOf(serial) !== index);
+    if (duplicate) {
+      toast.error(`Serial number "${duplicate}" is used more than once in this batch.`);
       return;
     }
 
     setSaving(true);
     try {
       if (kind === 'laptop') {
-        if (!serialNum.trim()) {
-          toast.error('Serial number is required for laptops. Enter the device serial number.');
-          setSaving(false);
-          return;
-        }
-        if (!category.trim()) {
-          toast.error('Category is required for laptops. Select or enter a category.');
-          setSaving(false);
-          return;
-        }
-        await createLaptop({
-          assetId: id,
-          accCode: accCode.trim() || null,
-          serialNum: serialNum.trim(),
-          category: category.trim(),
-          brand: brand.trim() || null,
-          model: model.trim() || null,
-          supplier: supplier.trim() || null,
-          partNumber: partNumber.trim() || null,
-          processor: processor.trim() || null,
-          memory: memory.trim() || null,
-          os: os.trim() || null,
-          storage: storage.trim() || null,
-          gpu: gpu.trim() || null,
-          ...purchaseInput,
-          statusId,
-          remarks: remarks.trim() || null,
-          warranty: warrantyInput,
-        });
+        await bulkCreateLaptop(
+          entries.map((entry) => ({
+            accCode: entry.accCode.trim() || null,
+            serialNum: entry.serialNum.trim(),
+            category: entry.category.trim(),
+            brand: entry.brand.trim() || null,
+            model: entry.model.trim() || null,
+            supplier: entry.supplier.trim() || null,
+            partNumber: entry.partNumber.trim() || null,
+            processor: entry.processor.trim() || null,
+            memory: entry.memory.trim() || null,
+            os: entry.os.trim() || null,
+            storage: entry.storage.trim() || null,
+            gpu: entry.gpu.trim() || null,
+            ...purchaseFormToInput(entry.purchase),
+            statusId,
+            remarks: entry.remarks.trim() || null,
+            warranty: warrantyFormToInput(entry.warranty),
+          })),
+        );
       } else if (kind === 'av') {
-        await createAv({
-          assetId: id,
-          accCode: accCode.trim() || null,
-          assetIdOld: assetIdOld.trim() || null,
-          category: avCategory.trim() || null,
-          brand: brand.trim() || null,
-          model: model.trim() || null,
-          supplier: supplier.trim() || null,
-          serialNum: serialNum.trim() || null,
-          ...purchaseInput,
-          statusId,
-          remarks: remarks.trim() || null,
-          warranty: warrantyInput,
-        });
+        await bulkCreateAv(
+          entries.map((entry) => ({
+            accCode: entry.accCode.trim() || null,
+            assetIdOld: entry.assetIdOld.trim() || null,
+            category: entry.category.trim() || null,
+            brand: entry.brand.trim() || null,
+            model: entry.model.trim() || null,
+            supplier: entry.supplier.trim() || null,
+            serialNum: entry.serialNum.trim() || null,
+            ...purchaseFormToInput(entry.purchase),
+            statusId,
+            remarks: entry.remarks.trim() || null,
+            warranty: warrantyFormToInput(entry.warranty),
+          })),
+        );
       } else {
-        await createNetwork({
-          assetId: id,
-          accCode: accCode.trim() || null,
-          category: networkCategory.trim() || null,
-          serialNum: serialNum.trim() || null,
-          brand: brand.trim() || null,
-          model: model.trim() || null,
-          supplier: supplier.trim() || null,
-          macAddress: macAddress.trim() || null,
-          ipAddress: ipAddress.trim() || null,
-          ...purchaseInput,
-          statusId,
-          remarks: remarks.trim() || null,
-          warranty: warrantyInput,
-        });
+        await bulkCreateNetwork(
+          entries.map((entry) => ({
+            accCode: entry.accCode.trim() || null,
+            category: entry.category.trim() || null,
+            serialNum: entry.serialNum.trim() || null,
+            brand: entry.brand.trim() || null,
+            model: entry.model.trim() || null,
+            supplier: entry.supplier.trim() || null,
+            macAddress: entry.macAddress.trim() || null,
+            ipAddress: entry.ipAddress.trim() || null,
+            ...purchaseFormToInput(entry.purchase),
+            statusId,
+            remarks: entry.remarks.trim() || null,
+            warranty: warrantyFormToInput(entry.warranty),
+          })),
+        );
       }
-      onCreated(kind);
+      onCreated(kind, entries.length);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'The asset could not be saved. Try again.';
+      const message = err instanceof Error ? err.message : 'The assets could not be saved. Try again.';
       toast.error(message);
     } finally {
       setSaving(false);
@@ -272,7 +361,7 @@ function AssetForm({
             Add {ASSET_KIND_LABEL[kind]}
           </h1>
           <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-            Maps to the <code className="text-[11px]">{kind}</code> table in database/schema.sql
+            Switch between assets in the list. Only one form is open at a time.
           </p>
         </div>
         <Button variant="outline" size="sm" className="rounded-[8px]" asChild>
@@ -280,184 +369,318 @@ function AssetForm({
         </Button>
       </div>
 
-      <Card className="rounded-[14px] border-border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Asset details</CardTitle>
-          <CardDescription>Please fill in the required fields.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <section className="space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Main Details</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Asset ID (auto-generated)">
-                  <div className="flex h-10 items-center gap-2 rounded-[8px] border border-input bg-muted/40 px-3 font-mono text-sm">
-                    {assetIdLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        <span className="text-muted-foreground">Checking database…</span>
-                      </>
-                    ) : generatedAssetId != null ? (
-                      <>
-                        <span>{generatedAssetId}</span>
-                        <span className="text-muted-foreground">({formatAssetIdDisplay(generatedAssetId)})</span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {kind === 'laptop' ? 'Select a category to generate ID' : 'Unavailable'}
-                      </span>
-                    )}
-                  </div>
-                </Field>
-                <Field label="Account code">
-                  <Select value={accCode || undefined} onValueChange={setAccCode}>
-                    <SelectTrigger className="rounded-[8px]">
-                      <SelectValue placeholder="Select account code" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACC_CODE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.value} ({opt.label})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field label="Status" required>
-                  <div className="flex h-10 items-center rounded-[8px] border border-input bg-muted/40 px-3 text-sm capitalize text-muted-foreground">
-                    {statusId} — {INVENTORY_STATUSES.find((s) => s.statusId === statusId)?.name ?? 'new'}
-                  </div>
-                </Field>
-                <Field label="Brand">
-                  <Input value={brand} onChange={(e) => setBrand(e.target.value)} className="rounded-[8px]" placeholder="Lenovo, HP, Dell, etc." />
-                </Field>
-                <Field label="Model">
-                  <Input value={model} onChange={(e) => setModel(e.target.value)} className="rounded-[8px]" placeholder="ThinkPad X1 Carbon, HP EliteBook 840 G8, etc." />
-                </Field>
-                <Field label="Supplier">
-                  <Input value={supplier} onChange={(e) => setSupplier(e.target.value)} className="rounded-[8px]" placeholder="Enter supplier name" />
-                </Field>
-                <Field label="Serial number" required={kind === 'laptop'}>
-                  <Input
-                    value={serialNum}
-                    onChange={(e) => setSerialNum(e.target.value)}
-                    required={kind === 'laptop'}
-                    className="rounded-[8px]"
-                    placeholder="Enter serial number (e.g. LN1234567890)"
-                  />
-                </Field>
-                <Field label="Remarks">
-                  <Textarea
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    className="min-h-[72px] rounded-[8px]"
-                    placeholder="Enter remarks (e.g. Laptop is used for development)"
-                  />
-                </Field>
-              </div>
-            </section>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-medium text-foreground">
+            {entries.length} {entries.length === 1 ? 'asset' : 'assets'} in this batch
+          </p>
+          <Button type="button" variant="outline" size="sm" className="rounded-[8px] gap-1.5" onClick={addEntry}>
+            <Plus className="h-3.5 w-3.5" />
+            Add another
+          </Button>
+        </div>
 
-            {kind === 'laptop' && (
-              <section className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Laptop</p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Category" required>
-                    <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger className="rounded-[8px]">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LAPTOP_CATEGORY_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  <Field label="Part number">
-                    <Input value={partNumber} onChange={(e) => setPartNumber(e.target.value)} className="rounded-[8px]" placeholder="Enter part number (e.g. 1234567890)" />
-                  </Field>
-                  <Field label="Processor">
-                    <Input value={processor} onChange={(e) => setProcessor(e.target.value)} className="rounded-[8px]" placeholder="Enter processor (e.g. Intel Core i5-1135G7)" />
-                  </Field>
-                  <Field label="Memory">
-                    <Input value={memory} onChange={(e) => setMemory(e.target.value)} placeholder="Enter memory (e.g. 16GB)" className="rounded-[8px]" />
-                  </Field>
-                  <Field label="OS">
-                    <Input value={os} onChange={(e) => setOs(e.target.value)} className="rounded-[8px]" placeholder="Enter OS (e.g. Windows 10)" />
-                  </Field>
-                  <Field label="Storage">
-                    <Input value={storage} onChange={(e) => setStorage(e.target.value)} placeholder="Enter storage (e.g. 512GB)" className="rounded-[8px]" />
-                  </Field>
-                  <Field label="GPU">
-                    <Input value={gpu} onChange={(e) => setGpu(e.target.value)} className="rounded-[8px]" placeholder="Enter GPU (e.g. Intel Iris Xe Graphics)" />
-                  </Field>
-                </div>
-              </section>
-            )}
-
-            {kind === 'av' && (
-              <section className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AV</p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Legacy ID">
-                    <Input value={assetIdOld} onChange={(e) => setAssetIdOld(e.target.value)} className="rounded-[8px]" />
-                  </Field>
-                  <Field label="Category">
-                    <Input
-                      value={avCategory}
-                      onChange={(e) => setAvCategory(e.target.value)}
-                      placeholder="display, projector…"
-                      className="rounded-[8px]"
-                    />
-                  </Field>
-                </div>
-              </section>
-            )}
-
-            {kind === 'network' && (
-              <section className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Network</p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Category">
-                    <Input
-                      value={networkCategory}
-                      onChange={(e) => setNetworkCategory(e.target.value)}
-                      placeholder="switch, router, AP…"
-                      className="rounded-[8px]"
-                    />
-                  </Field>
-                  <Field label="MAC address">
-                    <Input value={macAddress} onChange={(e) => setMacAddress(e.target.value)} className="rounded-[8px]" />
-                  </Field>
-                  <Field label="IP address">
-                    <Input value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} className="rounded-[8px]" />
-                  </Field>
-                </div>
-              </section>
-            )}
-
-            <PurchaseFieldsSection values={purchase} onChange={(patch) => setPurchase((p) => ({ ...p, ...patch }))} />
-
-            <WarrantyFieldsSection values={warranty} onChange={(patch) => setWarranty((w) => ({ ...w, ...patch }))} />
-
-            <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" className="rounded-[8px]" asChild>
-                <Link to={ASSET_LIST_PATH[kind]}>Cancel</Link>
-              </Button>
-              <Button
-                type="submit"
-                className="rounded-[8px] bg-foreground text-background hover:opacity-90"
-                disabled={saving}
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          {entries.map((entry, index) => {
+            const summary = entrySummary(entry, index);
+            const active = entry.key === selected.key;
+            return (
+              <button
+                key={entry.key}
+                type="button"
+                onClick={() => setSelectedKey(entry.key)}
+                className={cn(
+                  'min-w-[148px] max-w-[200px] shrink-0 rounded-[10px] border px-3 py-2 text-left transition-colors',
+                  active
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-border bg-card text-foreground hover:bg-muted/60',
+                )}
               >
-                {saving ? 'Saving…' : 'Register asset'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                <span className="block truncate text-xs font-semibold">{summary.title}</span>
+                <span
+                  className={cn(
+                    'mt-0.5 block truncate text-[11px]',
+                    active ? 'text-background/70' : 'text-muted-foreground',
+                  )}
+                >
+                  {summary.subtitle}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {selected ? (
+          <AssetEntryCard
+            kind={kind}
+            index={Math.max(0, selectedIndex)}
+            entry={selected}
+            canRemove={entries.length > 1}
+            onChange={(patch) => updateEntry(selected.key, patch)}
+            onRemove={() => removeEntry(selected.key)}
+          />
+        ) : null}
+
+        <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-2 rounded-[12px] border border-border bg-card/95 p-3 shadow-sm backdrop-blur sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" className="rounded-[8px]" asChild>
+            <Link to={ASSET_LIST_PATH[kind]}>Cancel</Link>
+          </Button>
+          <Button
+            type="submit"
+            className="rounded-[8px] bg-foreground text-background hover:opacity-90"
+            disabled={saving}
+          >
+            {saving
+              ? 'Saving…'
+              : entries.length === 1
+                ? 'Register asset'
+                : `Register ${entries.length} assets`}
+          </Button>
+        </div>
+      </form>
     </>
+  );
+}
+
+function AssetEntryCard({
+  kind,
+  index,
+  entry,
+  canRemove,
+  onChange,
+  onRemove,
+}: {
+  kind: AssetKind;
+  index: number;
+  entry: AssetEntry;
+  canRemove: boolean;
+  onChange: (patch: Partial<AssetEntry>) => void;
+  onRemove: () => void;
+}) {
+  const statusId = STATUS_ID.NEW;
+  const hint = assetIdHint(kind, entry.category);
+
+  return (
+    <Card className="rounded-[14px] border-border shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-4">
+        <div className="space-y-1">
+          <CardTitle className="text-base">Asset {index + 1}</CardTitle>
+          <CardDescription className="font-mono text-[11px]">
+            ID auto on save · {hint}
+          </CardDescription>
+        </div>
+        {canRemove ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 rounded-[8px] px-2 text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null}
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <section className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Main details</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Account code">
+              <Select
+                value={entry.accCode || undefined}
+                onValueChange={(value) => onChange({ accCode: value })}
+              >
+                <SelectTrigger className="rounded-[8px]">
+                  <SelectValue placeholder="Select account code" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ACC_CODE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.value} ({opt.label})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Status" required>
+              <div className="flex h-10 items-center rounded-[8px] border border-input bg-muted/40 px-3 text-sm capitalize text-muted-foreground">
+                {statusId} — {INVENTORY_STATUSES.find((s) => s.statusId === statusId)?.name ?? 'new'}
+              </div>
+            </Field>
+            <Field label="Brand">
+              <Input
+                value={entry.brand}
+                onChange={(e) => onChange({ brand: e.target.value })}
+                className="rounded-[8px]"
+                placeholder="Lenovo, HP, Dell, etc."
+              />
+            </Field>
+            <Field label="Model">
+              <Input
+                value={entry.model}
+                onChange={(e) => onChange({ model: e.target.value })}
+                className="rounded-[8px]"
+                placeholder="ThinkPad X1 Carbon, HP EliteBook 840 G8, etc."
+              />
+            </Field>
+            <Field label="Supplier">
+              <Input
+                value={entry.supplier}
+                onChange={(e) => onChange({ supplier: e.target.value })}
+                className="rounded-[8px]"
+                placeholder="Enter supplier name"
+              />
+            </Field>
+            <Field label="Serial number" required={kind === 'laptop'}>
+              <Input
+                value={entry.serialNum}
+                onChange={(e) => onChange({ serialNum: e.target.value })}
+                required={kind === 'laptop'}
+                className="rounded-[8px]"
+                placeholder="Enter serial number"
+              />
+            </Field>
+            {kind === 'laptop' && (
+              <Field label="Category" required>
+                <Select value={entry.category} onValueChange={(value) => onChange({ category: value })}>
+                  <SelectTrigger className="rounded-[8px]">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LAPTOP_CATEGORY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+            {kind === 'av' && (
+              <>
+                <Field label="Category">
+                  <Input
+                    value={entry.category}
+                    onChange={(e) => onChange({ category: e.target.value })}
+                    placeholder="display, projector…"
+                    className="rounded-[8px]"
+                  />
+                </Field>
+                <Field label="Legacy ID">
+                  <Input
+                    value={entry.assetIdOld}
+                    onChange={(e) => onChange({ assetIdOld: e.target.value })}
+                    className="rounded-[8px]"
+                  />
+                </Field>
+              </>
+            )}
+            {kind === 'network' && (
+              <>
+                <Field label="Category">
+                  <Input
+                    value={entry.category}
+                    onChange={(e) => onChange({ category: e.target.value })}
+                    placeholder="switch, router, AP…"
+                    className="rounded-[8px]"
+                  />
+                </Field>
+                <Field label="MAC address">
+                  <Input
+                    value={entry.macAddress}
+                    onChange={(e) => onChange({ macAddress: e.target.value })}
+                    className="rounded-[8px]"
+                  />
+                </Field>
+                <Field label="IP address">
+                  <Input
+                    value={entry.ipAddress}
+                    onChange={(e) => onChange({ ipAddress: e.target.value })}
+                    className="rounded-[8px]"
+                  />
+                </Field>
+              </>
+            )}
+            <div className="sm:col-span-2">
+              <Field label="Remarks">
+                <Textarea
+                  value={entry.remarks}
+                  onChange={(e) => onChange({ remarks: e.target.value })}
+                  className="min-h-[72px] rounded-[8px]"
+                  placeholder="Optional notes for this asset"
+                />
+              </Field>
+            </div>
+          </div>
+        </section>
+
+        {kind === 'laptop' && (
+          <section className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Laptop specs</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Part number">
+                <Input
+                  value={entry.partNumber}
+                  onChange={(e) => onChange({ partNumber: e.target.value })}
+                  className="rounded-[8px]"
+                  placeholder="Enter part number"
+                />
+              </Field>
+              <Field label="Processor">
+                <Input
+                  value={entry.processor}
+                  onChange={(e) => onChange({ processor: e.target.value })}
+                  className="rounded-[8px]"
+                  placeholder="Enter processor"
+                />
+              </Field>
+              <Field label="Memory">
+                <Input
+                  value={entry.memory}
+                  onChange={(e) => onChange({ memory: e.target.value })}
+                  className="rounded-[8px]"
+                  placeholder="Enter memory"
+                />
+              </Field>
+              <Field label="OS">
+                <Input
+                  value={entry.os}
+                  onChange={(e) => onChange({ os: e.target.value })}
+                  className="rounded-[8px]"
+                  placeholder="Enter OS"
+                />
+              </Field>
+              <Field label="Storage">
+                <Input
+                  value={entry.storage}
+                  onChange={(e) => onChange({ storage: e.target.value })}
+                  className="rounded-[8px]"
+                  placeholder="Enter storage"
+                />
+              </Field>
+              <Field label="GPU">
+                <Input
+                  value={entry.gpu}
+                  onChange={(e) => onChange({ gpu: e.target.value })}
+                  className="rounded-[8px]"
+                  placeholder="Enter GPU"
+                />
+              </Field>
+            </div>
+          </section>
+        )}
+
+        <PurchaseFieldsSection
+          values={entry.purchase}
+          onChange={(patch) => onChange({ purchase: { ...entry.purchase, ...patch } })}
+        />
+
+        <WarrantyFieldsSection
+          values={entry.warranty}
+          onChange={(patch) => onChange({ warranty: { ...entry.warranty, ...patch } })}
+        />
+      </CardContent>
+    </Card>
   );
 }
 

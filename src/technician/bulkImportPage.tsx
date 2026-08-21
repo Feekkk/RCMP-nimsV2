@@ -1,10 +1,16 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, Download, Laptop, Network, Tv, Upload } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Download, Laptop, Network, Tv, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,7 +33,8 @@ import {
   BULK_IMPORT_STATUS_DEPLOY,
   bulkImportDeployColumns,
   bulkImportDeployRequiredColumns,
-  downloadCsvFile,
+  downloadBulkImportTemplate,
+  excelFileToCsv,
   LAPTOP_CATEGORY_OPTIONS,
   useBulkImport,
 } from '@/hooks/bulkImport';
@@ -126,6 +133,13 @@ function BulkImportWorkspace({
   const { preview, isParsing, parseText, clearPreview, commit, getTemplate, columns } = useBulkImport();
   const requiredSet = new Set(BULK_IMPORT_REQUIRED[kind]);
   const deployRequiredSet = new Set(bulkImportDeployRequiredColumns(kind));
+  const deployLabel = kind === 'laptop' ? 'Handover' : 'Deploy';
+
+  const downloadTemplate = (variant: 'asset' | 'deploy' | 'place') => {
+    void downloadBulkImportTemplate(kind, variant).catch((err) => {
+      toast.error(err instanceof Error ? err.message : 'The template could not be downloaded.');
+    });
+  };
 
   const handleParse = () => {
     if (!csvText.trim()) {
@@ -167,14 +181,23 @@ function BulkImportWorkspace({
         : preview?.networkRows;
 
   const loadFile = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
-      toast.error('Only .csv files are supported.');
+    const name = file.name.toLowerCase();
+    const isCsv = name.endsWith('.csv') || file.type === 'text/csv';
+    const isExcel =
+      name.endsWith('.xlsx') ||
+      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (!isCsv && !isExcel) {
+      toast.error('Only .xlsx and .csv files are supported.');
       return;
     }
-    const text = await file.text();
-    setCsvText(text);
-    clearPreview();
-    toast.message('File loaded — click Parse preview');
+    try {
+      const text = isExcel ? await excelFileToCsv(file) : await file.text();
+      setCsvText(text);
+      clearPreview();
+      toast.message('File loaded — click Parse preview');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'The file could not be read.');
+    }
   };
 
   return (
@@ -213,16 +236,54 @@ function BulkImportWorkspace({
                   </CardDescription>
                 </div>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 rounded-[8px] gap-1.5"
-                onClick={() => downloadCsvFile(`${kind}-template.csv`, getTemplate(kind))}
-              >
-                <Download className="h-3.5 w-3.5" />
-                Template
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 rounded-[8px] gap-1.5"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Template
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem
+                    className="flex-col items-start gap-0.5"
+                    onSelect={() => downloadTemplate('asset')}
+                  >
+                    <span className="font-medium">New asset</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Asset columns only — no {deployLabel.toLowerCase()} record
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex-col items-start gap-0.5"
+                    onSelect={() => downloadTemplate('deploy')}
+                  >
+                    <span className="font-medium">{deployLabel}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {kind === 'laptop'
+                        ? `Asset columns plus staff handover (employee_no, status ${BULK_IMPORT_STATUS_DEPLOY})`
+                        : `Asset columns plus deploy columns (status ${BULK_IMPORT_STATUS_DEPLOY})`}
+                    </span>
+                  </DropdownMenuItem>
+                  {kind === 'laptop' ? (
+                    <DropdownMenuItem
+                      className="flex-col items-start gap-0.5"
+                      onSelect={() => downloadTemplate('place')}
+                    >
+                      <span className="font-medium">Deploy to facility</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Asset columns plus building, level, zone, handler (status{' '}
+                        {BULK_IMPORT_STATUS_DEPLOY})
+                      </span>
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -340,7 +401,7 @@ function BulkImportWorkspace({
               </span>
               <div className="space-y-1">
                 <CardTitle className="text-base">Upload your file</CardTitle>
-                <CardDescription>Drop a .csv file or browse from your computer.</CardDescription>
+                <CardDescription>Drop a .xlsx or .csv file or browse from your computer.</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -348,7 +409,7 @@ function BulkImportWorkspace({
             <input
               ref={fileRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="hidden"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
@@ -384,7 +445,7 @@ function BulkImportWorkspace({
               </span>
               <span className="text-xs text-muted-foreground">
                 or <span className="font-medium underline underline-offset-2">click to browse</span>{' '}
-                · .csv only
+                · .xlsx or .csv
               </span>
             </button>
           </CardContent>
@@ -516,7 +577,9 @@ function BulkImportWorkspace({
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                             {'handover' in row && row.handover
-                              ? `Handover ${row.handover.handoverStaffEmail} · ${row.handover.handoverDate}${row.handover.employeeNo ? ` · ${row.handover.employeeNo}` : ''}`
+                              ? row.handover.employeeNo
+                                ? `Handover ${row.handover.handoverStaffEmail} · ${row.handover.handoverDate} · ${row.handover.employeeNo}`
+                                : `Facility ${row.handover.building ?? ''} / ${row.handover.level ?? '-'} / ${row.handover.zone ?? '-'}${row.handover.handler ? ` · ${row.handover.handler}` : ''}`
                               : 'deployment' in row && row.deployment
                                 ? `${row.deployment.deploymentStaffEmail} · ${row.deployment.building} / ${row.deployment.level} / ${row.deployment.zone}`
                                 : '—'}

@@ -7,8 +7,11 @@ import {
   INVENTORY_STATUSES,
   bulkImportDeployColumns,
   bulkImportDeployRequiredColumns,
+  bulkImportTemplateColumns,
+  bulkImportTemplateStatusId,
   isValidAccCode,
   type AssetKind,
+  type BulkImportTemplateVariant,
   type BulkLaptopHandoverImport,
   type BulkPlaceDeploymentImport,
   type CreateAvInput,
@@ -119,6 +122,27 @@ const MOCK_CSV: Record<AssetKind, string> = {
       handover_date: '15/1/26',
       handover_remarks: 'Issued for project',
       employee_no: 'EMP10001',
+    },
+    {
+      acc_code: '200-0500',
+      serial_num: 'HP-PLACE-01',
+      brand: 'HP',
+      model: 'EliteDesk 800',
+      supplier: 'HP',
+      category: 'Desktop AIO',
+      processor: 'Intel i5',
+      memory: '16GB',
+      os: 'Windows 11',
+      storage: '512GB',
+      status_id: '3',
+      remarks: 'Training lab',
+      handover_staff_id: 'tech@example.com',
+      handover_date: '20/1/26',
+      handover_remarks: 'Shared lab PC',
+      building: 'Main',
+      level: '2',
+      zone: 'Lab A',
+      handler: 'Lab technician',
     },
     {
       acc_code: '992-000',
@@ -341,7 +365,11 @@ function parseStatusId(raw: string, row: number, errors: BulkImportRowError[]): 
   return n;
 }
 
-function requireCell(row: string[], index: number, name: string, rowNum: number, errors: BulkImportRowError[]) {
+function requireCell(row: string[], index: number | undefined, name: string, rowNum: number, errors: BulkImportRowError[]) {
+  if (index === undefined || index < 0) {
+    errors.push({ row: rowNum, message: `Required field "${name}" is empty. Fill in this column to continue.` });
+    return '';
+  }
   const val = row[index]?.trim() ?? '';
   if (!val) errors.push({ row: rowNum, message: `Required field "${name}" is empty. Fill in this column to continue.` });
   return val;
@@ -363,7 +391,8 @@ function parseOptionalAssetId(
   return n;
 }
 
-function optionalCell(row: string[], index: number) {
+function optionalCell(row: string[], index: number | undefined) {
+  if (index === undefined || index < 0) return null;
   const val = row[index]?.trim() ?? '';
   return val || null;
 }
@@ -382,11 +411,15 @@ function parseAccCode(raw: string, rowNum: number, errors: BulkImportRowError[])
   return val;
 }
 
-function buildColumnIndex(headers: string[], expected: readonly string[], errors: BulkImportRowError[]) {
+function buildColumnIndex(
+  headers: string[],
+  required: readonly string[],
+  errors: BulkImportRowError[],
+) {
   const index = new Map<string, number>();
   headers.forEach((h, i) => index.set(normalizeHeader(h), i));
 
-  for (const col of expected) {
+  for (const col of required) {
     if (!index.has(col)) {
       errors.push({ row: 0, message: `The CSV is missing a required column: "${col}". Use the template as a guide.` });
     }
@@ -472,7 +505,7 @@ function parseLaptopHandover(
 
   const handoverStaffEmail = requireCell(
     row,
-    col.get('handover_staff_id')!,
+    col.get('handover_staff_id'),
     'handover_staff_id',
     rowNum,
     errors,
@@ -484,13 +517,43 @@ function parseLaptopHandover(
       message: 'handover_staff_id must be a registered user email address.',
     });
   }
+
+  const employeeNo = optionalCell(row, col.get('employee_no'));
+  const building = optionalCell(row, col.get('building'));
+  const handler = optionalCell(row, col.get('handler'));
+  const level = optionalCell(row, col.get('level'));
+  const zone = optionalCell(row, col.get('zone'));
+
+  if (employeeNo && (building || handler)) {
+    errors.push({
+      row: rowNum,
+      message:
+        'Use either staff handover (employee_no) or facility deploy (building and handler), not both.',
+    });
+  } else if (!employeeNo && !building) {
+    errors.push({
+      row: rowNum,
+      message:
+        'When status is deployed, fill employee_no for a staff handover, or building and handler for a facility deploy.',
+    });
+  } else if (!employeeNo && !handler) {
+    errors.push({
+      row: rowNum,
+      message: 'handler is required when deploying a laptop to a facility.',
+    });
+  }
+
   if (rowHasErrors(errors, rowNum) || !handoverStaffEmail || !handoverDate) return undefined;
 
   return {
     handoverStaffEmail: handoverStaffEmail.trim().toLowerCase(),
     handoverDate,
-    handoverRemarks: optionalCell(row, col.get('handover_remarks')!),
-    employeeNo: optionalCell(row, col.get('employee_no')!),
+    handoverRemarks: optionalCell(row, col.get('handover_remarks')),
+    employeeNo,
+    building,
+    level,
+    zone,
+    handler,
   };
 }
 
@@ -546,7 +609,7 @@ function parsePlaceDeployment(
 
 function parseLaptopRows(headers: string[], rows: string[][]) {
   const errors: BulkImportRowError[] = [];
-  const col = buildColumnIndex(headers, BULK_IMPORT_COLUMNS.laptop, errors);
+  const col = buildColumnIndex(headers, BULK_IMPORT_REQUIRED.laptop, errors);
   if (errors.some((e) => e.row === 0)) {
     return { laptopRows: [] as CreateLaptopInput[], errors, validCount: 0, errorCount: 1 };
   }
@@ -608,7 +671,7 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
 
 function parseAvRows(headers: string[], rows: string[][]) {
   const errors: BulkImportRowError[] = [];
-  const col = buildColumnIndex(headers, BULK_IMPORT_COLUMNS.av, errors);
+  const col = buildColumnIndex(headers, BULK_IMPORT_REQUIRED.av, errors);
   if (errors.some((e) => e.row === 0)) {
     return { avRows: [] as CreateAvInput[], errors, validCount: 0, errorCount: 1 };
   }
@@ -652,7 +715,7 @@ function parseAvRows(headers: string[], rows: string[][]) {
 
 function parseNetworkRows(headers: string[], rows: string[][]) {
   const errors: BulkImportRowError[] = [];
-  const col = buildColumnIndex(headers, BULK_IMPORT_COLUMNS.network, errors);
+  const col = buildColumnIndex(headers, BULK_IMPORT_REQUIRED.network, errors);
   if (errors.some((e) => e.row === 0)) {
     return { networkRows: [] as CreateNetworkInput[], errors, validCount: 0, errorCount: 1 };
   }
@@ -712,13 +775,23 @@ export function parseBulkImportCsv(kind: AssetKind, csvText: string): BulkImport
   return { ...base, ...parseNetworkRows(headers, rows) };
 }
 
-export function getBulkImportTemplate(kind: AssetKind): string {
-  return `${BULK_IMPORT_COLUMNS[kind].join(',')}\n`;
+export type { BulkImportTemplateVariant };
+
+export function getBulkImportTemplate(
+  kind: AssetKind,
+  variant: BulkImportTemplateVariant = 'asset',
+): string {
+  const columns = bulkImportTemplateColumns(kind, variant);
+  const statusId = String(bulkImportTemplateStatusId(variant));
+  const sample = columns.map((column) => (column === 'status_id' ? statusId : ''));
+  return [columns.join(','), sample.map(csvEscape).join(',')].join('\n') + '\n';
 }
 
 export function getBulkImportMockCsv(kind: AssetKind): string {
   return MOCK_CSV[kind];
 }
+
+export { downloadBulkImportTemplate, excelFileToCsv } from '@/lib/bulk-import-workbook';
 
 export function downloadCsvFile(filename: string, content: string) {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });

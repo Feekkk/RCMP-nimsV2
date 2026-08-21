@@ -216,7 +216,7 @@ export default defineConfig(({ mode }) => {
     },
     define: envDefine,
     ssr: {
-      external: ['mysql2', 'mysql2/promise', 'nodemailer'],
+      external: ['mysql2', 'mysql2/promise', 'nodemailer', 'exceljs'],
     },
     resolve: {
       alias: {

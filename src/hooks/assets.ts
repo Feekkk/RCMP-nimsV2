@@ -17,9 +17,9 @@ import {
 } from '@/lib/inventory-schema';
 import { compareAssetIdNewestYearFirst } from '@/hooks/assetid-generator';
 import {
-  bulkCreateAvFn,
-  bulkCreateLaptopsFn,
-  bulkCreateNetworkFn,
+  bulkCreateAvImportFn,
+  bulkCreateLaptopsImportFn,
+  bulkCreateNetworkImportFn,
   createAvFn,
   createLaptopFn,
   createNetworkFn,
@@ -90,14 +90,20 @@ export function useAssets<K extends AssetKind>(kind: K) {
   );
 
   const bulkCreate = useCallback(
-    async (rows: K extends 'laptop' ? CreateLaptopInput[] : K extends 'av' ? CreateAvInput[] : CreateNetworkInput[]) => {
+    async (
+      rows: K extends 'laptop'
+        ? Array<Omit<CreateLaptopInput, 'assetId'> & { assetId?: number }>
+        : K extends 'av'
+          ? Array<Omit<CreateAvInput, 'assetId'> & { assetId?: number }>
+          : Array<Omit<CreateNetworkInput, 'assetId'> & { assetId?: number }>,
+    ) => {
       let count = 0;
       if (kind === 'laptop') {
-        count = await bulkCreateLaptopsFn({ data: rows as CreateLaptopInput[] });
+        count = await bulkCreateLaptopsImportFn({ data: rows as Omit<CreateLaptopInput, 'assetId'>[] });
       } else if (kind === 'av') {
-        count = await bulkCreateAvFn({ data: rows as CreateAvInput[] });
+        count = await bulkCreateAvImportFn({ data: rows as Omit<CreateAvInput, 'assetId'>[] });
       } else {
-        count = await bulkCreateNetworkFn({ data: rows as CreateNetworkInput[] });
+        count = await bulkCreateNetworkImportFn({ data: rows as Omit<CreateNetworkInput, 'assetId'>[] });
       }
       await refetch();
       return count;
