@@ -24,9 +24,15 @@ import { getDbPool } from '@/server/core/db';
 import { insertWarranty } from '@/server/requests/warranty-repair-repo.server';
 
 export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & {
-  assetId?: number;
+  assetId?: string | number;
   handover?: BulkLaptopHandoverImport;
 };
+
+function hasProvidedLaptopAssetId(assetId: string | number | undefined): assetId is string | number {
+  if (assetId == null) return false;
+  if (typeof assetId === 'number') return Number.isFinite(assetId) && assetId > 0;
+  return assetId.trim().length > 0;
+}
 
 export type BulkAvImportRow = Omit<CreateAvInput, 'assetId'> & {
   assetId?: number;
@@ -39,14 +45,14 @@ export type BulkNetworkImportRow = Omit<CreateNetworkInput, 'assetId'> & {
 };
 
 async function fillLaptopAssetIds(rows: BulkLaptopImportRow[]): Promise<BulkLaptopImportRow[]> {
-  const autoCategories = rows.filter((r) => r.assetId == null || r.assetId <= 0).map((r) => r.category);
+  const autoCategories = rows.filter((r) => !hasProvidedLaptopAssetId(r.assetId)).map((r) => r.category);
   const generated =
     autoCategories.length > 0
       ? await allocateAssetIdsFromDb({ kind: 'laptop', laptopCategories: autoCategories })
       : [];
   let genIdx = 0;
   return rows.map((row) => {
-    if (row.assetId != null && row.assetId > 0) {
+    if (hasProvidedLaptopAssetId(row.assetId)) {
       return row;
     }
     const assetId = generated[genIdx++];
@@ -130,7 +136,7 @@ async function assertEmployeeNo(
 
 async function insertLaptopHandover(
   conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
-  assetId: number,
+  assetId: string | number,
   handover: BulkLaptopHandoverImport,
 ) {
   const userId = await resolveUserIdByEmail(conn, handover.handoverStaffEmail);
@@ -535,7 +541,7 @@ export async function listAssets(kind: AssetKind) {
 
 async function maybeInsertWarranty(
   kind: AssetKind,
-  assetId: number,
+  assetId: string | number,
   warranty: CreateLaptopInput['warranty'],
   conn?: import('mysql2/promise').PoolConnection,
 ) {
@@ -587,7 +593,7 @@ export async function bulkCreateLaptops(rows: BulkLaptopImportRow[]) {
     await conn.beginTransaction();
     for (const row of rows) {
       const { handover, assetId, warranty, ...laptop } = row;
-      if (assetId == null || assetId <= 0) {
+      if (!hasProvidedLaptopAssetId(assetId)) {
         throw new Error(
           'An asset ID could not be assigned after generation. Try saving again, or contact support if this keeps happening.',
         );

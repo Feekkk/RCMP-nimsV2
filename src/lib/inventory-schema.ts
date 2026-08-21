@@ -165,7 +165,7 @@ export type NetworkAsset = {
   PurchaseFields;
 
 export type CreateLaptopInput = {
-  assetId: number;
+  assetId: string | number;
   accCode?: string | null;
   serialNum: string;
   brand?: string | null;

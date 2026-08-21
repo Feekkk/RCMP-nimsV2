@@ -232,7 +232,7 @@ function BulkImportWorkspace({
                   <CardTitle className="text-base">Prepare your CSV</CardTitle>
                   <CardDescription>
                     Leave <code className="text-[11px]">asset_id</code> blank to auto-generate from
-                    category.
+                    category, or enter a custom ID (up to 32 characters).
                   </CardDescription>
                 </div>
               </div>
@@ -386,7 +386,7 @@ function BulkImportWorkspace({
                 <p className="text-[11px] text-muted-foreground">
                   Notebook categories use prefix {ASSET_ID_PREFIX.laptop}; desktop categories use prefix{' '}
                   {ASSET_ID_PREFIX.desktop}. Leave <code className="text-[10px]">asset_id</code> blank to
-                  auto-generate from category.
+                  auto-generate from category, or supply a varchar ID (up to 32 characters).
                 </p>
               </div>
             ) : null}

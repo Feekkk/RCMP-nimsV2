@@ -28,7 +28,7 @@ import {
 } from '@/server/assets/assets.functions';
 
 export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & {
-  assetId?: number;
+  assetId?: string | number;
   handover?: BulkLaptopHandoverImport;
 };
 
@@ -375,7 +375,9 @@ function requireCell(row: string[], index: number | undefined, name: string, row
   return val;
 }
 
-/** Blank cell → auto-generate on import; otherwise use provided ID. */
+const LAPTOP_ASSET_ID_MAX_LENGTH = 32;
+
+/** Blank cell → auto-generate on import; otherwise use provided numeric ID. */
 function parseOptionalAssetId(
   raw: string,
   rowNum: number,
@@ -389,6 +391,24 @@ function parseOptionalAssetId(
     return undefined;
   }
   return n;
+}
+
+/** Blank cell → auto-generate on import; otherwise keep the varchar asset ID. */
+function parseOptionalLaptopAssetId(
+  raw: string,
+  rowNum: number,
+  errors: BulkImportRowError[],
+): string | undefined {
+  const val = raw?.trim() ?? '';
+  if (!val) return undefined;
+  if (val.length > LAPTOP_ASSET_ID_MAX_LENGTH) {
+    errors.push({
+      row: rowNum,
+      message: `The asset ID must be at most ${LAPTOP_ASSET_ID_MAX_LENGTH} characters, or leave blank to auto-generate one.`,
+    });
+    return undefined;
+  }
+  return val;
 }
 
 function optionalCell(row: string[], index: number | undefined) {
@@ -619,7 +639,7 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
   rows.forEach((row, i) => {
     const rowNum = i + 2;
     warnIfColumnsShifted(row, col, rowNum, errors);
-    const assetId = parseOptionalAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
+    const assetId = parseOptionalLaptopAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
     const accCode = parseAccCode(row[col.get('acc_code')!] ?? '', rowNum, errors);
     const serialNum = requireCell(row, col.get('serial_num')!, 'serial_num', rowNum, errors);
     const category = requireCell(row, col.get('category')!, 'category', rowNum, errors);

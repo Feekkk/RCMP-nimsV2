@@ -51,7 +51,7 @@ export function isWarrantyActive(w: WarrantyRecord, onDate = todayIso()): boolea
 
 export async function insertWarranty(
   kind: AssetKind,
-  assetId: number,
+  assetId: string | number,
   input: WarrantyInput,
   conn?: import('mysql2/promise').PoolConnection,
 ) {
