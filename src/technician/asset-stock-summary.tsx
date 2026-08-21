@@ -31,7 +31,7 @@ function breakdownFiltersEqual(
   return false;
 }
 
-function MetricChipGrid({
+function MetricList({
   rows,
   activeFilter,
   onFilterClick,
@@ -43,30 +43,29 @@ function MetricChipGrid({
   if (rows.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+    <ul className="divide-y divide-border/60">
       {rows.map((row) => {
         const isActive = breakdownFiltersEqual(activeFilter, row.filter);
         return (
-          <button
-            key={row.key}
-            type="button"
-            title={`Filter table by ${row.label}`}
-            onClick={() => onFilterClick(row.filter)}
-            className={cn(
-              'rounded-[8px] bg-background/80 px-2 py-1.5 text-left ring-1 ring-border/50 transition-colors',
-              'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              isActive && 'bg-primary/10 ring-2 ring-primary/40',
-              row.count === 0 && !isActive && 'opacity-60',
-            )}
-          >
-            <p className="truncate text-[10px] capitalize leading-tight text-muted-foreground">
-              {row.label}
-            </p>
-            <p className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">{row.count}</p>
-          </button>
+          <li key={row.key}>
+            <button
+              type="button"
+              title={`Filter table by ${row.label}`}
+              onClick={() => onFilterClick(row.filter)}
+              className={cn(
+                'flex w-full items-center justify-between gap-3 py-1.5 text-left transition-colors',
+                'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                isActive ? 'text-foreground' : 'text-muted-foreground',
+                row.count === 0 && !isActive && 'opacity-60',
+              )}
+            >
+              <span className="min-w-0 truncate text-xs capitalize">{row.label}</span>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{row.count}</span>
+            </button>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }
 
@@ -91,7 +90,7 @@ function BreakdownList({
               {section.title}
             </p>
           ) : null}
-          <MetricChipGrid
+          <MetricList
             rows={section.rows}
             activeFilter={activeFilter}
             onFilterClick={onFilterClick}

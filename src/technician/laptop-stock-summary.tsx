@@ -1,6 +1,10 @@
 import type { ElementType } from 'react';
-import { Laptop as LaptopIcon, Monitor } from 'lucide-react';
-import { isDesktopCategory, isNotebookCategory } from '@/hooks/assetid-generator';
+import { Laptop as LaptopIcon, Layers, Monitor } from 'lucide-react';
+import {
+  isLeasingCategory,
+  isOwnedDesktopCategory,
+  isOwnedNotebookCategory,
+} from '@/hooks/assetid-generator';
 import {
   formatStatusLabel,
   LAPTOP_ASSIGNMENT_BUCKETS,
@@ -11,7 +15,8 @@ import {
 import { InsightStatCard } from '@/components/insight-stat-card';
 import { cn } from '@/lib/utils';
 
-export type LaptopFormFactorFilter = 'all' | 'laptop' | 'desktop';
+export type LaptopFormFactor = 'laptop' | 'desktop' | 'leasing';
+export type LaptopFormFactorFilter = 'all' | LaptopFormFactor;
 
 const STOCK_SUMMARY_STATUS_IDS = [1, 2, 3, 5] as const;
 
@@ -34,10 +39,10 @@ function StatusMetricGrid({
   onStatusClick,
 }: {
   rows: StatusCount[];
-  formFactor: 'laptop' | 'desktop';
+  formFactor: LaptopFormFactor;
   statusFilter: number | null;
   formFactorFilter: LaptopFormFactorFilter;
-  onStatusClick: (formFactor: 'laptop' | 'desktop', statusId: number) => void;
+  onStatusClick: (formFactor: LaptopFormFactor, statusId: number) => void;
 }) {
   return (
     <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
@@ -74,10 +79,10 @@ function DivisionSplit({
   onDivisionClick,
 }: {
   rows: LabelCount[];
-  formFactor: 'laptop' | 'desktop';
+  formFactor: LaptopFormFactor;
   divisionFilter: LaptopAssignmentBucket | null;
   formFactorFilter: LaptopFormFactorFilter;
-  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: LaptopAssignmentBucket) => void;
+  onDivisionClick: (formFactor: LaptopFormFactor, division: LaptopAssignmentBucket) => void;
 }) {
   return (
     <div className="grid grid-cols-3 gap-2">
@@ -122,16 +127,16 @@ function FormFactorCard({
 }: {
   icon: ElementType;
   label: string;
-  formFactor: 'laptop' | 'desktop';
+  formFactor: LaptopFormFactor;
   value: number;
   statusRows: StatusCount[];
   divisionRows: LabelCount[];
-  tone: 'lime' | 'violet';
+  tone: 'lime' | 'violet' | 'amber';
   statusFilter: number | null;
   formFactorFilter: LaptopFormFactorFilter;
   divisionFilter: LaptopAssignmentBucket | null;
-  onStatusClick: (formFactor: 'laptop' | 'desktop', statusId: number) => void;
-  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: LaptopAssignmentBucket) => void;
+  onStatusClick: (formFactor: LaptopFormFactor, statusId: number) => void;
+  onDivisionClick: (formFactor: LaptopFormFactor, division: LaptopAssignmentBucket) => void;
 }) {
   return (
     <InsightStatCard icon={Icon} label={label} value={value} tone={tone}>
@@ -190,8 +195,8 @@ type LaptopAssetStockSummaryProps = {
   statusFilter: number | null;
   formFactorFilter: LaptopFormFactorFilter;
   divisionFilter: LaptopAssignmentBucket | null;
-  onStatusClick: (formFactor: 'laptop' | 'desktop', statusId: number) => void;
-  onDivisionClick: (formFactor: 'laptop' | 'desktop', division: LaptopAssignmentBucket) => void;
+  onStatusClick: (formFactor: LaptopFormFactor, statusId: number) => void;
+  onDivisionClick: (formFactor: LaptopFormFactor, division: LaptopAssignmentBucket) => void;
 };
 
 export function LaptopAssetStockSummary({
@@ -202,11 +207,12 @@ export function LaptopAssetStockSummary({
   onStatusClick,
   onDivisionClick,
 }: LaptopAssetStockSummaryProps) {
-  const laptopItems = items.filter((item) => isNotebookCategory(item.category));
-  const desktopItems = items.filter((item) => isDesktopCategory(item.category));
+  const laptopItems = items.filter((item) => isOwnedNotebookCategory(item.category));
+  const desktopItems = items.filter((item) => isOwnedDesktopCategory(item.category));
+  const leasingItems = items.filter((item) => isLeasingCategory(item.category));
 
   return (
-    <div className="mb-5 grid grid-cols-1 gap-3 sm:mb-6 sm:grid-cols-2">
+    <div className="mb-5 grid grid-cols-1 gap-3 sm:mb-6 sm:grid-cols-2 xl:grid-cols-3">
       <FormFactorCard
         icon={LaptopIcon}
         label="Laptop"
@@ -229,6 +235,20 @@ export function LaptopAssetStockSummary({
         statusRows={countStatusRows(desktopItems)}
         divisionRows={countDivisionRows(desktopItems)}
         tone="violet"
+        statusFilter={statusFilter}
+        formFactorFilter={formFactorFilter}
+        divisionFilter={divisionFilter}
+        onStatusClick={onStatusClick}
+        onDivisionClick={onDivisionClick}
+      />
+      <FormFactorCard
+        icon={Layers}
+        label="Leasing Laptop / Desktop"
+        formFactor="leasing"
+        value={leasingItems.length}
+        statusRows={countStatusRows(leasingItems)}
+        divisionRows={countDivisionRows(leasingItems)}
+        tone="amber"
         statusFilter={statusFilter}
         formFactorFilter={formFactorFilter}
         divisionFilter={divisionFilter}

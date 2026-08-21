@@ -18,8 +18,9 @@ import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
 import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
 import {
-	isDesktopCategory,
-	isNotebookCategory,
+	isLeasingCategory,
+	isOwnedDesktopCategory,
+	isOwnedNotebookCategory,
 	LAPTOP_CATEGORY_OPTIONS,
 	normalizeCategory,
 } from '@/hooks/assetid-generator';
@@ -28,6 +29,7 @@ import type { LaptopAssignmentBucket } from '@/lib/inventory-schema';
 import { matchesAssignmentBucket } from '@/lib/inventory-schema';
 import {
 	LaptopAssetStockSummary,
+	type LaptopFormFactor,
 	type LaptopFormFactorFilter,
 } from '@/technician/laptop-stock-summary';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
@@ -55,8 +57,9 @@ function matchesFormFactor(
 	formFactorFilter: LaptopFormFactorFilter,
 ): boolean {
 	if (formFactorFilter === 'all') return true;
-	if (formFactorFilter === 'laptop') return isNotebookCategory(category);
-	return isDesktopCategory(category);
+	if (formFactorFilter === 'leasing') return isLeasingCategory(category);
+	if (formFactorFilter === 'laptop') return isOwnedNotebookCategory(category);
+	return isOwnedDesktopCategory(category);
 }
 
 export function TechnicianLaptopPage() {
@@ -68,7 +71,7 @@ export function TechnicianLaptopPage() {
 	const [categoryView, setCategoryView] = useState<LaptopCategoryView>('all');
 	const { items, isLoading, error, updateStatus } = useAssets('laptop');
 
-	const handleStatusMetricClick = (formFactor: 'laptop' | 'desktop', statusId: number) => {
+	const handleStatusMetricClick = (formFactor: LaptopFormFactor, statusId: number) => {
 		if (statusFilter === statusId && formFactorFilter === formFactor) {
 			setStatusFilter(null);
 			setFormFactorFilter('all');
@@ -79,7 +82,7 @@ export function TechnicianLaptopPage() {
 	};
 
 	const handleDivisionMetricClick = (
-		formFactor: 'laptop' | 'desktop',
+		formFactor: LaptopFormFactor,
 		division: LaptopAssignmentBucket,
 	) => {
 		if (divisionFilter === division && formFactorFilter === formFactor) {
