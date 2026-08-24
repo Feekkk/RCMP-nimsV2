@@ -1,4 +1,5 @@
-import type { RowDataPacket } from 'mysql2';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import type { PoolConnection } from 'mysql2/promise';
 import type { AssetKind } from '@shared/lib/inventory-schema';
 import { STATUS_ID } from '@shared/lib/asset-status-actions';
 import type {
@@ -15,6 +16,7 @@ import type {
   StaffRecipient,
 } from '@shared/lib/deploy-return-schema';
 import { getReturnStatusIdForCondition } from '@shared/lib/deploy-return-schema';
+import { recordAssetPredisposed } from '@backend/server/assets/disposal-repo.server';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 
@@ -23,6 +25,17 @@ const ASSET_TABLE: Record<AssetKind, string> = {
   av: 'av',
   network: 'network',
 };
+
+async function logPredisposedReturnIfNeeded(
+  conn: PoolConnection,
+  kind: AssetKind,
+  assetId: number | string,
+  statusId: number,
+  staffId: string,
+): Promise<void> {
+  if (statusId !== STATUS_ID.PRE_DISPOSED) return;
+  await recordAssetPredisposed(conn, { kind, assetId, staffId });
+}
 
 export async function searchStaffRecipients(query: string): Promise<StaffRecipient[]> {
   const pool = getDbPool();
@@ -334,6 +347,7 @@ export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
       statusId,
       row.asset_id,
     ]);
+    await logPredisposedReturnIfNeeded(conn, 'laptop', row.asset_id, statusId, input.returnedBy);
     await conn.commit();
     return {
       assetId: row.asset_id,
@@ -383,6 +397,7 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
       statusId,
       row.asset_id,
     ]);
+    await logPredisposedReturnIfNeeded(conn, 'laptop', row.asset_id, statusId, input.returnedBy);
     await conn.commit();
     return {
       assetId: row.asset_id,
@@ -432,6 +447,7 @@ export async function returnPlaceAsset(input: ReturnPlaceInput) {
       statusId,
       row.asset_id,
     ]);
+    await logPredisposedReturnIfNeeded(conn, input.kind, row.asset_id, statusId, input.returnedBy);
     await conn.commit();
     return { assetId: row.asset_id };
   } catch (e) {

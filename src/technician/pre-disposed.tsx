@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Laptop, List, Network, Recycle, Search, Tv } from 'lucide-react';
+import { ArrowLeft, Laptop, Network, Search, Trash2, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -27,15 +27,15 @@ import {
 } from '@/components/ui/table';
 import { formatAssetLifespan } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, type AssetKind } from '@shared/lib/inventory-schema';
-import type { PredisposalEligibleAsset } from '@shared/lib/disposal-schema';
+import type { PreDisposedAsset } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { TechnicianShell } from '@/technician/technician-shell';
 import {
-  listPredisposalEligibleAssetsFn,
-  markAssetsPredisposedFn,
+  listPreDisposedAssetsFn,
+  removeAssetsFromPredisposalFn,
 } from '@backend/server/assets/assets.functions';
 
 function assetKey(kind: AssetKind, assetId: number) {
@@ -44,8 +44,8 @@ function assetKey(kind: AssetKind, assetId: number) {
 
 type KindFilter = 'all' | AssetKind;
 
-export function TechnicianDisposalPage() {
-  const [assets, setAssets] = useState<PredisposalEligibleAsset[]>([]);
+export function TechnicianPreDisposedPage() {
+  const [assets, setAssets] = useState<PreDisposedAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
@@ -56,11 +56,11 @@ export function TechnicianDisposalPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await listPredisposalEligibleAssetsFn();
+      const rows = await listPreDisposedAssetsFn();
       setAssets(rows);
       setSelected(new Set());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load assets');
+      toast.error(e instanceof Error ? e.message : 'Failed to load pre-disposed assets');
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,16 @@ export function TechnicianDisposalPage() {
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter((a) =>
-      [String(a.assetId), a.assetIdOld, a.model, a.brand, a.category, a.serialNum, a.kind]
+      [
+        String(a.assetId),
+        a.assetIdOld,
+        a.model,
+        a.brand,
+        a.category,
+        a.serialNum,
+        a.kind,
+        a.predisposedBy,
+      ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
@@ -121,21 +130,21 @@ export function TechnicianDisposalPage() {
     return assets.filter((a) => selected.has(assetKey(a.kind, a.assetId)));
   }, [assets, selected]);
 
-  const handleMarkPredisposed = async () => {
+  const handleRemove = async () => {
     if (selectedAssets.length === 0) {
       toast.error('Select at least one asset');
       return;
     }
     setSaving(true);
     try {
-      const result = await markAssetsPredisposedFn({
+      const result = await removeAssetsFromPredisposalFn({
         data: {
           assets: selectedAssets.map((a) => ({ kind: a.kind, assetId: a.assetId })),
         },
       });
       if (result.updated > 0) {
         toast.success(
-          `Marked ${result.updated} asset${result.updated === 1 ? '' : 's'} as pre-disposed`,
+          `Removed ${result.updated} asset${result.updated === 1 ? '' : 's'} from the pre-disposed queue`,
         );
       }
       if (result.errors.length > 0) {
@@ -146,7 +155,7 @@ export function TechnicianDisposalPage() {
       setConfirmOpen(false);
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not mark assets as pre-disposed');
+      toast.error(e instanceof Error ? e.message : 'Could not remove assets from the queue');
     } finally {
       setSaving(false);
     }
@@ -156,26 +165,27 @@ export function TechnicianDisposalPage() {
     <TechnicianShell>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Asset disposal</h1>
+          <Button variant="ghost" size="sm" type="button" className="-ml-2 mb-2 gap-1.5" asChild>
+            <Link to="/technician/disposal">
+              <ArrowLeft className="h-4 w-4" />
+              Back to disposal
+            </Link>
+          </Button>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Pre-disposed assets</h1>
           <p className="mt-1 max-w-xl text-xs text-muted-foreground sm:text-sm">
-            Select returned assets and mark them as pre-disposed for the disposal unit.
+            Assets marked as pre-disposed and queued for the disposal unit. Remove assets to revert
+            them to return status.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-[8px]" asChild>
-          <Link to="/technician/pre-disposed">
-            <List className="h-4 w-4" />
-            View pre-disposed
-          </Link>
-        </Button>
       </div>
 
       <Card className="rounded-[14px] border-border shadow-sm">
         <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
           <div>
-            <CardTitle className="text-base">Eligible assets</CardTitle>
+            <CardTitle className="text-base">Pre-disposed queue</CardTitle>
             <CardDescription>
               {filtered.length} shown · {assets.length} total · search by asset ID, legacy ID (AV),
-              model, brand, category, or serial
+              model, brand, category, serial, or pre-disposed by
             </CardDescription>
           </div>
           <div className="relative w-full sm:max-w-xs">
@@ -220,13 +230,14 @@ export function TechnicianDisposalPage() {
             </p>
             <Button
               type="button"
+              variant="outline"
               size="sm"
-              className="gap-1.5 rounded-[8px]"
+              className="gap-1.5 rounded-[8px] text-destructive hover:text-destructive"
               disabled={selected.size === 0 || saving}
               onClick={() => setConfirmOpen(true)}
             >
-              <Recycle className="h-4 w-4" />
-              Mark as pre-disposed{selected.size > 0 ? ` (${selected.size})` : ''}
+              <Trash2 className="h-4 w-4" />
+              Remove from queue{selected.size > 0 ? ` (${selected.size})` : ''}
             </Button>
           </div>
           <div className="overflow-x-auto">
@@ -246,21 +257,23 @@ export function TechnicianDisposalPage() {
                   <TableHead className="font-semibold">Brand</TableHead>
                   <TableHead className="font-semibold">Serial</TableHead>
                   <TableHead className="font-semibold">Life-span</TableHead>
+                  <TableHead className="font-semibold">Pre-disposed</TableHead>
+                  <TableHead className="font-semibold">By</TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={10} className="py-10 text-center text-sm text-muted-foreground">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={10} className="py-10 text-center text-sm text-muted-foreground">
                       {assets.length === 0
-                        ? 'No return assets are available to mark as pre-disposed.'
+                        ? 'No assets are currently marked as pre-disposed.'
                         : 'No assets match your filters.'}
                     </TableCell>
                   </TableRow>
@@ -296,6 +309,12 @@ export function TechnicianDisposalPage() {
                         <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                           {formatAssetLifespan(a.poDate, a.assetId)}
                         </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                          {formatPredisposedAt(a.predisposedAt)}
+                        </TableCell>
+                        <TableCell className="max-w-[10rem] truncate text-sm text-muted-foreground">
+                          {a.predisposedBy ?? '—'}
+                        </TableCell>
                         <TableCell>
                           <AssetStatusBadge statusId={a.statusId} />
                         </TableCell>
@@ -323,10 +342,10 @@ export function TechnicianDisposalPage() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="rounded-[14px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark selected assets as pre-disposed?</AlertDialogTitle>
+            <AlertDialogTitle>Remove selected assets from the pre-disposed queue?</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedAssets.length} asset{selectedAssets.length === 1 ? '' : 's'} will be set to
-              pre-disposed (status 4) and queued for the disposal unit.
+              {selectedAssets.length} asset{selectedAssets.length === 1 ? '' : 's'} will be reverted
+              to return status (status 2) and removed from the disposal queue.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {selectedAssets.length > 0 ? (
@@ -349,20 +368,33 @@ export function TechnicianDisposalPage() {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className="rounded-[8px]"
+              className="rounded-[8px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={saving}
               onClick={(e) => {
                 e.preventDefault();
-                void handleMarkPredisposed();
+                void handleRemove();
               }}
             >
-              {saving ? 'Saving…' : 'Confirm pre-disposal'}
+              {saving ? 'Removing…' : 'Confirm removal'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </TechnicianShell>
   );
+}
+
+function formatPredisposedAt(value: string | null): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function KindCell({ kind }: { kind: AssetKind }) {

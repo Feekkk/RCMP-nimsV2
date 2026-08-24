@@ -118,3 +118,7 @@ export const PREDISPOSAL_ELIGIBLE_STATUS_IDS = [STATUS_ID.RETURN] as const;
 export function isPredisposalEligibleStatus(statusId: number): boolean {
   return (PREDISPOSAL_ELIGIBLE_STATUS_IDS as readonly number[]).includes(statusId);
 }
+
+export function isPreDisposedStatus(statusId: number): boolean {
+  return statusId === STATUS_ID.PRE_DISPOSED;
+}

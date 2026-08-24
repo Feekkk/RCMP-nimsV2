@@ -14,10 +14,15 @@ import type {
   NetworkAsset,
   PurchaseFields,
 } from '@shared/lib/inventory-schema';
-import type { MarkPredisposedAssetInput, PredisposalEligibleAsset } from '@shared/lib/disposal-schema';
+import type {
+  MarkPredisposedAssetInput,
+  PreDisposedAsset,
+  PredisposalEligibleAsset,
+} from '@shared/lib/disposal-schema';
 import {
   isAllowedStatusTransition,
   isPredisposalEligibleStatus,
+  isPreDisposedStatus,
   PREDISPOSAL_ELIGIBLE_STATUS_IDS,
   STATUS_ID,
 } from '@shared/lib/asset-status-actions';
@@ -25,6 +30,11 @@ import { formatIsoToDdMmYy, parseDdMmYyToIso } from '@shared/lib/date-format';
 import { purchaseSqlParams } from '@shared/lib/purchase-field-utils';
 import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import { allocateAssetIdsFromDb } from '@backend/server/assets/asset-id.server';
+import {
+  recordAssetPredisposed,
+  recordAssetPredisposalRemoved,
+  withAssetPredisposalTransaction,
+} from '@backend/server/assets/disposal-repo.server';
 import { attachDisplayNames, getDisplayNameByOid } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 import { insertWarranty } from '@backend/server/requests/warranty-repair-repo.server';
@@ -771,39 +781,163 @@ export async function listPredisposalEligibleAssets(): Promise<PredisposalEligib
   return [...laptop, ...av, ...network];
 }
 
-async function markAssetPredisposed(input: MarkPredisposedAssetInput): Promise<void> {
+type PreDisposedQueryRow = PredisposalRow & {
+  predisposed_at: Date | string | null;
+  predisposed_email: string | null;
+  predisposed_oid: string | null;
+  predisposed_name?: string | null;
+};
+
+function formatDateTimeIso(val: Date | string | null | undefined): string | null {
+  if (val == null) return null;
+  const d = val instanceof Date ? val : new Date(val);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+async function queryPreDisposedAssets(
+  kind: AssetKind,
+  extraSelect = '',
+): Promise<(PreDisposedQueryRow & { kind: AssetKind })[]> {
   const pool = getDbPool();
-  const table = TABLE_BY_KIND[input.kind];
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
-    [input.assetId],
+  const table = TABLE_BY_KIND[kind];
+  const [rows] = await pool.query<PreDisposedQueryRow[]>(
+    `SELECT a.asset_id, ${extraSelect} a.model, a.brand, a.category, a.serial_num, a.status_id, a.PO_DATE,
+            di.predisposed_at, u.email AS predisposed_email, u.oid AS predisposed_oid
+     FROM \`${table}\` a
+     LEFT JOIN disposal_item di
+       ON di.asset_type = ?
+      AND di.asset_id = CAST(a.asset_id AS CHAR)
+      AND di.removed_at IS NULL
+     LEFT JOIN users u ON u.id = di.predisposed_by
+     WHERE a.status_id = ?
+     ORDER BY di.predisposed_at DESC, ${assetIdNewestYearFirstSql('a.asset_id')}`,
+    [kind, STATUS_ID.PRE_DISPOSED],
   );
-  const row = rows[0] as { status_id: number } | undefined;
-  if (!row) {
-    throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
-  }
-  if (!isPredisposalEligibleStatus(row.status_id)) {
-    throw new Error(
-      'Only return assets can be marked as pre-disposed. Return deployed assets first, or choose a different asset.',
-    );
-  }
-  await pool.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
-    STATUS_ID.PRE_DISPOSED,
-    input.assetId,
+  return rows.map((r) => ({ ...r, kind }));
+}
+
+function mapPreDisposedRow(r: PreDisposedQueryRow & { kind: AssetKind }): PreDisposedAsset {
+  return {
+    kind: r.kind,
+    assetId: r.asset_id,
+    assetIdOld: r.asset_id_old ?? null,
+    model: r.model,
+    brand: r.brand,
+    category: r.category,
+    serialNum: r.serial_num,
+    statusId: r.status_id,
+    poDate: formatDate(r.PO_DATE),
+    predisposedAt: formatDateTimeIso(r.predisposed_at),
+    predisposedBy: r.predisposed_name?.trim() || r.predisposed_email?.trim() || null,
+  };
+}
+
+export async function listPreDisposedAssets(): Promise<PreDisposedAsset[]> {
+  const [laptop, av, network] = await Promise.all([
+    queryPreDisposedAssets('laptop'),
+    queryPreDisposedAssets('av', 'a.asset_id_old,'),
+    queryPreDisposedAssets('network'),
   ]);
+  const rows = [...laptop, ...av, ...network];
+  await attachDisplayNames(rows, 'predisposed_oid', 'predisposed_name');
+  return rows.map(mapPreDisposedRow);
+}
+
+async function markAssetPredisposed(
+  input: MarkPredisposedAssetInput,
+  staffId: string,
+): Promise<void> {
+  await withAssetPredisposalTransaction(async (conn) => {
+    const table = TABLE_BY_KIND[input.kind];
+    const [rows] = await conn.execute<(RowDataPacket & { status_id: number })[]>(
+      `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
+      [input.assetId],
+    );
+    const row = rows[0];
+    if (!row) {
+      throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
+    }
+    if (!isPredisposalEligibleStatus(row.status_id)) {
+      throw new Error(
+        'Only return assets can be marked as pre-disposed. Return deployed assets first, or choose a different asset.',
+      );
+    }
+
+    await recordAssetPredisposed(conn, {
+      kind: input.kind,
+      assetId: input.assetId,
+      staffId,
+    });
+
+    await conn.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
+      STATUS_ID.PRE_DISPOSED,
+      input.assetId,
+    ]);
+  });
 }
 
 export async function markAssetsPredisposed(
   assets: MarkPredisposedAssetInput[],
+  staffId: string,
 ): Promise<{ updated: number; errors: string[] }> {
   const errors: string[] = [];
   let updated = 0;
   for (const asset of assets) {
     try {
-      await markAssetPredisposed(asset);
+      await markAssetPredisposed(asset, staffId);
       updated += 1;
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'This asset could not be marked as pre-disposed.';
+      errors.push(`${asset.kind} #${asset.assetId}: ${msg}`);
+    }
+  }
+  return { updated, errors };
+}
+
+async function removeAssetFromPredisposal(
+  input: MarkPredisposedAssetInput,
+  staffId: string,
+): Promise<void> {
+  await withAssetPredisposalTransaction(async (conn) => {
+    const table = TABLE_BY_KIND[input.kind];
+    const [rows] = await conn.execute<(RowDataPacket & { status_id: number })[]>(
+      `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
+      [input.assetId],
+    );
+    const row = rows[0];
+    if (!row) {
+      throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
+    }
+    if (!isPreDisposedStatus(row.status_id)) {
+      throw new Error('Only pre-disposed assets can be removed from the disposal queue.');
+    }
+
+    await recordAssetPredisposalRemoved(conn, {
+      kind: input.kind,
+      assetId: input.assetId,
+      staffId,
+    });
+
+    await conn.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
+      STATUS_ID.RETURN,
+      input.assetId,
+    ]);
+  });
+}
+
+export async function removeAssetsFromPredisposal(
+  assets: MarkPredisposedAssetInput[],
+  staffId: string,
+): Promise<{ updated: number; errors: string[] }> {
+  const errors: string[] = [];
+  let updated = 0;
+  for (const asset of assets) {
+    try {
+      await removeAssetFromPredisposal(asset, staffId);
+      updated += 1;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'This asset could not be removed from the queue.';
       errors.push(`${asset.kind} #${asset.assetId}: ${msg}`);
     }
   }

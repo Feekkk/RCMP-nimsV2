@@ -12,6 +12,11 @@ export type PredisposalEligibleAsset = {
   poDate: string | null;
 };
 
+export type PreDisposedAsset = PredisposalEligibleAsset & {
+  predisposedAt: string | null;
+  predisposedBy: string | null;
+};
+
 export type MarkPredisposedAssetInput = {
   kind: AssetKind;
   assetId: number;
@@ -25,3 +30,7 @@ export type MarkAssetsPredisposedResult = {
   updated: number;
   errors: string[];
 };
+
+export type RemoveAssetsFromPredisposalInput = MarkAssetsPredisposedInput;
+
+export type RemoveAssetsFromPredisposalResult = MarkAssetsPredisposedResult;

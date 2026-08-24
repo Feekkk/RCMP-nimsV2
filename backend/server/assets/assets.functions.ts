@@ -5,7 +5,7 @@ import type {
   CreateLaptopInput,
   CreateNetworkInput,
 } from '@shared/lib/inventory-schema';
-import type { MarkAssetsPredisposedInput } from '@shared/lib/disposal-schema';
+import type { MarkAssetsPredisposedInput, RemoveAssetsFromPredisposalInput } from '@shared/lib/disposal-schema';
 import type { NextAssetIdRequest } from '@backend/server/assets/asset-id.server';
 import type {
   BulkAvImportRow,
@@ -145,10 +145,25 @@ export const listPredisposalEligibleAssetsFn = createServerFn({ method: 'GET' })
     return listPredisposalEligibleAssets();
   });
 
+export const listPreDisposedAssetsFn = createServerFn({ method: 'GET' })
+  .middleware([staffMiddleware])
+  .handler(async () => {
+    const { listPreDisposedAssets } = await import('@backend/server/assets/assets-repo.server');
+    return listPreDisposedAssets();
+  });
+
 export const markAssetsPredisposedFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((input: MarkAssetsPredisposedInput) => input)
-  .handler(async ({ data: input }) => {
+  .handler(async ({ data: input, context }) => {
     const { markAssetsPredisposed } = await import('@backend/server/assets/assets-repo.server');
-    return markAssetsPredisposed(input.assets);
+    return markAssetsPredisposed(input.assets, context.staffId);
+  });
+
+export const removeAssetsFromPredisposalFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
+  .inputValidator((input: RemoveAssetsFromPredisposalInput) => input)
+  .handler(async ({ data: input, context }) => {
+    const { removeAssetsFromPredisposal } = await import('@backend/server/assets/assets-repo.server');
+    return removeAssetsFromPredisposal(input.assets, context.staffId);
   });
