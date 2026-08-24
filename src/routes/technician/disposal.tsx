@@ -5,7 +5,7 @@ export const Route = createFileRoute('/technician/disposal')({
   head: () => ({
     meta: [
       { title: 'Asset disposal | NIMS' },
-      { name: 'description', content: 'Record disposal for returned assets.' },
+      { name: 'description', content: 'Select assets to mark as pre-disposed.' },
     ],
   }),
   component: TechnicianDisposalPage,

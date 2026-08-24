@@ -112,3 +112,9 @@ export function isAllowedStatusTransition(
     (a) => a.mode === 'status' && a.targetStatusId === toStatusId,
   );
 }
+
+export const PREDISPOSAL_ELIGIBLE_STATUS_IDS = [STATUS_ID.RETURN] as const;
+
+export function isPredisposalEligibleStatus(statusId: number): boolean {
+  return (PREDISPOSAL_ELIGIBLE_STATUS_IDS as readonly number[]).includes(statusId);
+}

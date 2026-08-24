@@ -14,7 +14,13 @@ import type {
   NetworkAsset,
   PurchaseFields,
 } from '@shared/lib/inventory-schema';
-import { isAllowedStatusTransition } from '@shared/lib/asset-status-actions';
+import type { MarkPredisposedAssetInput, PredisposalEligibleAsset } from '@shared/lib/disposal-schema';
+import {
+  isAllowedStatusTransition,
+  isPredisposalEligibleStatus,
+  PREDISPOSAL_ELIGIBLE_STATUS_IDS,
+  STATUS_ID,
+} from '@shared/lib/asset-status-actions';
 import { formatIsoToDdMmYy, parseDdMmYyToIso } from '@shared/lib/date-format';
 import { purchaseSqlParams } from '@shared/lib/purchase-field-utils';
 import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
@@ -716,6 +722,92 @@ export async function updateAssetStatus(kind: AssetKind, assetId: number, status
     throw new Error('The asset was updated but could not be loaded. Refresh the page to see the latest details.');
   }
   return updated;
+}
+
+type PredisposalRow = RowDataPacket & {
+  asset_id: number;
+  asset_id_old?: string | null;
+  model: string | null;
+  brand: string | null;
+  category: string | null;
+  serial_num: string | null;
+  status_id: number;
+  PO_DATE: Date | string | null;
+};
+
+async function queryPredisposalEligible(
+  kind: AssetKind,
+  extraSelect = '',
+): Promise<PredisposalEligibleAsset[]> {
+  const pool = getDbPool();
+  const table = TABLE_BY_KIND[kind];
+  const placeholders = PREDISPOSAL_ELIGIBLE_STATUS_IDS.map(() => '?').join(', ');
+  const [rows] = await pool.query<PredisposalRow[]>(
+    `SELECT asset_id, ${extraSelect} model, brand, category, serial_num, status_id, PO_DATE
+     FROM \`${table}\`
+     WHERE status_id IN (${placeholders})
+     ORDER BY ${assetIdNewestYearFirstSql()}`,
+    [...PREDISPOSAL_ELIGIBLE_STATUS_IDS],
+  );
+  return rows.map((r) => ({
+    kind,
+    assetId: r.asset_id,
+    assetIdOld: r.asset_id_old ?? null,
+    model: r.model,
+    brand: r.brand,
+    category: r.category,
+    serialNum: r.serial_num,
+    statusId: r.status_id,
+    poDate: formatDate(r.PO_DATE),
+  }));
+}
+
+export async function listPredisposalEligibleAssets(): Promise<PredisposalEligibleAsset[]> {
+  const [laptop, av, network] = await Promise.all([
+    queryPredisposalEligible('laptop'),
+    queryPredisposalEligible('av', 'asset_id_old,'),
+    queryPredisposalEligible('network'),
+  ]);
+  return [...laptop, ...av, ...network];
+}
+
+async function markAssetPredisposed(input: MarkPredisposedAssetInput): Promise<void> {
+  const pool = getDbPool();
+  const table = TABLE_BY_KIND[input.kind];
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
+    [input.assetId],
+  );
+  const row = rows[0] as { status_id: number } | undefined;
+  if (!row) {
+    throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
+  }
+  if (!isPredisposalEligibleStatus(row.status_id)) {
+    throw new Error(
+      'Only return assets can be marked as pre-disposed. Return deployed assets first, or choose a different asset.',
+    );
+  }
+  await pool.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
+    STATUS_ID.PRE_DISPOSED,
+    input.assetId,
+  ]);
+}
+
+export async function markAssetsPredisposed(
+  assets: MarkPredisposedAssetInput[],
+): Promise<{ updated: number; errors: string[] }> {
+  const errors: string[] = [];
+  let updated = 0;
+  for (const asset of assets) {
+    try {
+      await markAssetPredisposed(asset);
+      updated += 1;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'This asset could not be marked as pre-disposed.';
+      errors.push(`${asset.kind} #${asset.assetId}: ${msg}`);
+    }
+  }
+  return { updated, errors };
 }
 
 type TimedRow = { created_at?: Date | string | null; updated_at?: Date | string | null };

@@ -5,6 +5,7 @@ import type {
   CreateLaptopInput,
   CreateNetworkInput,
 } from '@shared/lib/inventory-schema';
+import type { MarkAssetsPredisposedInput } from '@shared/lib/disposal-schema';
 import type { NextAssetIdRequest } from '@backend/server/assets/asset-id.server';
 import type {
   BulkAvImportRow,
@@ -135,4 +136,19 @@ export const findAssetByCodeFn = createServerFn({ method: 'GET' })
   .handler(async ({ data: code }) => {
     const { findAssetByCode } = await import('@backend/server/assets/assets-repo.server');
     return findAssetByCode(code);
+  });
+
+export const listPredisposalEligibleAssetsFn = createServerFn({ method: 'GET' })
+  .middleware([staffMiddleware])
+  .handler(async () => {
+    const { listPredisposalEligibleAssets } = await import('@backend/server/assets/assets-repo.server');
+    return listPredisposalEligibleAssets();
+  });
+
+export const markAssetsPredisposedFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
+  .inputValidator((input: MarkAssetsPredisposedInput) => input)
+  .handler(async ({ data: input }) => {
+    const { markAssetsPredisposed } = await import('@backend/server/assets/assets-repo.server');
+    return markAssetsPredisposed(input.assets);
   });
