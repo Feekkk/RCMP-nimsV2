@@ -18,12 +18,12 @@ import {
   REQUEST_STATUS_ACTIVE,
   REQUEST_STATUS_BOOKED,
   REQUEST_STATUS_CHECKOUT,
-} from '@/lib/request-schema';
-import type { RequestAssignableKind, RequestPoolAsset } from '@/lib/request-schema';
+} from '@shared/lib/request-schema';
+import type { RequestAssignableKind, RequestPoolAsset } from '@shared/lib/request-schema';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
-import { listRequestPoolAssetsFn, removeAssetFromRequestPoolFn } from '@/server/requests/request.functions';
+import { listRequestPoolAssetsFn, removeAssetFromRequestPoolFn } from '@backend/server/requests/request.functions';
 
 type KindFilter = 'all' | RequestAssignableKind;
 

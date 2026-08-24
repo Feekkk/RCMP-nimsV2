@@ -5,7 +5,7 @@ import {
   bulkImportTemplateStatusId,
   type AssetKind,
   type BulkImportTemplateVariant,
-} from '@/lib/inventory-schema';
+} from '@shared/lib/inventory-schema';
 
 const REQUIRED_FILL = 'FACC15';
 const HEADER_FONT = '0F172A';

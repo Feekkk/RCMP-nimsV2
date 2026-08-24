@@ -28,9 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { AdminUserRow } from '@/lib/admin-users-schema';
-import { ROLE_ADMIN, ROLE_DISPOSAL_UNIT, ROLE_TECHNICIAN, ROLE_USER, readAdminSession } from '@/lib/auth-session';
-import { createAdminUserFn, listAdminUsersFn, updateAdminUserFn } from '@/server/admin/admin-users.functions';
+import type { AdminUserRow } from '@shared/lib/admin-users-schema';
+import { ROLE_ADMIN, ROLE_DISPOSAL_UNIT, ROLE_TECHNICIAN, ROLE_USER, readAdminSession } from '@shared/lib/auth-session';
+import { createAdminUserFn, listAdminUsersFn, updateAdminUserFn } from '@backend/server/admin/admin-users.functions';
 
 type UserFormState = {
   email: string;

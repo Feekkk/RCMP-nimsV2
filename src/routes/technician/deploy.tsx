@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { TechnicianDeployPage } from '@/technician/deployPage';
-import type { AssetKind } from '@/lib/inventory-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
 
 type DeploySearch = { kind?: AssetKind; assetId?: number };
 

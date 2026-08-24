@@ -20,9 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { AssetKind } from '@/lib/inventory-schema';
-import { ASSET_KIND_LABEL } from '@/lib/inventory-schema';
-import type { PmChecklistDetail, PmChecklistSummary } from '@/lib/pm-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
+import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
+import type { PmChecklistDetail, PmChecklistSummary } from '@shared/lib/pm-schema';
 import { cn } from '@/lib/utils';
 import {
   addPmChecklistItemFn,
@@ -34,7 +34,7 @@ import {
   listPmChecklistsFn,
   updatePmChecklistFn,
   updatePmChecklistItemFn,
-} from '@/server/operations/pm.functions';
+} from '@backend/server/operations/pm.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
 

@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
-import { formatStatusLabel } from '@/lib/inventory-schema';
-import { STATUS_ID } from '@/lib/asset-status-actions';
+import { formatStatusLabel } from '@shared/lib/inventory-schema';
+import { STATUS_ID } from '@shared/lib/asset-status-actions';
 import { cn } from '@/lib/utils';
 
 /** Semantic badge colors per status_id (see status.md). */

@@ -11,7 +11,7 @@ import {
   matchesAssignmentBucket,
   type LaptopAsset,
   type LaptopAssignmentBucket,
-} from '@/lib/inventory-schema';
+} from '@shared/lib/inventory-schema';
 import { InsightStatCard } from '@/components/insight-stat-card';
 import { cn } from '@/lib/utils';
 

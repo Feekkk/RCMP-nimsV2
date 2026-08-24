@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { DisposalUnitShell } from '@/disposal-unit/disposal-unit-shell';
-import { isoToLocalDate, localDateToIso } from '@/lib/date-format';
+import { isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 

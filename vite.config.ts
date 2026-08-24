@@ -167,7 +167,7 @@ function overdueReturnEmailSchedulerPlugin() {
     configureServer(server: import('vite').ViteDevServer) {
       if (process.env.OVERDUE_EMAIL_SCHEDULER !== 'true') return;
       const schedulerModule = pathToFileURL(
-        path.resolve(process.cwd(), 'src/server/jobs/overdue-return-email-scheduler.server.ts'),
+        path.resolve(process.cwd(), 'backend/server/jobs/overdue-return-email-scheduler.server.ts'),
       ).href;
       void server
         .ssrLoadModule(schedulerModule)
@@ -221,6 +221,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        "@backend": path.resolve(__dirname, "./backend"),
+        "@shared": path.resolve(__dirname, "./shared"),
       },
       dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     },
@@ -237,7 +239,7 @@ export default defineConfig(({ mode }) => {
       nitro({
         preset: 'node-server',
         plugins: [
-          path.resolve(__dirname, 'server/plugins/overdue-email-scheduler.ts'),
+          path.resolve(__dirname, 'backend/plugins/overdue-email-scheduler.ts'),
         ],
         rollupConfig: {
           external: ['mysql2', 'mysql2/promise', 'nodemailer'],

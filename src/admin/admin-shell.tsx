@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AdminSideBar } from '@/components/ui/adminSidebar';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, getPostLoginPath, hasAdminSession, readPrivilegedSession } from '@/lib/auth-session';
+import { clearAllSessions, getPostLoginPath, hasAdminSession, readPrivilegedSession } from '@shared/lib/auth-session';
 import { AssetLookupButton } from '@/technician/asset-lookup';
 import { AskAiLink } from '@/components/ask-ai-link';
 

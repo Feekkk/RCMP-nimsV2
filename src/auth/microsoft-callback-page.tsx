@@ -4,9 +4,9 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { getPostLoginPath, persistSession } from '@/lib/auth-session';
+import { getPostLoginPath, persistSession } from '@shared/lib/auth-session';
 import { buildMobileAppCallbackUrl, isMobileOAuthState } from '@/lib/mobile-auth';
-import { completeMicrosoftLoginFn } from '@/server/auth/auth.functions';
+import { completeMicrosoftLoginFn } from '@backend/server/auth/auth.functions';
 
 export const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
 

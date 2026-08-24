@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { TechSideBar } from '@/components/ui/techSideBar';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, hasTechnicianSession, isAdminRole, isDisposalUnitRole, readPrivilegedSession } from '@/lib/auth-session';
+import { clearAllSessions, hasTechnicianSession, isAdminRole, isDisposalUnitRole, readPrivilegedSession } from '@shared/lib/auth-session';
 import { AssetLookupButton } from '@/technician/asset-lookup';
 
 export function TechnicianShell({ children }: { children: ReactNode }) {

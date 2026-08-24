@@ -28,7 +28,7 @@ import { useAssets } from '@/hooks/assets';
 import { isLeasingCategory, isOwnedDesktopCategory, isOwnedNotebookCategory } from '@/hooks/assetid-generator';
 import {
   DASHBOARD_ASSET_STORE_STATUS_IDS,
-} from '@/lib/dashboard-schema';
+} from '@shared/lib/dashboard-schema';
 import {
   ASSET_KIND_LABEL,
   formatStatusLabel,
@@ -38,17 +38,17 @@ import {
   type LaptopAsset,
   type LaptopAssignmentBucket,
   type NetworkAsset,
-} from '@/lib/inventory-schema';
-import { ACTIVITY_CATEGORY_LABEL, type ActivityLogEntry } from '@/lib/activity-log-schema';
+} from '@shared/lib/inventory-schema';
+import { ACTIVITY_CATEGORY_LABEL, type ActivityLogEntry } from '@shared/lib/activity-log-schema';
 import type {
   LaptopDepartmentHandover,
   LaptopDepartmentStaffHandover,
-} from '@/lib/admin-laptop-insights-schema';
-import { getLaptopDepartmentHandoversFn } from '@/server/admin/admin-laptop-insights.functions';
-import { listActivityLogFn } from '@/server/operations/activity-log.functions';
-import { STATUS_ID } from '@/lib/asset-status-actions';
-import { formatAssetLifespan } from '@/lib/date-format';
-import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@/lib/deploy-return-schema';
+} from '@shared/lib/admin-laptop-insights-schema';
+import { getLaptopDepartmentHandoversFn } from '@backend/server/admin/admin-laptop-insights.functions';
+import { listActivityLogFn } from '@backend/server/operations/activity-log.functions';
+import { STATUS_ID } from '@shared/lib/asset-status-actions';
+import { formatAssetLifespan } from '@shared/lib/date-format';
+import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@shared/lib/deploy-return-schema';
 import { cn } from '@/lib/utils';
 
 type FormFactor = 'laptop' | 'desktop' | 'leasing';

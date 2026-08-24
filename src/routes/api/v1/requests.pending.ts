@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { handlePendingRequests } from '@/server/api/api-handlers.server';
+import { handlePendingRequests } from '@backend/server/api/api-handlers.server';
 
 export const Route = createFileRoute('/api/v1/requests/pending')({
   server: {

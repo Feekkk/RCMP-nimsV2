@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { History, LogOut, UserPen } from 'lucide-react';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 import { Button } from '@/components/ui/button';
-import type { SessionUser } from '@/lib/auth-session';
+import type { SessionUser } from '@shared/lib/auth-session';
 
 export function UserPageChrome({
   session,

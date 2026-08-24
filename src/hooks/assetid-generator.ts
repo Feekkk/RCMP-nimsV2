@@ -3,8 +3,8 @@
  * See assetid-flow.md for when each prefix applies.
  */
 import { useCallback, useEffect, useState } from 'react';
-import type { AssetKind } from '@/lib/inventory-schema';
-import { getNextAssetIdFn } from '@/server/assets/assets.functions';
+import type { AssetKind } from '@shared/lib/inventory-schema';
+import { getNextAssetIdFn } from '@backend/server/assets/assets.functions';
 
 export const ASSET_ID_PREFIX = {
   laptop: 12,

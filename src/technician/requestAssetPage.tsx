@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { ActiveForRequestAsset, RequestAssignableKind } from '@/lib/request-schema';
+import type { ActiveForRequestAsset, RequestAssignableKind } from '@shared/lib/request-schema';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
@@ -23,7 +23,7 @@ import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 import {
   listActiveForRequestPoolFn,
   markAssetsForRequestFn,
-} from '@/server/requests/request.functions';
+} from '@backend/server/requests/request.functions';
 
 function assetKey(kind: RequestAssignableKind, assetId: number) {
   return `${kind}:${assetId}`;

@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import type { TechnicianDashboardCharts } from '@/lib/dashboard-schema';
+import type { TechnicianDashboardCharts } from '@shared/lib/dashboard-schema';
 
 const PROGRAM_PALETTE = [
   'hsl(262 55% 58%)',

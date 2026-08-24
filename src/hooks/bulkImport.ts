@@ -17,15 +17,15 @@ import {
   type CreateAvInput,
   type CreateLaptopInput,
   type CreateNetworkInput,
-} from '@/lib/inventory-schema';
+} from '@shared/lib/inventory-schema';
 import { getLaptopAssetIdPrefix, LAPTOP_CATEGORY_OPTIONS } from '@/hooks/assetid-generator';
-import { parseOptionalDate, parsePurchaseFromRow } from '@/lib/purchase-field-utils';
+import { parseOptionalDate, parsePurchaseFromRow } from '@shared/lib/purchase-field-utils';
 import { parseWarrantyFromRow } from '@/lib/warranty-field-utils';
 import {
   bulkCreateAvImportFn,
   bulkCreateLaptopsImportFn,
   bulkCreateNetworkImportFn,
-} from '@/server/assets/assets.functions';
+} from '@backend/server/assets/assets.functions';
 
 export type BulkLaptopImportRow = Omit<CreateLaptopInput, 'assetId'> & {
   assetId?: string | number;

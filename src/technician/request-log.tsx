@@ -21,15 +21,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { usePagination } from '@/hooks/use-pagination';
-import { formatDateLabel, isoToLocalDate, localDateToIso } from '@/lib/date-format';
-import type { RequestLogAssignment, RequestLogEntry } from '@/lib/request-schema';
+import { formatDateLabel, isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
+import type { RequestLogAssignment, RequestLogEntry } from '@shared/lib/request-schema';
 import { cn } from '@/lib/utils';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { listRequestLogFn } from '@/server/requests/request.functions';
+import { listRequestLogFn } from '@backend/server/requests/request.functions';
 
 type LogEvent = {
   at: string;

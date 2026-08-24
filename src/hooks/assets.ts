@@ -14,7 +14,7 @@ import {
   type CreateNetworkInput,
   type LaptopAsset,
   type NetworkAsset,
-} from '@/lib/inventory-schema';
+} from '@shared/lib/inventory-schema';
 import { compareAssetIdNewestYearFirst } from '@/hooks/assetid-generator';
 import {
   bulkCreateAvImportFn,
@@ -25,7 +25,7 @@ import {
   createNetworkFn,
   listAssetsFn,
   updateAssetStatusFn,
-} from '@/server/assets/assets.functions';
+} from '@backend/server/assets/assets.functions';
 
 export type {
   AssetKind,

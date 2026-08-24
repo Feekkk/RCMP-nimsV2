@@ -9,12 +9,12 @@ import {
   DASHBOARD_REQUEST_WORKFLOW_KEYS,
   DASHBOARD_REQUEST_WORKFLOW_LABEL,
   type DashboardRequestStats,
-} from '@/lib/dashboard-schema';
-import type { AdminRequestInsights } from '@/lib/admin-request-insights-schema';
-import { ASSET_KIND_LABEL } from '@/lib/inventory-schema';
-import { formatDateLabel } from '@/lib/date-format';
-import { getTechnicianDashboardFn } from '@/server/operations/dashboard.functions';
-import { getAdminRequestInsightsFn } from '@/server/admin/admin-request-insights.functions';
+} from '@shared/lib/dashboard-schema';
+import type { AdminRequestInsights } from '@shared/lib/admin-request-insights-schema';
+import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
+import { formatDateLabel } from '@shared/lib/date-format';
+import { getTechnicianDashboardFn } from '@backend/server/operations/dashboard.functions';
+import { getAdminRequestInsightsFn } from '@backend/server/admin/admin-request-insights.functions';
 import { currentCalendarMonth } from '@/dashboard/dashboard-widgets';
 
 const EMPTY_REQUEST_STATS: DashboardRequestStats = {

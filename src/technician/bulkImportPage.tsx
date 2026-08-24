@@ -24,8 +24,8 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { IMPORT_DATE_FORMAT_HINT, PURCHASE_DATE_COLUMNS } from '@/lib/date-format';
-import { INVENTORY_STATUSES, formatStatusLabel } from '@/lib/inventory-schema';
+import { IMPORT_DATE_FORMAT_HINT, PURCHASE_DATE_COLUMNS } from '@shared/lib/date-format';
+import { INVENTORY_STATUSES, formatStatusLabel } from '@shared/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, type AssetKind } from '@/hooks/assets';
 import {
   ACC_CODE_OPTIONS,

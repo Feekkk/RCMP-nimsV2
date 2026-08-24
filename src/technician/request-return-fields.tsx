@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { RETURN_CONDITIONS } from '@/lib/deploy-return-schema';
+import { RETURN_CONDITIONS } from '@shared/lib/deploy-return-schema';
 
 export function RequestReturnFields({
   returnCondition,

@@ -1,5 +1,5 @@
 import { AdminShell } from '@/admin/admin-shell';
-import type { AssetKind } from '@/lib/inventory-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
 import { AssetViewContent } from '@/technician/asset-view';
 
 const ADMIN_ASSET_LIST_PATH: Record<AssetKind, string> = {

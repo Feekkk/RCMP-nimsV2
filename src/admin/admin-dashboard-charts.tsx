@@ -4,7 +4,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import type { RoleCountSlice } from '@/lib/admin-dashboard-schema';
+import type { RoleCountSlice } from '@shared/lib/admin-dashboard-schema';
 
 const roleConfig = {
   count: { label: 'Accounts', color: 'hsl(262 55% 58%)' },

@@ -15,13 +15,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { INVENTORY_STATUSES, ACC_CODE_OPTIONS } from '@/lib/inventory-schema';
-import { STATUS_ID } from '@/lib/asset-status-actions';
+import { INVENTORY_STATUSES, ACC_CODE_OPTIONS } from '@shared/lib/inventory-schema';
+import { STATUS_ID } from '@shared/lib/asset-status-actions';
 import {
   emptyPurchaseFormState,
   purchaseFormToInput,
   type PurchaseFormState,
-} from '@/lib/purchase-field-utils';
+} from '@shared/lib/purchase-field-utils';
 import {
   emptyWarrantyFormState,
   warrantyFormToInput,

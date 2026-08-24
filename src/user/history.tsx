@@ -10,9 +10,9 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, readUserSession } from '@/lib/auth-session';
-import type { UserRequestHistory, UserRequestItemProgress } from '@/lib/request-schema';
-import { listUserRequestHistoryFn } from '@/server/requests/request.functions';
+import { clearAllSessions, readUserSession } from '@shared/lib/auth-session';
+import type { UserRequestHistory, UserRequestItemProgress } from '@shared/lib/request-schema';
+import { listUserRequestHistoryFn } from '@backend/server/requests/request.functions';
 import { UserPageChrome } from '@/user/user-chrome';
 import { cn } from '@/lib/utils';
 

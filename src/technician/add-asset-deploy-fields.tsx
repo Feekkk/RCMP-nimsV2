@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { AssetKind } from '@/lib/inventory-schema';
-import type { StaffRecipient } from '@/lib/deploy-return-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { StaffRecipient } from '@shared/lib/deploy-return-schema';
 import {
   CampusBuildingSelect,
   DatePickerField,

@@ -39,12 +39,12 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Toaster } from '@/components/ui/sonner';
-import { clearAllSessions, readUserSession, type SessionUser } from '@/lib/auth-session';
-import { isUserProfileComplete } from '@/lib/user-profile';
+import { clearAllSessions, readUserSession, type SessionUser } from '@shared/lib/auth-session';
+import { isUserProfileComplete } from '@shared/lib/user-profile';
 import {
   REQUEST_PROGRAM_TYPES,
   type UserRequestItemDraft,
-} from '@/lib/request-schema';
+} from '@shared/lib/request-schema';
 import {
   USER_REQUEST_ASSET_CATALOG,
   type UserRequestAssetCatalogEntry,
@@ -52,14 +52,14 @@ import {
   getUserRequestAssetCatalogEntry,
   kindGroupLabel,
   requestItemKindFromAssetType,
-} from '@/lib/request-asset-types';
-import { sendRequestEmailFn } from '@/server/email/request-email.functions';
-import { submitUserRequestFn } from '@/server/requests/request.functions';
+} from '@shared/lib/request-asset-types';
+import { sendRequestEmailFn } from '@backend/server/email/request-email.functions';
+import { submitUserRequestFn } from '@backend/server/requests/request.functions';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
 import { UserProfileCompleteDialog } from '@/user/profile-complete-dialog';
-import { getUserProfileFn } from '@/server/auth/auth.functions';
-import { localDateToIso } from '@/lib/date-format';
+import { getUserProfileFn } from '@backend/server/auth/auth.functions';
+import { localDateToIso } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
 
 const STEPS = [

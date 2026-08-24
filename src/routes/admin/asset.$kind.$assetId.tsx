@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AdminAssetViewPage } from '@/admin/asset-view';
-import type { AssetKind } from '@/lib/inventory-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
 
 function parseKind(raw: string): AssetKind | null {
   if (raw === 'laptop' || raw === 'av' || raw === 'network') return raw;

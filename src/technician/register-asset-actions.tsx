@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { AssetKind } from '@/hooks/assets';
-import { formatStatusLabel, INVENTORY_STATUSES } from '@/lib/inventory-schema';
+import { formatStatusLabel, INVENTORY_STATUSES } from '@shared/lib/inventory-schema';
 import { cn } from '@/lib/utils';
 
 type RegisterAssetActionsProps = {

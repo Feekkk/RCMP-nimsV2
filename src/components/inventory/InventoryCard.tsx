@@ -15,7 +15,6 @@ export function InventoryCard({ item, isAdmin, onEdit, onDelete }: Props) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-secondary">
           {item.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
           ) : (
             <Tag className="h-6 w-6 text-muted-foreground" />

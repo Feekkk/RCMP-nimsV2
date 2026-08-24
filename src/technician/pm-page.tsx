@@ -39,12 +39,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { isoToLocalDate, localDateToIso } from '@/lib/date-format';
-import { ASSET_KIND_LABEL, type AssetKind } from '@/lib/inventory-schema';
-import type { PmLogListRow, PmLogStatus, PmStats } from '@/lib/pm-schema';
+import { isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
+import { ASSET_KIND_LABEL, type AssetKind } from '@shared/lib/inventory-schema';
+import type { PmLogListRow, PmLogStatus, PmStats } from '@shared/lib/pm-schema';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
-import { getPmStatsFn, listPmChecklistsFn, listPmLogsFn } from '@/server/operations/pm.functions';
+import { getPmStatsFn, listPmChecklistsFn, listPmLogsFn } from '@backend/server/operations/pm.functions';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';

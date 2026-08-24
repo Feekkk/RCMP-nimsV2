@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { PurchaseFormState } from '@/lib/purchase-field-utils';
+import type { PurchaseFormState } from '@shared/lib/purchase-field-utils';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 
 export function PurchaseFieldsSection({

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { findAssetByCodeFn } from '@/server/assets/assets.functions';
+import { findAssetByCodeFn } from '@backend/server/assets/assets.functions';
 import { AssetBarcodeScanner } from '@/technician/asset-barcode-scanner';
 
 type AssetLookupButtonProps = {

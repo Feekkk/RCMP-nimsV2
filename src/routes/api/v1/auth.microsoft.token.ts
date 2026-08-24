@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { handleMicrosoftToken } from '@/server/api/api-handlers.server';
+import { handleMicrosoftToken } from '@backend/server/api/api-handlers.server';
 
 export const Route = createFileRoute('/api/v1/auth/microsoft/token')({
   server: {

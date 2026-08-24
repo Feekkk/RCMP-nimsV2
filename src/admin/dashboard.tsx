@@ -4,9 +4,9 @@ import { toast } from 'sonner';
 import {
   type DashboardAssetKindStats,
   type TechnicianDashboardData,
-} from '@/lib/dashboard-schema';
-import { ASSET_KIND_LABEL } from '@/lib/inventory-schema';
-import { getTechnicianDashboardFn } from '@/server/operations/dashboard.functions';
+} from '@shared/lib/dashboard-schema';
+import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
+import { getTechnicianDashboardFn } from '@backend/server/operations/dashboard.functions';
 import { AdminShell } from '@/admin/admin-shell';
 import {
   InventoryStatCard,

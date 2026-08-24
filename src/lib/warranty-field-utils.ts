@@ -10,7 +10,7 @@ export type WarrantyInput = {
   remarks?: string | null;
 };
 import type { BulkImportRowError } from '@/hooks/bulkImport';
-import { parseOptionalDate } from '@/lib/purchase-field-utils';
+import { parseOptionalDate } from '@shared/lib/purchase-field-utils';
 
 export type WarrantyFormState = {
   startDate: string;

@@ -10,7 +10,7 @@ import {
   getPostLoginPath,
   hasDisposalUnitSession,
   readPrivilegedSession,
-} from '@/lib/auth-session';
+} from '@shared/lib/auth-session';
 
 export function DisposalUnitShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();

@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "mailpit": "docker compose -f docker-compose.mailpit.yml up",
     "mailpit:down": "docker compose -f docker-compose.mailpit.yml down",
-    "overdue-emails": "npx tsx scripts/run-overdue-return-emails.ts"
+    "overdue-emails": "npx tsx backend/scripts/run-overdue-return-emails.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -59,12 +59,12 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
     "embla-carousel-react": "^8.6.0",
-    "exceljs": "^4.4.0",
+    "exceljs": "^3.4.0",
     "input-otp": "^1.4.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.575.0",
     "mysql2": "^3.22.3",
-    "nodemailer": "^8.0.10",
+    "nodemailer": "^9.0.5",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.0",

@@ -1,9 +1,9 @@
 import type { ElementType } from 'react';
 import { PackageCheck, PackageX } from 'lucide-react';
 import { countStockAssets, type StockStatusCount } from '@/hooks/assets';
-import { STATUS_ID } from '@/lib/asset-status-actions';
-import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@/lib/deploy-return-schema';
-import { formatStatusLabel, OUTSTOCK_STATUS_IDS, type AssetKind } from '@/lib/inventory-schema';
+import { STATUS_ID } from '@shared/lib/asset-status-actions';
+import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@shared/lib/deploy-return-schema';
+import { formatStatusLabel, OUTSTOCK_STATUS_IDS, type AssetKind } from '@shared/lib/inventory-schema';
 import { InsightStatCard } from '@/components/insight-stat-card';
 import { cn } from '@/lib/utils';
 

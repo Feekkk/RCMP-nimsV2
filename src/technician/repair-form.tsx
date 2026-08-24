@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { readTechnicianSession } from '@/lib/auth-session';
-import { normalizeToIsoDate } from '@/lib/date-format';
+import { readTechnicianSession } from '@shared/lib/auth-session';
+import { normalizeToIsoDate } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
-import { parseFaultyAssetRouteSearch } from '@/lib/warranty-repair-schema';
-import { createRepairFn } from '@/server/requests/warranty-repair.functions';
+import { parseFaultyAssetRouteSearch } from '@shared/lib/warranty-repair-schema';
+import { createRepairFn } from '@backend/server/requests/warranty-repair.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 

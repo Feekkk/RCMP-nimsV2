@@ -18,10 +18,10 @@ import {
   type DashboardRequestStatus,
   type DashboardStatusCount,
   type DashboardTimetableEntry,
-} from '@/lib/dashboard-schema';
+} from '@shared/lib/dashboard-schema';
 import { InsightStatCard, type InsightCardTone } from '@/components/insight-stat-card';
-import { formatStatusLabel } from '@/lib/inventory-schema';
-import { formatDateLabel, localDateToIso } from '@/lib/date-format';
+import { formatStatusLabel } from '@shared/lib/inventory-schema';
+import { formatDateLabel, localDateToIso } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
 
 function BreakdownList({ rows }: { rows: { label: string; count: number }[] }) {

@@ -33,7 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { DisposalUnitShell } from '@/disposal-unit/disposal-unit-shell';
-import { isoToLocalDate } from '@/lib/date-format';
+import { isoToLocalDate } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 

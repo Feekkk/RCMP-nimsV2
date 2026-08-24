@@ -17,9 +17,9 @@ import { toast } from 'sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 import uniklOfficialLogo from '@/assets/unikl-official.png';
 import { MICROSOFT_OAUTH_STATE_KEY } from '@/auth/microsoft-callback-page';
-import type { LandingStatusLevel, LandingSystemStatus } from '@/lib/landing-status-types';
-import { getLandingSystemStatusFn } from '@/server/operations/landing-status.functions';
-import { getMicrosoftLoginUrlFn } from '@/server/auth/auth.functions';
+import type { LandingStatusLevel, LandingSystemStatus } from '@shared/lib/landing-status-types';
+import { getLandingSystemStatusFn } from '@backend/server/operations/landing-status.functions';
+import { getMicrosoftLoginUrlFn } from '@backend/server/auth/auth.functions';
 import { cn } from '@/lib/utils';
 
 const STATUS_DOT: Record<LandingStatusLevel, string> = {

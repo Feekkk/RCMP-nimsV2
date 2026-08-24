@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { TechnicianReturnPage } from '@/technician/returnPage';
-import type { AssetKind } from '@/lib/inventory-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
 
 type ReturnSearch = { kind?: AssetKind; assetId?: number };
 

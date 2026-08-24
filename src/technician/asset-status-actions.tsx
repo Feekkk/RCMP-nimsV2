@@ -4,15 +4,15 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { AssetKind } from '@/lib/inventory-schema';
-import { formatStatusLabel } from '@/lib/inventory-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
+import { formatStatusLabel } from '@shared/lib/inventory-schema';
 import {
   getAssetStatusActions,
   getRepairOrWarrantyAction,
   isFaultyServiceStatus,
   type AssetStatusAction,
-} from '@/lib/asset-status-actions';
-import { getWarrantyContextFn } from '@/server/requests/warranty-repair.functions';
+} from '@shared/lib/asset-status-actions';
+import { getWarrantyContextFn } from '@backend/server/requests/warranty-repair.functions';
 
 type AssetStatusActionsProps = {
   kind: AssetKind;

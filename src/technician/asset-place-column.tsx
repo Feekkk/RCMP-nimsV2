@@ -1,5 +1,5 @@
 import { TableHead } from '@/components/ui/table';
-import type { PlaceFields } from '@/lib/inventory-schema';
+import type { PlaceFields } from '@shared/lib/inventory-schema';
 
 export type PlaceColumnView = 'place' | 'building' | 'level' | 'zone';
 

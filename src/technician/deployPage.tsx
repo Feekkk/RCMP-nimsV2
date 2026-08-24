@@ -6,22 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { readTechnicianSession } from '@/lib/auth-session';
-import { normalizeToIsoDate } from '@/lib/date-format';
-import type { DeployReturnSearch } from '@/lib/deploy-return-schema';
-import type { StaffRecipient } from '@/lib/deploy-return-schema';
+import { readTechnicianSession } from '@shared/lib/auth-session';
+import { normalizeToIsoDate } from '@shared/lib/date-format';
+import type { DeployReturnSearch } from '@shared/lib/deploy-return-schema';
+import type { StaffRecipient } from '@shared/lib/deploy-return-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
 import {
   deployLaptopPlaceFn,
   deployLaptopStaffFn,
   deployPlaceFn,
-} from '@/server/requests/deploy-return.functions';
-import { generateHandoverPdfFn } from '@/server/pdf/handover-pdf.functions';
+} from '@backend/server/requests/deploy-return.functions';
+import { generateHandoverPdfFn } from '@backend/server/pdf/handover-pdf.functions';
 import {
   getHandoverEmailStatusFn,
   queueHandoverEmailFn,
   sendHandoverEmailFn,
-} from '@/server/email/handover-email.functions';
+} from '@backend/server/email/handover-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { DatePickerField, CampusBuildingSelect, FormField } from '@/technician/deploy-return-fields';
 import { StaffRecipientSearch } from '@/technician/staff-recipient-search';

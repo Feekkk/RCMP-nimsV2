@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import type { StaffRecipient } from '@/lib/deploy-return-schema';
-import { searchStaffFn } from '@/server/requests/deploy-return.functions';
+import type { StaffRecipient } from '@shared/lib/deploy-return-schema';
+import { searchStaffFn } from '@backend/server/requests/deploy-return.functions';
 
 export function StaffRecipientSearch({
   value,

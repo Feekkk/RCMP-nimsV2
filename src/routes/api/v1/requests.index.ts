@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { handleSubmitRequest, handleUserRequests } from '@/server/api/api-handlers.server';
+import { handleSubmitRequest, handleUserRequests } from '@backend/server/api/api-handlers.server';
 
 export const Route = createFileRoute('/api/v1/requests/')({
   server: {

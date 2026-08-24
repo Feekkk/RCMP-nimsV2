@@ -30,14 +30,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { usePagination } from '@/hooks/use-pagination';
-import type { StaffDirectoryRow, StaffDivision, StaffHandoverAsset } from '@/lib/staff-schema';
-import { STAFF_DIVISIONS } from '@/lib/staff-schema';
-import { formatDateLabel } from '@/lib/date-format';
+import type { StaffDirectoryRow, StaffDivision, StaffHandoverAsset } from '@shared/lib/staff-schema';
+import { STAFF_DIVISIONS } from '@shared/lib/staff-schema';
+import { formatDateLabel } from '@shared/lib/date-format';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { createStaffFn, listStaffDirectoryFn, listStaffHandoverAssetsFn, updateStaffFn } from '@/server/operations/staff.functions';
+import { createStaffFn, listStaffDirectoryFn, listStaffHandoverAssetsFn, updateStaffFn } from '@backend/server/operations/staff.functions';
 
 type StaffFormState = {
   employeeNo: string;

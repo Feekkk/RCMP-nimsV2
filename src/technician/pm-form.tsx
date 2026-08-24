@@ -18,22 +18,22 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { readTechnicianSession } from '@/lib/auth-session';
-import { localDateToIso } from '@/lib/date-format';
-import { ASSET_KIND_LABEL, type AssetKind } from '@/lib/inventory-schema';
+import { readTechnicianSession } from '@shared/lib/auth-session';
+import { localDateToIso } from '@shared/lib/date-format';
+import { ASSET_KIND_LABEL, type AssetKind } from '@shared/lib/inventory-schema';
 import type {
   PmChecklistDetail,
   PmItemResult,
   PmLocationTree,
   PmPlaceAsset,
-} from '@/lib/pm-schema';
+} from '@shared/lib/pm-schema';
 import { cn } from '@/lib/utils';
 import {
   createPmLogFn,
   getPmChecklistDetailFn,
   getPmLocationTreeFn,
   listPmAssetsAtPlaceFn,
-} from '@/server/operations/pm.functions';
+} from '@backend/server/operations/pm.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
 

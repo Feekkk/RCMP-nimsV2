@@ -20,24 +20,24 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import type { AssetKind } from '@/lib/inventory-schema';
-import { ASSET_KIND_LABEL, INVENTORY_STATUSES, formatStatusLabel } from '@/lib/inventory-schema';
-import { readTechnicianSession } from '@/lib/auth-session';
+import type { AssetKind } from '@shared/lib/inventory-schema';
+import { ASSET_KIND_LABEL, INVENTORY_STATUSES, formatStatusLabel } from '@shared/lib/inventory-schema';
+import { readTechnicianSession } from '@shared/lib/auth-session';
 import type {
   TechnicianAssetExportKind,
   TechnicianReportPdfFilters,
   TechnicianReportRequestFilter,
   ReportPdfColumn,
-} from '@/lib/technician-export-schema';
+} from '@shared/lib/technician-export-schema';
 import {
   DEFAULT_REPORT_PDF_COLUMNS,
   REPORT_PDF_COLUMNS,
-} from '@/lib/technician-export-schema';
+} from '@shared/lib/technician-export-schema';
 import { downloadCsvFile } from '@/hooks/bulkImport';
 import {
   exportTechnicianAssetCsvFn,
   generateAssetReportPdfFn,
-} from '@/server/admin/technician-export.functions';
+} from '@backend/server/admin/technician-export.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 
 const CSV_EXPORTS: {

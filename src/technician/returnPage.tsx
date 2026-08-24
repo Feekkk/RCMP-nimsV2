@@ -4,9 +4,9 @@ import { ArrowLeft, FileDown, Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { readTechnicianSession } from '@/lib/auth-session';
-import { formatDateLabel, normalizeToIsoDate } from '@/lib/date-format';
-import type { OpenReturnContext } from '@/lib/deploy-return-schema';
+import { readTechnicianSession } from '@shared/lib/auth-session';
+import { formatDateLabel, normalizeToIsoDate } from '@shared/lib/date-format';
+import type { OpenReturnContext } from '@shared/lib/deploy-return-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
 import { Route } from '@/routes/technician/return';
 import {
@@ -14,16 +14,16 @@ import {
   returnLaptopPlaceFn,
   returnLaptopStaffFn,
   returnPlaceFn,
-} from '@/server/requests/deploy-return.functions';
-import { generateReturnPdfFn } from '@/server/pdf/return-pdf.functions';
+} from '@backend/server/requests/deploy-return.functions';
+import { generateReturnPdfFn } from '@backend/server/pdf/return-pdf.functions';
 import {
   getReturnEmailStatusFn,
   queueReturnEmailFn,
   sendReturnEmailFn,
-} from '@/server/email/return-email.functions';
+} from '@backend/server/email/return-email.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { ReturnDetailsFields } from '@/technician/deploy-return-fields';
-import { STATUS_ID } from '@/lib/asset-status-actions';
+import { STATUS_ID } from '@shared/lib/asset-status-actions';
 
 function DeploymentSummary({ ctx }: { ctx: OpenReturnContext }) {
   if (ctx.kind === 'laptop') {

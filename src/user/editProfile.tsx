@@ -11,8 +11,8 @@ import {
   persistSession,
   readUserSession,
   type SessionUser,
-} from '@/lib/auth-session';
-import { getUserProfileFn, updateUserProfileFn } from '@/server/auth/auth.functions';
+} from '@shared/lib/auth-session';
+import { getUserProfileFn, updateUserProfileFn } from '@backend/server/auth/auth.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
 

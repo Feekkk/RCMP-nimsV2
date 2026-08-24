@@ -50,12 +50,12 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
-import { readTechnicianSession } from '@/lib/auth-session';
+import { readTechnicianSession } from '@shared/lib/auth-session';
 import {
   REQUEST_STATUS_ACTIVE,
   REQUEST_STATUS_BOOKED,
   REQUEST_STATUS_CHECKOUT,
-} from '@/lib/request-schema';
+} from '@shared/lib/request-schema';
 import type {
   PendingRequest,
   RequestAssignableKind,
@@ -63,16 +63,16 @@ import type {
   RequestItemRow,
   RequestPoolAsset,
   RequestSlotMark,
-} from '@/lib/request-schema';
-import { kindGroupLabel, requestItemKindFromAssetType } from '@/lib/request-asset-types';
-import { formatDateLabel, isoToLocalDate, localDateToIso } from '@/lib/date-format';
+} from '@shared/lib/request-schema';
+import { kindGroupLabel, requestItemKindFromAssetType } from '@shared/lib/request-asset-types';
+import { formatDateLabel, isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { sendCheckoutEmailFn } from '@/server/email/checkout-email.functions';
-import { sendRequestRejectEmailFn } from '@/server/email/request-reject-email.functions';
-import { sendRequestReturnEmailFn } from '@/server/email/request-return-email.functions';
+import { sendCheckoutEmailFn } from '@backend/server/email/checkout-email.functions';
+import { sendRequestRejectEmailFn } from '@backend/server/email/request-reject-email.functions';
+import { sendRequestReturnEmailFn } from '@backend/server/email/request-return-email.functions';
 import {
   bookPoolAssetToRequestFn,
   cancelBookedAssignmentNotTakenFn,
@@ -84,7 +84,7 @@ import {
   markRequestSlotUnavailableFn,
   rejectUserRequestFn,
   returnUserRequestFn,
-} from '@/server/requests/request.functions';
+} from '@backend/server/requests/request.functions';
 import { RequestReturnFields } from '@/technician/request-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 

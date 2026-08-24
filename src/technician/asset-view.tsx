@@ -14,17 +14,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AssetDetail, AssetDetailResponse, AssetKind, AssetTrailEvent } from '@/lib/inventory-schema';
-import { ASSET_KIND_LABEL, ASSET_LIST_PATH, formatAccCodeDisplay } from '@/lib/inventory-schema';
-import type { OpenReturnContext } from '@/lib/deploy-return-schema';
-import { formatAssetAge, formatDateLabel, formatPurchaseDateLabel, parseDdMmYyToIso } from '@/lib/date-format';
-import { formatPurchaseCost } from '@/lib/purchase-field-utils';
+import type { AssetDetail, AssetDetailResponse, AssetKind, AssetTrailEvent } from '@shared/lib/inventory-schema';
+import { ASSET_KIND_LABEL, ASSET_LIST_PATH, formatAccCodeDisplay } from '@shared/lib/inventory-schema';
+import type { OpenReturnContext } from '@shared/lib/deploy-return-schema';
+import { formatAssetAge, formatDateLabel, formatPurchaseDateLabel, parseDdMmYyToIso } from '@shared/lib/date-format';
+import { formatPurchaseCost } from '@shared/lib/purchase-field-utils';
 import { cn } from '@/lib/utils';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetStatusActions } from '@/technician/asset-status-actions';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { getAssetDetailFn } from '@/server/assets/assets.functions';
-import { getOpenReturnContextFn } from '@/server/requests/deploy-return.functions';
+import { getAssetDetailFn } from '@backend/server/assets/assets.functions';
+import { getOpenReturnContextFn } from '@backend/server/requests/deploy-return.functions';
 
 function DetailItem({ label, value }: { label: string; value: string | null | undefined }) {
   const text = value?.trim() ? value : '—';
@@ -348,7 +348,7 @@ export function AssetViewContent({
   const assetAge = asset ? formatAssetAge(asset.poDate, asset.createdAt) : null;
 
   const handleStatusChange = async (_assetId: number, statusId: number) => {
-    const { updateAssetStatusFn } = await import('@/server/assets/assets.functions');
+    const { updateAssetStatusFn } = await import('@backend/server/assets/assets.functions');
     await updateAssetStatusFn({ data: { kind, assetId, statusId } });
     await load();
   };

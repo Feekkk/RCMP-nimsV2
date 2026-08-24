@@ -15,9 +15,9 @@ import { toast } from 'sonner';
 import { AdminShell } from '@/admin/admin-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { readAdminSession } from '@/lib/auth-session';
-import { exportAdminCsvFn } from '@/server/admin/admin-export.functions';
-import type { AdminExportKind } from '@/server/admin/admin-export.server';
+import { readAdminSession } from '@shared/lib/auth-session';
+import { exportAdminCsvFn } from '@backend/server/admin/admin-export.functions';
+import type { AdminExportKind } from '@backend/server/admin/admin-export.server';
 
 type ExportOption = {
   kind: AdminExportKind;

@@ -5,16 +5,16 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { NimsLogo } from '@/components/brand/NimsLogo';
-import { persistSession, getPostLoginPath } from '@/lib/auth-session';
+import { persistSession, getPostLoginPath } from '@shared/lib/auth-session';
 import {
   devLoginAsAdminFn,
   devLoginAsTechnicianFn,
   devLoginAsUserFn,
   devLoginAsDisposalUnitFn,
   getMicrosoftLoginUrlFn,
-} from '@/server/auth/auth.functions';
-import { getLoginMaintenanceModeFn } from '@/server/operations/system-settings.functions';
-import { LOGIN_MAINTENANCE_MESSAGE } from '@/lib/system-settings';
+} from '@backend/server/auth/auth.functions';
+import { getLoginMaintenanceModeFn } from '@backend/server/operations/system-settings.functions';
+import { LOGIN_MAINTENANCE_MESSAGE } from '@shared/lib/system-settings';
 import { MICROSOFT_OAUTH_STATE_KEY } from '@/auth/microsoft-callback-page';
 
 function MicrosoftIcon() {

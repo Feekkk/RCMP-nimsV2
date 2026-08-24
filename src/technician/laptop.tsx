@@ -25,8 +25,8 @@ import {
 	normalizeCategory,
 } from '@/hooks/assetid-generator';
 import { usePagination } from '@/hooks/use-pagination';
-import type { LaptopAssignmentBucket } from '@/lib/inventory-schema';
-import { matchesAssignmentBucket } from '@/lib/inventory-schema';
+import type { LaptopAssignmentBucket } from '@shared/lib/inventory-schema';
+import { matchesAssignmentBucket } from '@shared/lib/inventory-schema';
 import {
 	LaptopAssetStockSummary,
 	type LaptopFormFactor,

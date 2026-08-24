@@ -23,8 +23,8 @@ import {
   formatIsoToDdMmYy,
   isoToLocalDate,
   localDateToIso,
-} from '@/lib/date-format';
-import { RETURN_CONDITIONS, CAMPUS_BUILDINGS } from '@/lib/deploy-return-schema';
+} from '@shared/lib/date-format';
+import { RETURN_CONDITIONS, CAMPUS_BUILDINGS } from '@shared/lib/deploy-return-schema';
 import { cn } from '@/lib/utils';
 
 export function FormField({

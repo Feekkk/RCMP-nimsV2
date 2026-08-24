@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { handleLogout } from '@/server/api/api-handlers.server';
+import { handleLogout } from '@backend/server/api/api-handlers.server';
 
 export const Route = createFileRoute('/api/v1/auth/logout')({
   server: {

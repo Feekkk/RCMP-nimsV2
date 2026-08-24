@@ -11,9 +11,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { persistSession, type SessionUser } from '@/lib/auth-session';
-import { isUserProfileComplete, missingUserProfileFields } from '@/lib/user-profile';
-import { updateUserProfileFn } from '@/server/auth/auth.functions';
+import { persistSession, type SessionUser } from '@shared/lib/auth-session';
+import { isUserProfileComplete, missingUserProfileFields } from '@shared/lib/user-profile';
+import { updateUserProfileFn } from '@backend/server/auth/auth.functions';
 import { FormField } from '@/technician/deploy-return-fields';
 
 type UserProfileCompleteDialogProps = {

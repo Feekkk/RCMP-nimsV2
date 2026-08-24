@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { TechnicianRepairFormPage } from '@/technician/repair-form';
-import type { AssetKind } from '@/lib/inventory-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
 
 type RepairSearch = { kind?: AssetKind; assetId?: number };
 

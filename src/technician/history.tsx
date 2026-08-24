@@ -31,18 +31,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { AssetKind } from '@/lib/inventory-schema';
-import { ASSET_KIND_LABEL } from '@/lib/inventory-schema';
+import type { AssetKind } from '@shared/lib/inventory-schema';
+import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import {
   ACTIVITY_CATEGORY_LABEL,
   ACTIVITY_LOG_CATEGORIES,
   type ActivityLogCategory,
   type ActivityLogEntry,
-} from '@/lib/activity-log-schema';
-import { isoToLocalDate, localDateToIso } from '@/lib/date-format';
+} from '@shared/lib/activity-log-schema';
+import { isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
-import { listActivityLogFn } from '@/server/operations/activity-log.functions';
+import { listActivityLogFn } from '@backend/server/operations/activity-log.functions';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
