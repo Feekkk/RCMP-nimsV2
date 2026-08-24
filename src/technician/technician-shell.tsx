@@ -62,7 +62,7 @@ export function TechnicianShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="relative mx-auto w-full max-w-6xl flex-1 px-4 pb-5 pt-8 sm:px-6 sm:pb-6 sm:pt-10">{children}</main>
+        <main className="relative w-full flex-1 px-4 pb-5 pt-8 sm:px-6 sm:pb-6 sm:pt-10 md:px-8">{children}</main>
       </div>
       <AssetLookupButton />
       <Toaster />

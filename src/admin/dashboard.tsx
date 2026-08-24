@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Laptop, Network, Tv } from 'lucide-react';
+import { Download, Laptop, Network, Settings, Sparkles, Tv, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   type DashboardAssetKindStats,
@@ -9,9 +9,11 @@ import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import { getTechnicianDashboardFn } from '@backend/server/operations/dashboard.functions';
 import { AdminShell } from '@/admin/admin-shell';
 import {
+  DashboardShortcuts,
   InventoryStatCard,
   RequestTimetable,
   useDashboardMonthState,
+  type DashboardShortcutItem,
 } from '@/dashboard/dashboard-widgets';
 
 const EMPTY_ASSET_STATS: DashboardAssetKindStats = {
@@ -21,6 +23,16 @@ const EMPTY_ASSET_STATS: DashboardAssetKindStats = {
   registeredTotal: 0,
   byStatus: [],
 };
+
+const ADMIN_SHORTCUTS: DashboardShortcutItem[] = [
+  { to: '/admin/laptop', label: 'Laptop / Desktop', icon: Laptop },
+  { to: '/admin/av', label: 'AV', icon: Tv },
+  { to: '/admin/network', label: 'Network', icon: Network },
+  { to: '/admin/users', label: 'Manage user', icon: Users },
+  { to: '/admin/prompt', label: 'AI Chatbot', icon: Sparkles },
+  { to: '/admin/export', label: 'Export', icon: Download },
+  { to: '/admin/settings', label: 'Setting', icon: Settings },
+];
 
 export function AdminDashboardPage() {
   const { viewMonth, isCurrentMonth, shiftMonth, goToThisMonth } = useDashboardMonthState();
@@ -84,16 +96,21 @@ export function AdminDashboardPage() {
         />
       </div>
 
-      <div className="mb-6">
-        <RequestTimetable
-          entries={timetable}
-          viewMonth={viewMonth}
-          loading={loading}
-          isCurrentMonth={isCurrentMonth}
-          onPrevMonth={() => shiftMonth(-1)}
-          onNextMonth={() => shiftMonth(1)}
-          onThisMonth={() => goToThisMonth()}
-        />
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+        <div className="lg:col-span-2">
+          <RequestTimetable
+            entries={timetable}
+            viewMonth={viewMonth}
+            loading={loading}
+            isCurrentMonth={isCurrentMonth}
+            onPrevMonth={() => shiftMonth(-1)}
+            onNextMonth={() => shiftMonth(1)}
+            onThisMonth={() => goToThisMonth()}
+          />
+        </div>
+        <div className="lg:col-span-1">
+          <DashboardShortcuts items={ADMIN_SHORTCUTS} />
+        </div>
       </div>
       <br />
       <div className="text-right text-[11px] text-muted-foreground">
