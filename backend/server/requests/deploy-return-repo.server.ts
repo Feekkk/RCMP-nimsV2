@@ -14,9 +14,10 @@ import type {
   ReturnLaptopStaffInput,
   ReturnPlaceInput,
   StaffRecipient,
+  UpdateOpenDeploymentInput,
 } from '@shared/lib/deploy-return-schema';
-import { getReturnStatusIdForCondition } from '@shared/lib/deploy-return-schema';
-import { sqlDateToIso as formatDateOnly } from '@shared/lib/date-format';
+import { canonicalizeCampusBuilding, getReturnStatusIdForCondition } from '@shared/lib/deploy-return-schema';
+import { parseDdMmYyToIso, sqlDateToIso as formatDateOnly } from '@shared/lib/date-format';
 import { recordAssetPredisposed } from '@backend/server/assets/disposal-repo.server';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
@@ -452,4 +453,177 @@ export async function returnPlaceAsset(input: ReturnPlaceInput) {
   } finally {
     conn.release();
   }
+}
+
+function trimOrNull(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function requireDate(raw: string, label: string): string {
+  const iso = parseDdMmYyToIso(raw);
+  if (!iso) {
+    throw new Error(`${label} is required. Pick a date from the calendar.`);
+  }
+  return iso;
+}
+
+async function assertStaffEmployeeNo(employeeNo: string) {
+  const pool = getDbPool();
+  const [rows] = await pool.query<(RowDataPacket & { employee_no: string })[]>(
+    'SELECT employee_no FROM staff WHERE employee_no = ? LIMIT 1',
+    [employeeNo],
+  );
+  if (!rows[0]) {
+    throw new Error(
+      `No staff member matches employee number "${employeeNo}". Check the number or add the person to the staff directory first.`,
+    );
+  }
+}
+
+async function updateLaptopStaffHandover(input: Extract<UpdateOpenDeploymentInput, { type: 'staff' }>) {
+  const employeeNo = input.employeeNo.trim();
+  if (!employeeNo) {
+    throw new Error('Choose a staff recipient from the directory.');
+  }
+  await assertStaffEmployeeNo(employeeNo);
+  const handoverDate = requireDate(input.handoverDate, 'Handover date');
+  const pool = getDbPool();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [rows] = await conn.query<(RowDataPacket & { asset_id: number })[]>(
+      `SELECT h.asset_id
+       FROM handover h
+       INNER JOIN handover_staff hs ON hs.handover_id = h.handover_id
+       LEFT JOIN handover_return hr ON hr.handover_staff_id = hs.handover_staff_id
+       WHERE h.handover_id = ? AND hs.handover_staff_id = ? AND hr.return_id IS NULL
+       LIMIT 1`,
+      [input.handoverId, input.handoverStaffId],
+    );
+    const row = rows[0];
+    if (!row || Number(row.asset_id) !== Number(input.assetId)) {
+      throw new Error('This handover is no longer open. Refresh the page and try again.');
+    }
+    await conn.execute(
+      `UPDATE handover SET handover_date = ?, handover_remarks = ? WHERE handover_id = ?`,
+      [handoverDate, trimOrNull(input.handoverRemarks), input.handoverId],
+    );
+    await conn.execute(`UPDATE handover_staff SET employee_no = ? WHERE handover_staff_id = ?`, [
+      employeeNo,
+      input.handoverStaffId,
+    ]);
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+async function updateLaptopPlaceHandover(input: Extract<UpdateOpenDeploymentInput, { type: 'place' }>) {
+  const building = canonicalizeCampusBuilding(input.building);
+  if (!building || building === 'Unknown') {
+    throw new Error('Building is required.');
+  }
+  const handler = input.handler.trim();
+  if (!handler) {
+    throw new Error('Handler is required.');
+  }
+  const handoverDate = requireDate(input.handoverDate, 'Deployment date');
+  const pool = getDbPool();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [rows] = await conn.query<(RowDataPacket & { asset_id: number })[]>(
+      `SELECT h.asset_id
+       FROM handover h
+       LEFT JOIN handover_staff hs ON hs.handover_id = h.handover_id
+       LEFT JOIN handover_return hr ON hr.handover_id = h.handover_id
+       WHERE h.handover_id = ? AND hs.handover_staff_id IS NULL AND hr.return_id IS NULL
+       LIMIT 1`,
+      [input.handoverId],
+    );
+    const row = rows[0];
+    if (!row || Number(row.asset_id) !== Number(input.assetId)) {
+      throw new Error('This deployment is no longer open. Refresh the page and try again.');
+    }
+    await conn.execute(
+      `UPDATE handover
+       SET building = ?, level = ?, zone = ?, handler = ?, handover_date = ?, handover_remarks = ?
+       WHERE handover_id = ?`,
+      [
+        building,
+        trimOrNull(input.level),
+        trimOrNull(input.zone),
+        handler,
+        handoverDate,
+        trimOrNull(input.handoverRemarks),
+        input.handoverId,
+      ],
+    );
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+async function updatePlaceDeployment(input: Extract<UpdateOpenDeploymentInput, { kind: 'av' | 'network' }>) {
+  const building =
+    input.kind === 'network'
+      ? input.building.trim()
+      : canonicalizeCampusBuilding(input.building);
+  if (!building || building === 'Unknown') {
+    throw new Error('Building is required.');
+  }
+  const level = input.level.trim();
+  const zone = input.zone.trim();
+  if (!level) throw new Error('Level is required.');
+  if (!zone) throw new Error('Zone is required.');
+  const deploymentDate = requireDate(input.deploymentDate, 'Deployment date');
+  const deployTable = input.kind === 'av' ? 'av_deployment' : 'network_deployment';
+  const returnTable = input.kind === 'av' ? 'av_return' : 'network_return';
+  const pool = getDbPool();
+  const [rows] = await pool.query<(RowDataPacket & { asset_id: number })[]>(
+    `SELECT d.asset_id
+     FROM \`${deployTable}\` d
+     WHERE d.deployment_id = ?
+       AND NOT EXISTS (
+         SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d.deployment_id
+       )
+     LIMIT 1`,
+    [input.deploymentId],
+  );
+  const row = rows[0];
+  if (!row || Number(row.asset_id) !== Number(input.assetId)) {
+    throw new Error('This deployment is no longer open. Refresh the page and try again.');
+  }
+  await pool.execute(
+    `UPDATE \`${deployTable}\`
+     SET building = ?, level = ?, zone = ?, deployment_date = ?, deployment_remarks = ?
+     WHERE deployment_id = ?`,
+    [
+      building,
+      level,
+      zone,
+      deploymentDate,
+      trimOrNull(input.deploymentRemarks),
+      input.deploymentId,
+    ],
+  );
+}
+
+export async function updateOpenDeployment(input: UpdateOpenDeploymentInput) {
+  if (input.kind === 'laptop' && input.type === 'staff') {
+    await updateLaptopStaffHandover(input);
+  } else if (input.kind === 'laptop') {
+    await updateLaptopPlaceHandover(input);
+  } else {
+    await updatePlaceDeployment(input);
+  }
+  return getOpenReturnContext(input.kind, input.assetId);
 }

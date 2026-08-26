@@ -131,13 +131,19 @@ export function CampusBuildingSelect({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const buildings: string[] = [...CAMPUS_BUILDINGS];
+  const current = value.trim();
+  if (current && !buildings.some((building) => building.toLowerCase() === current.toLowerCase())) {
+    buildings.unshift(current);
+  }
+
   return (
     <Select value={value || undefined} onValueChange={onChange}>
       <SelectTrigger className="rounded-[8px]">
         <SelectValue placeholder="Select building" />
       </SelectTrigger>
       <SelectContent>
-        {CAMPUS_BUILDINGS.map((building) => (
+        {buildings.map((building) => (
           <SelectItem key={building} value={building}>
             {building}
           </SelectItem>

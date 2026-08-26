@@ -98,6 +98,18 @@ export function purchaseFormToInput(state: PurchaseFormState): PurchaseFields {
   };
 }
 
+export function purchaseFieldsToFormState(p: PurchaseFields): PurchaseFormState {
+  return {
+    poDate: p.poDate ? parseDdMmYyToIso(p.poDate) ?? '' : '',
+    poNum: p.poNum ?? '',
+    doDate: p.doDate ? parseDdMmYyToIso(p.doDate) ?? '' : '',
+    doNum: p.doNum ?? '',
+    invoiceDate: p.invoiceDate ? parseDdMmYyToIso(p.invoiceDate) ?? '' : '',
+    invoiceNum: p.invoiceNum ?? '',
+    purchaseCost: p.purchaseCost != null && Number.isFinite(p.purchaseCost) ? String(p.purchaseCost) : '',
+  };
+}
+
 export function purchaseSqlParams(p: PurchaseFields) {
   return [
     p.poDate ?? null,

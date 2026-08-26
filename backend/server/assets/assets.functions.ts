@@ -4,6 +4,7 @@ import type {
   CreateAvInput,
   CreateLaptopInput,
   CreateNetworkInput,
+  UpdateAssetInput,
 } from '@shared/lib/inventory-schema';
 import type { MarkAssetsPredisposedInput, RemoveAssetsFromPredisposalInput } from '@shared/lib/disposal-schema';
 import type { NextAssetIdRequest } from '@backend/server/assets/asset-id.server';
@@ -114,6 +115,14 @@ export const updateAssetStatusFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: input }) => {
     const { updateAssetStatus } = await import('@backend/server/assets/assets-repo.server');
     return updateAssetStatus(input.kind, input.assetId, input.statusId);
+  });
+
+export const updateAssetFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
+  .inputValidator((input: UpdateAssetInput) => input)
+  .handler(async ({ data: input }) => {
+    const { updateAssetDetails } = await import('@backend/server/assets/assets-repo.server');
+    return updateAssetDetails(input);
   });
 
 export type GetAssetDetailInput = { kind: AssetKind; assetId: number };

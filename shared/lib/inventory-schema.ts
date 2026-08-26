@@ -212,6 +212,15 @@ export type CreateNetworkInput = {
   warranty?: WarrantyInput | null;
 } & PurchaseFields;
 
+export type UpdateLaptopInput = Omit<CreateLaptopInput, 'assetId' | 'statusId' | 'warranty'>;
+export type UpdateAvInput = Omit<CreateAvInput, 'assetId' | 'statusId' | 'warranty'>;
+export type UpdateNetworkInput = Omit<CreateNetworkInput, 'assetId' | 'statusId' | 'warranty'>;
+
+export type UpdateAssetInput =
+  | ({ kind: 'laptop'; assetId: number } & UpdateLaptopInput)
+  | ({ kind: 'av'; assetId: number } & UpdateAvInput)
+  | ({ kind: 'network'; assetId: number } & UpdateNetworkInput);
+
 export type AssetRecord = LaptopAsset | AvAsset | NetworkAsset;
 
 export type AssetTrailEvent = {

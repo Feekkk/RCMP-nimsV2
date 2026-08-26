@@ -7,6 +7,7 @@ import type {
   ReturnLaptopPlaceInput,
   ReturnLaptopStaffInput,
   ReturnPlaceInput,
+  UpdateOpenDeploymentInput,
 } from '@shared/lib/deploy-return-schema';
 import { staffMiddleware } from '@backend/server/core/auth-middleware';
 
@@ -72,4 +73,12 @@ export const returnPlaceFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: input }) => {
     const { returnPlaceAsset } = await import('@backend/server/requests/deploy-return-repo.server');
     return returnPlaceAsset(input);
+  });
+
+export const updateOpenDeploymentFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
+  .inputValidator((input: UpdateOpenDeploymentInput) => input)
+  .handler(async ({ data: input }) => {
+    const { updateOpenDeployment } = await import('@backend/server/requests/deploy-return-repo.server');
+    return updateOpenDeployment(input);
   });

@@ -6,13 +6,17 @@ import { DatePickerField } from '@/technician/deploy-return-fields';
 export function PurchaseFieldsSection({
   values,
   onChange,
+  hideHeading,
 }: {
   values: PurchaseFormState;
   onChange: (patch: Partial<PurchaseFormState>) => void;
+  hideHeading?: boolean;
 }) {
   return (
     <section className="space-y-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Procurement</p>
+      {hideHeading ? null : (
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Procurement</p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <DatePickerField
           label="PO date"

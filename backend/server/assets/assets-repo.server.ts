@@ -1,18 +1,23 @@
 import type { RowDataPacket } from 'mysql2';
-import type {
-  AssetDetail,
-  AssetDetailResponse,
-  AssetKind,
-  AssetTrailEvent,
-  AvAsset,
-  BulkLaptopHandoverImport,
-  BulkPlaceDeploymentImport,
-  CreateAvInput,
-  CreateLaptopInput,
-  CreateNetworkInput,
-  LaptopAsset,
-  NetworkAsset,
-  PurchaseFields,
+import {
+  isValidAccCode,
+  type AssetDetail,
+  type AssetDetailResponse,
+  type AssetKind,
+  type AssetTrailEvent,
+  type AvAsset,
+  type BulkLaptopHandoverImport,
+  type BulkPlaceDeploymentImport,
+  type CreateAvInput,
+  type CreateLaptopInput,
+  type CreateNetworkInput,
+  type LaptopAsset,
+  type NetworkAsset,
+  type PurchaseFields,
+  type UpdateAssetInput,
+  type UpdateAvInput,
+  type UpdateLaptopInput,
+  type UpdateNetworkInput,
 } from '@shared/lib/inventory-schema';
 import type {
   MarkPredisposedAssetInput,
@@ -26,7 +31,7 @@ import {
   PREDISPOSAL_ELIGIBLE_STATUS_IDS,
   STATUS_ID,
 } from '@shared/lib/asset-status-actions';
-import { formatIsoToDdMmYy, sqlDateToIso } from '@shared/lib/date-format';
+import { formatIsoToDdMmYy, parseDdMmYyToIso, sqlDateToIso } from '@shared/lib/date-format';
 import { purchaseSqlParams } from '@shared/lib/purchase-field-utils';
 import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import { allocateAssetIdsFromDb } from '@backend/server/assets/asset-id.server';
@@ -718,6 +723,157 @@ export async function updateAssetStatus(kind: AssetKind, assetId: number, status
     throw new Error('The asset was updated but could not be loaded. Refresh the page to see the latest details.');
   }
   return updated;
+}
+
+function trimOrNull(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function normalizeAccCode(value: string | null | undefined): string | null {
+  const code = trimOrNull(value);
+  if (code && !isValidAccCode(code)) {
+    throw new Error('Choose a valid account code from the list.');
+  }
+  return code;
+}
+
+function normalizeOptionalDate(raw: string | null | undefined): string | null {
+  if (raw == null || !String(raw).trim()) return null;
+  const iso = parseDdMmYyToIso(String(raw));
+  if (!iso) {
+    throw new Error('A purchase date is not valid. Pick a date from the calendar.');
+  }
+  return iso;
+}
+
+function normalizePurchaseForUpdate(input: PurchaseFields): PurchaseFields {
+  const cost = input.purchaseCost;
+  if (cost != null && (!Number.isFinite(Number(cost)) || Number(cost) < 0)) {
+    throw new Error('Purchase cost must be a valid amount of 0 or more.');
+  }
+  return {
+    poDate: normalizeOptionalDate(input.poDate),
+    poNum: trimOrNull(input.poNum),
+    doDate: normalizeOptionalDate(input.doDate),
+    doNum: trimOrNull(input.doNum),
+    invoiceDate: normalizeOptionalDate(input.invoiceDate),
+    invoiceNum: trimOrNull(input.invoiceNum),
+    purchaseCost: cost == null ? null : Number(cost),
+  };
+}
+
+async function assertAssetExists(kind: AssetKind, assetId: number) {
+  const pool = getDbPool();
+  const table = TABLE_BY_KIND[kind];
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT asset_id FROM \`${table}\` WHERE asset_id = ? LIMIT 1`,
+    [assetId],
+  );
+  if (!rows[0]) {
+    throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
+  }
+}
+
+const PURCHASE_SET = `PO_DATE = ?, PO_NUM = ?, DO_DATE = ?, DO_NUM = ?, INVOICE_DATE = ?, INVOICE_NUM = ?, PURCHASE_COST = ?`;
+
+async function updateLaptopDetails(assetId: number, input: UpdateLaptopInput) {
+  const serialNum = input.serialNum.trim();
+  const category = input.category.trim();
+  if (!serialNum) throw new Error('Serial number is required.');
+  if (!category) throw new Error('Category is required.');
+  const purchase = normalizePurchaseForUpdate(input);
+  await assertAssetExists('laptop', assetId);
+  const pool = getDbPool();
+  await pool.execute(
+    `UPDATE laptop SET
+      acc_code = ?, serial_num = ?, brand = ?, model = ?, supplier = ?, category = ?,
+      part_number = ?, processor = ?, memory = ?, os = ?, storage = ?, gpu = ?,
+      ${PURCHASE_SET}, remarks = ?
+     WHERE asset_id = ?`,
+    [
+      normalizeAccCode(input.accCode),
+      serialNum,
+      trimOrNull(input.brand),
+      trimOrNull(input.model),
+      trimOrNull(input.supplier),
+      category,
+      trimOrNull(input.partNumber),
+      trimOrNull(input.processor),
+      trimOrNull(input.memory),
+      trimOrNull(input.os),
+      trimOrNull(input.storage),
+      trimOrNull(input.gpu),
+      ...purchaseSqlParams(purchase),
+      trimOrNull(input.remarks),
+      assetId,
+    ],
+  );
+}
+
+async function updateAvDetails(assetId: number, input: UpdateAvInput) {
+  const purchase = normalizePurchaseForUpdate(input);
+  await assertAssetExists('av', assetId);
+  const pool = getDbPool();
+  await pool.execute(
+    `UPDATE av SET
+      acc_code = ?, asset_id_old = ?, category = ?, brand = ?, model = ?, supplier = ?, serial_num = ?,
+      ${PURCHASE_SET}, remarks = ?
+     WHERE asset_id = ?`,
+    [
+      normalizeAccCode(input.accCode),
+      trimOrNull(input.assetIdOld),
+      trimOrNull(input.category),
+      trimOrNull(input.brand),
+      trimOrNull(input.model),
+      trimOrNull(input.supplier),
+      trimOrNull(input.serialNum),
+      ...purchaseSqlParams(purchase),
+      trimOrNull(input.remarks),
+      assetId,
+    ],
+  );
+}
+
+async function updateNetworkDetails(assetId: number, input: UpdateNetworkInput) {
+  const purchase = normalizePurchaseForUpdate(input);
+  await assertAssetExists('network', assetId);
+  const pool = getDbPool();
+  await pool.execute(
+    `UPDATE network SET
+      acc_code = ?, category = ?, serial_num = ?, brand = ?, model = ?, supplier = ?,
+      mac_address = ?, ip_address = ?,
+      ${PURCHASE_SET}, remarks = ?
+     WHERE asset_id = ?`,
+    [
+      normalizeAccCode(input.accCode),
+      trimOrNull(input.category),
+      trimOrNull(input.serialNum),
+      trimOrNull(input.brand),
+      trimOrNull(input.model),
+      trimOrNull(input.supplier),
+      trimOrNull(input.macAddress),
+      trimOrNull(input.ipAddress),
+      ...purchaseSqlParams(purchase),
+      trimOrNull(input.remarks),
+      assetId,
+    ],
+  );
+}
+
+export async function updateAssetDetails(input: UpdateAssetInput) {
+  if (input.kind === 'laptop') {
+    await updateLaptopDetails(input.assetId, input);
+  } else if (input.kind === 'av') {
+    await updateAvDetails(input.assetId, input);
+  } else {
+    await updateNetworkDetails(input.assetId, input);
+  }
+  const detail = await getAssetDetail(input.kind, input.assetId);
+  if (!detail) {
+    throw new Error('The asset was updated but could not be loaded. Refresh the page to see the latest details.');
+  }
+  return detail;
 }
 
 type PredisposalRow = RowDataPacket & {

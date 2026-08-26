@@ -103,6 +103,46 @@ export type DeployPlaceInput = {
   deploymentRemarks?: string | null;
 };
 
+export type UpdateLaptopStaffHandoverInput = {
+  kind: 'laptop';
+  type: 'staff';
+  assetId: number;
+  handoverId: number;
+  handoverStaffId: number;
+  employeeNo: string;
+  handoverDate: string;
+  handoverRemarks?: string | null;
+};
+
+export type UpdateLaptopPlaceHandoverInput = {
+  kind: 'laptop';
+  type: 'place';
+  assetId: number;
+  handoverId: number;
+  building: string;
+  level?: string | null;
+  zone?: string | null;
+  handler: string;
+  handoverDate: string;
+  handoverRemarks?: string | null;
+};
+
+export type UpdatePlaceDeploymentInput = {
+  kind: 'av' | 'network';
+  assetId: number;
+  deploymentId: number;
+  building: string;
+  level: string;
+  zone: string;
+  deploymentDate: string;
+  deploymentRemarks?: string | null;
+};
+
+export type UpdateOpenDeploymentInput =
+  | UpdateLaptopStaffHandoverInput
+  | UpdateLaptopPlaceHandoverInput
+  | UpdatePlaceDeploymentInput;
+
 export type ReturnLaptopStaffInput = {
   handoverStaffId: number;
   returnedBy: string;

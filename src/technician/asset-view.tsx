@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeft, ChevronDown, ExternalLink, History, MapPin, Package, Truck, User } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ExternalLink, History, MapPin, Package, Pencil, Truck, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { formatPurchaseCost } from '@shared/lib/purchase-field-utils';
 import { cn } from '@/lib/utils';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetStatusActions } from '@/technician/asset-status-actions';
+import { AssetDetailsForm } from '@/technician/asset-details-form';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { getAssetDetailFn } from '@backend/server/assets/assets.functions';
 import { getOpenReturnContextFn } from '@backend/server/requests/deploy-return.functions';
@@ -320,10 +321,11 @@ export function AssetViewContent({
   const [data, setData] = useState<AssetDetailResponse | null>(null);
   const [deployment, setDeployment] = useState<OpenReturnContext | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
   const [section, setSection] = useState<'details' | 'activity'>('details');
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const [result, openDeployment] = await Promise.all([
         getAssetDetailFn({ data: { kind, assetId } }),
@@ -341,6 +343,7 @@ export function AssetViewContent({
   }, [kind, assetId]);
 
   useEffect(() => {
+    setEditing(false);
     void load();
   }, [load]);
 
@@ -389,12 +392,29 @@ export function AssetViewContent({
               {readOnly ? (
                 <AssetStatusBadge statusId={asset.statusId} />
               ) : (
-                <AssetStatusActions
-                  kind={kind}
-                  assetId={asset.assetId}
-                  statusId={asset.statusId}
-                  onStatusChange={handleStatusChange}
-                />
+                <>
+                  {!editing ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-[8px]"
+                      onClick={() => {
+                        setSection('details');
+                        setEditing(true);
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit details
+                    </Button>
+                  ) : null}
+                  <AssetStatusActions
+                    kind={kind}
+                    assetId={asset.assetId}
+                    statusId={asset.statusId}
+                    onStatusChange={handleStatusChange}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -416,41 +436,53 @@ export function AssetViewContent({
             </TabsList>
 
             <TabsContent value="details" className="mt-0">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <Card className="rounded-[14px]">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Specifications</CardTitle>
-                    <CardDescription>Core fields from the inventory record</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-2 sm:grid-cols-2">
-                    <AssetSpecs asset={asset} />
-                    <DetailItem label="Remarks" value={asset.remarks} />
-                  </CardContent>
-                </Card>
+              {editing && !readOnly ? (
+                <AssetDetailsForm
+                  asset={asset}
+                  deployment={deployment}
+                  onCancel={() => setEditing(false)}
+                  onSaved={async () => {
+                    await load({ silent: true });
+                    setEditing(false);
+                  }}
+                />
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card className="rounded-[14px]">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Specifications</CardTitle>
+                      <CardDescription>Core fields from the inventory record</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-2 sm:grid-cols-2">
+                      <AssetSpecs asset={asset} />
+                      <DetailItem label="Remarks" value={asset.remarks} />
+                    </CardContent>
+                  </Card>
 
-                <Card className="rounded-[14px]">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Procurement</CardTitle>
-                    <CardDescription>PO, delivery, and invoice details</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-2 sm:grid-cols-2">
-                    <PurchaseBlock asset={asset} />
-                  </CardContent>
-                </Card>
+                  <Card className="rounded-[14px]">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Procurement</CardTitle>
+                      <CardDescription>PO, delivery, and invoice details</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-2 sm:grid-cols-2">
+                      <PurchaseBlock asset={asset} />
+                    </CardContent>
+                  </Card>
 
-                <Card className="rounded-[14px] lg:col-span-2">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <DeploymentIcon deployment={deployment} />
-                      {deploymentCardTitle(deployment)}
-                    </CardTitle>
-                    <CardDescription>{deploymentSummaryLabel(deployment)}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <DeploymentDetails deployment={deployment} />
-                  </CardContent>
-                </Card>
-              </div>
+                  <Card className="rounded-[14px] lg:col-span-2">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <DeploymentIcon deployment={deployment} />
+                        {deploymentCardTitle(deployment)}
+                      </CardTitle>
+                      <CardDescription>{deploymentSummaryLabel(deployment)}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <DeploymentDetails deployment={deployment} />
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="activity" className="mt-0">
