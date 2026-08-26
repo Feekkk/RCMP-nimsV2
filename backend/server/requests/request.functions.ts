@@ -96,7 +96,10 @@ export const submitUserRequestFn = createServerFn({ method: 'POST' })
   .inputValidator((input: SubmitUserRequestInput) => input)
   .handler(async ({ data: input, context }) => {
     const { submitUserRequest } = await import('@backend/server/requests/request-repo.server');
-    return submitUserRequest({ ...input, requestedBy: context.staffId });
+    const result = await submitUserRequest({ ...input, requestedBy: context.staffId });
+    const { trySendRequestEmail } = await import('@backend/server/email/request-email.server');
+    const email = await trySendRequestEmail(result.requestId);
+    return { ...result, ...email };
   });
 
 export const bookPoolAssetToRequestFn = createServerFn({ method: 'POST' })

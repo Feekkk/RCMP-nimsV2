@@ -53,7 +53,6 @@ import {
   kindGroupLabel,
   requestItemKindFromAssetType,
 } from '@shared/lib/request-asset-types';
-import { sendRequestEmailFn } from '@backend/server/email/request-email.functions';
 import { submitUserRequestFn } from '@backend/server/requests/request.functions';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
@@ -190,15 +189,13 @@ export function UserRequestFormPage() {
         },
       });
       setSubmittedId(result.requestId);
-      try {
-        await sendRequestEmailFn({ data: result.requestId });
-        toast.success(`Request #${result.requestId} submitted — confirmation sent to you and IT`);
-      } catch (emailErr) {
+      if (result.emailSent) {
+        toast.success(`Request #${result.requestId} submitted — confirmation sent to you and IT staff`);
+      } else {
         toast.success(`Request #${result.requestId} submitted`);
         toast.warning(
-          emailErr instanceof Error
-            ? emailErr.message
-            : 'Your request was saved, but the confirmation email could not be sent.',
+          result.emailError ??
+            'Your request was saved, but the confirmation email could not be sent.',
         );
       }
     } catch (e) {

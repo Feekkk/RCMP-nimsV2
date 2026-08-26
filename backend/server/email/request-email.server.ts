@@ -173,12 +173,12 @@ export async function sendRequestEmail(requestId: number): Promise<SendRequestEm
     );
   }
 
-  const recipients = [...new Set([data.requesterEmail, REQUEST_IT_EMAIL])];
   const logo = loadLogoBuffer();
 
   const { sendNotificationEmail } = await import('@backend/server/email/email.server');
   const result = await sendNotificationEmail({
-    to: recipients,
+    to: data.requesterEmail,
+    cc: REQUEST_IT_EMAIL,
     subject: `UNIKL RCMP — Equipment Request #${data.requestId} Submitted`,
     text: buildRequestEmailText(data),
     html: buildRequestEmailHtml(data),
@@ -194,6 +194,22 @@ export async function sendRequestEmail(requestId: number): Promise<SendRequestEm
 
   return {
     messageId: result.messageId,
-    to: recipients,
+    to: [data.requesterEmail],
   };
+}
+
+export async function trySendRequestEmail(
+  requestId: number,
+): Promise<{ emailSent: boolean; emailError?: string }> {
+  try {
+    await sendRequestEmail(requestId);
+    return { emailSent: true };
+  } catch (err) {
+    console.error('[request-email] send failed', requestId, err);
+    return {
+      emailSent: false,
+      emailError:
+        err instanceof Error ? err.message : 'The confirmation email could not be sent.',
+    };
+  }
 }

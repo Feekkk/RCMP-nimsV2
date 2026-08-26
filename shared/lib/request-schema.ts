@@ -195,6 +195,8 @@ export type SubmitUserRequestInput = {
 
 export type SubmitUserRequestResult = {
   requestId: number;
+  emailSent?: boolean;
+  emailError?: string;
 };
 
 export type UserRequestHistoryStatus =

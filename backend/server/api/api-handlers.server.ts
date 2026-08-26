@@ -298,7 +298,9 @@ export async function handleSubmitRequest(request: Request): Promise<Response> {
           })
         : [],
     });
-    return apiOk(result, 201);
+    const { trySendRequestEmail } = await import('@backend/server/email/request-email.server');
+    const email = await trySendRequestEmail(result.requestId);
+    return apiOk({ ...result, ...email }, 201);
   } catch (error) {
     return handleApiError(error);
   }
