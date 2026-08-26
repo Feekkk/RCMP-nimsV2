@@ -16,6 +16,7 @@ import type {
   StaffRecipient,
 } from '@shared/lib/deploy-return-schema';
 import { getReturnStatusIdForCondition } from '@shared/lib/deploy-return-schema';
+import { sqlDateToIso as formatDateOnly } from '@shared/lib/date-format';
 import { recordAssetPredisposed } from '@backend/server/assets/disposal-repo.server';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
@@ -200,11 +201,6 @@ export async function getOpenReturnContext(
     handledBy: r.technician_name?.trim() || null,
   };
   return { kind, record };
-}
-
-function formatDateOnly(val: Date | string): string {
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
 }
 
 export async function deployLaptopToStaff(input: DeployLaptopStaffInput) {

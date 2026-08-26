@@ -5,13 +5,8 @@ import type {
   DashboardTrendPoint,
   TechnicianDashboardCharts,
 } from '@shared/lib/dashboard-schema';
+import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 import { getDbPool } from '@backend/server/core/db';
-
-function formatDate(val: Date | string | null | undefined): string {
-  if (val == null) return '';
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
-}
 
 function lastNDaysIso(n: number): string[] {
   const days: string[] = [];

@@ -7,6 +7,7 @@ import type {
   UpdateStaffInput,
 } from '@shared/lib/staff-schema';
 import { STAFF_DIVISIONS } from '@shared/lib/staff-schema';
+import { sqlDateToIso as formatDateOnly } from '@shared/lib/date-format';
 import { getDbPool } from '@backend/server/core/db';
 
 export async function listStaffDirectory(): Promise<StaffDirectoryRow[]> {
@@ -134,11 +135,6 @@ export async function updateStaff(input: UpdateStaffInput): Promise<StaffDirecto
     throw new Error('Staff could not be updated. Try again.');
   }
   return updated;
-}
-
-function formatDateOnly(val: Date | string): string {
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
 }
 
 export async function listStaffHandoverAssets(employeeNo: string): Promise<StaffHandoverAsset[]> {

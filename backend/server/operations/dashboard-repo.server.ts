@@ -17,14 +17,9 @@ import type { RequestItemRow } from '@shared/lib/request-schema';
 import { REQUEST_STATUS_ACTIVE } from '@shared/lib/request-schema';
 import { LAPTOP_ASSIGNMENT_BUCKETS } from '@shared/lib/inventory-schema';
 import { canonicalizeCampusBuilding } from '@shared/lib/deploy-return-schema';
+import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
-
-function formatDate(val: Date | string | null | undefined): string {
-  if (val == null) return '';
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
-}
 
 function addDaysIso(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);

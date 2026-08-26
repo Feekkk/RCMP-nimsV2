@@ -3,6 +3,7 @@ import type { AssetKind } from '@shared/lib/inventory-schema';
 import type { ActivityLogCategory, ActivityLogEntry } from '@shared/lib/activity-log-schema';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
+import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 
 const MAX_EVENTS = 600;
 
@@ -16,12 +17,6 @@ function trailSortKey(val: Date | string | null | undefined): number {
 function trailAt(val: Date | string | null | undefined): string {
   if (val == null) return '';
   return val instanceof Date ? val.toISOString() : String(val);
-}
-
-function formatDate(val: Date | string | null | undefined): string {
-  if (val == null) return '';
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
 }
 
 function atFromDateAndTime(

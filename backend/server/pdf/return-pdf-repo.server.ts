@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { ReturnNotificationData } from '@shared/lib/return-pdf-types';
+import { sqlDateToIso as formatDateOnly } from '@shared/lib/date-format';
 import { getDisplayNameByOid } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 
@@ -21,11 +22,6 @@ type ReturnRow = RowDataPacket & {
   returned_by_oid: string | null;
   returned_by_role: string | null;
 };
-
-function formatDateOnly(val: Date | string): string {
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
-}
 
 function displayCondition(condition: string | null): string {
   const c = condition?.trim() || 'Good';

@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { HandoverNotificationData } from '@shared/lib/handover-pdf-types';
+import { sqlDateToIso as formatDateOnly } from '@shared/lib/date-format';
 import { getDisplayNameByOid } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 
@@ -20,11 +21,6 @@ type HandoverRow = RowDataPacket & {
   handed_by_oid: string | null;
   handed_by_role: string | null;
 };
-
-function formatDateOnly(val: Date | string): string {
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
-}
 
 /**
  * Single query (+ Azure lookup only when the technician name wasn't captured at handover time) shared

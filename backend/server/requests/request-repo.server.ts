@@ -42,18 +42,13 @@ import { requestItemKindFromAssetType } from '@shared/lib/request-asset-types';
 import { isUserProfileComplete } from '@shared/lib/user-profile';
 import { attachDisplayNames, resolveAccountProfile } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
+import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 
 /** Source statuses eligible to enter the request pool: new (1) and return (2). */
 const REQUEST_POOL_ELIGIBLE_STATUS_IDS = [STATUS_ID.NEW, STATUS_ID.RETURN] as const;
 
 function isRequestPoolEligibleStatus(statusId: number): boolean {
   return (REQUEST_POOL_ELIGIBLE_STATUS_IDS as readonly number[]).includes(statusId);
-}
-
-function formatDate(val: Date | string | null | undefined): string {
-  if (val == null) return '';
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
 }
 
 function formatTs(val: Date | string | null | undefined): string | null {

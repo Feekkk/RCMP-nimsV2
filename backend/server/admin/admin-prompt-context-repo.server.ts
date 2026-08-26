@@ -19,14 +19,9 @@ import {
   type AssetKind,
 } from '@shared/lib/inventory-schema';
 import { STATUS_ID } from '@shared/lib/asset-status-actions';
+import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
-
-function formatDate(val: Date | string | null | undefined): string {
-  if (val == null) return '';
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
-}
 
 function summarizeInventory(stats: TechnicianDashboardStats) {
   const kinds = ['laptop', 'av', 'network'] as const;

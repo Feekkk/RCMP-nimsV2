@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import type { RequestEmailData } from '@shared/lib/request-email-types';
+import { sqlDateToIso as formatDateOnly } from '@shared/lib/date-format';
 import { resolveAccountProfile } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 
@@ -22,11 +23,6 @@ type RequestEmailItemRow = RowDataPacket & {
   asset_type: string;
   quantity: number;
 };
-
-function formatDateOnly(val: Date | string): string {
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
-}
 
 function formatDateTime(val: Date | string | null): string | null {
   if (val == null) return null;

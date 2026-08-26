@@ -1,13 +1,8 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AdminRequestInsights } from '@shared/lib/admin-request-insights-schema';
+import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
-
-function formatDate(val: Date | string | null | undefined): string {
-  if (val == null) return '';
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
-}
 
 function formatDateTime(val: Date | string | null | undefined): string {
   if (val == null) return '';

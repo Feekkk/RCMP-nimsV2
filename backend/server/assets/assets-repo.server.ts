@@ -26,7 +26,7 @@ import {
   PREDISPOSAL_ELIGIBLE_STATUS_IDS,
   STATUS_ID,
 } from '@shared/lib/asset-status-actions';
-import { formatIsoToDdMmYy, parseDdMmYyToIso } from '@shared/lib/date-format';
+import { formatIsoToDdMmYy, sqlDateToIso } from '@shared/lib/date-format';
 import { purchaseSqlParams } from '@shared/lib/purchase-field-utils';
 import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
 import { allocateAssetIdsFromDb } from '@backend/server/assets/asset-id.server';
@@ -273,23 +273,9 @@ type NetworkRow = RowDataPacket &
 
 function formatDate(val: Date | string | null | undefined): string | null {
   if (val == null) return null;
-  const iso =
-    val instanceof Date ? val.toISOString().slice(0, 10) : String(val).trim().slice(0, 10);
+  const iso = sqlDateToIso(val);
+  if (!iso) return null;
   return formatIsoToDdMmYy(iso) ?? iso;
-}
-
-function trailDateOnly(val: Date | string | null | undefined): string {
-  if (val == null) return '';
-  if (val instanceof Date) {
-    if (Number.isNaN(val.getTime())) return '';
-    const y = val.getFullYear();
-    const m = String(val.getMonth() + 1).padStart(2, '0');
-    const d = String(val.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-  const raw = String(val).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
-  return parseDdMmYyToIso(raw) ?? '';
 }
 
 function mapPurchase(row: PurchaseRow): PurchaseFields {
@@ -1115,7 +1101,7 @@ async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
   await attachDisplayNames(returns, 'returned_oid', 'returned_by');
 
   for (const r of returns) {
-    const at = trailDateOnly(r.return_date) || trailAt(r.created_at);
+    const at = sqlDateToIso(r.return_date) || trailAt(r.created_at);
     pushTrail(events, {
       at,
       category: 'Handover',
@@ -1208,7 +1194,7 @@ async function listPlaceDeployTrails(
 
   for (const r of returns) {
     const loc = [r.building, r.level, r.zone].filter(Boolean).join(' · ');
-    const at = trailDateOnly(r.return_date) || trailAt(r.created_at);
+    const at = sqlDateToIso(r.return_date) || trailAt(r.created_at);
     pushTrail(events, {
       at,
       category: label,
@@ -1278,7 +1264,7 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
 
   for (const c of claims) {
     const attendedBy = await getDisplayNameByOid(c.claimed_oid, c.claimed_email);
-    const at = trailDateOnly(c.claim_date) || trailAt(c.created_at);
+    const at = sqlDateToIso(c.claim_date) || trailAt(c.created_at);
     pushTrail(events, {
       at,
       category: 'Warranty',

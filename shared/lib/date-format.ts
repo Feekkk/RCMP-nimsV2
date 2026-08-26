@@ -117,8 +117,32 @@ export function normalizeToIsoDate(raw: string): string | null {
   return parseDdMmYyToIso(val);
 }
 
+export function localDateToIso(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function sqlDateToIso(val: Date | string | null | undefined): string {
+  if (val == null) return '';
+  if (val instanceof Date) {
+    if (Number.isNaN(val.getTime())) return '';
+    return localDateToIso(val);
+  }
+  const raw = String(val).trim();
+  if (!raw) return '';
+  if (ISO_DATE_RE.test(raw)) return raw;
+  if (ISO_DATE_RE.test(raw.slice(0, 10)) && (raw[10] === 'T' || raw[10] === ' ')) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return localDateToIso(parsed);
+    return raw.slice(0, 10);
+  }
+  return parseDdMmYyToIso(raw) ?? '';
+}
+
 export function isoToLocalDate(iso: string): Date | undefined {
-  const normalized = normalizeToIsoDate(iso);
+  const normalized = sqlDateToIso(iso);
   if (!normalized) return undefined;
   const [y, m, d] = normalized.split('-').map(Number);
   const date = new Date(y, m - 1, d);
@@ -126,13 +150,6 @@ export function isoToLocalDate(iso: string): Date | undefined {
     return undefined;
   }
   return date;
-}
-
-export function localDateToIso(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
 }
 
 export function formatDateLabel(iso: string): string {

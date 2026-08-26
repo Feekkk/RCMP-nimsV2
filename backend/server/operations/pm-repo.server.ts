@@ -19,12 +19,8 @@ import type {
   UpdatePmChecklistItemInput,
 } from '@shared/lib/pm-schema';
 import { derivePmLogStatus } from '@shared/lib/pm-schema';
+import { sqlDateToIso as toIsoDate } from '@shared/lib/date-format';
 import { getDbPool } from '@backend/server/core/db';
-
-function toIsoDate(d: Date | string): string {
-  if (typeof d === 'string') return d.slice(0, 10);
-  return d.toISOString().slice(0, 10);
-}
 
 function monthBounds(now = new Date()): { from: string; to: string } {
   const y = now.getFullYear();

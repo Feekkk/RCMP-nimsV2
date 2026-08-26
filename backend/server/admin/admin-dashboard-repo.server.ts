@@ -9,15 +9,10 @@ import type {
   TopRequesterRow,
 } from '@shared/lib/admin-dashboard-schema';
 import { ROLE_USER } from '@shared/lib/auth-session';
+import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 import { loadDashboardCharts } from '@backend/server/operations/dashboard-charts.server';
-
-function formatDate(val: Date | string | null | undefined): string {
-  if (val == null) return '';
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
-  return String(val).slice(0, 10);
-}
 
 function formatDateTime(val: Date | string | null | undefined): string {
   if (val == null) return '';

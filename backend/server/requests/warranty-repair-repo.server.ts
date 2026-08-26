@@ -7,6 +7,7 @@ import type {
   WarrantyInput,
   WarrantyRecord,
 } from '@shared/lib/warranty-repair-schema';
+import { localDateToIso, sqlDateToIso as toIsoDate } from '@shared/lib/date-format';
 import { getDbPool } from '@backend/server/core/db';
 
 type WarrantyRow = RowDataPacket & {
@@ -25,13 +26,8 @@ type ClaimRow = RowDataPacket & {
   claim_remarks: string | null;
 };
 
-function toIsoDate(d: Date | string): string {
-  if (typeof d === 'string') return d.slice(0, 10);
-  return d.toISOString().slice(0, 10);
-}
-
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateToIso(new Date());
 }
 
 function mapWarranty(row: WarrantyRow): WarrantyRecord {
