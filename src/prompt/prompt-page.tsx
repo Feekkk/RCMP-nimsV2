@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { SessionUser } from '@shared/lib/auth-session';
 import { cn } from '@/lib/utils';
 import { adminPromptChatFn } from '@backend/server/admin/admin-prompt.functions';
-import chatbotAnimation from '../../public/Talking robot - chatbot.json';
+import chatbotAnimation from '@/assets/talking-robot-chatbot.json';
 
 type ChatRole = 'assistant' | 'user';
 

@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { staffMiddleware } from '@backend/server/core/auth-middleware';
 
-export const getTechnicianDashboardFn = createServerFn({ method: 'GET' })
+export const getTechnicianDashboardFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((data?: { year: number; month: number }) => {
     const now = new Date();
