@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Laptop, List, Network, Recycle, Search, Tv } from 'lucide-react';
+import { Laptop, List, Network, PackageCheck, Recycle, Search, Tv } from 'lucide-react';
 import { toast } from 'sonner';
+import { InsightStatCard } from '@/components/insight-stat-card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/table';
 import { formatAssetLifespan } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, type AssetKind } from '@shared/lib/inventory-schema';
-import type { PredisposalEligibleAsset } from '@shared/lib/disposal-schema';
+import type { PredisposalEligibleAsset, PreDisposedAsset } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
@@ -35,6 +36,7 @@ import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { TechnicianShell } from '@/technician/technician-shell';
 import {
   listPredisposalEligibleAssetsFn,
+  listPreDisposedAssetsFn,
   markAssetsPredisposedFn,
 } from '@backend/server/assets/assets.functions';
 
@@ -42,10 +44,36 @@ function assetKey(kind: AssetKind, assetId: number) {
   return `${kind}:${assetId}`;
 }
 
+const KIND_ORDER: AssetKind[] = ['laptop', 'av', 'network'];
+const KIND_COUNT_LABEL: Record<AssetKind, string> = {
+  laptop: 'Laptop',
+  av: 'AV',
+  network: 'Network',
+};
+
+function KindCountList({ assets }: { assets: { kind: AssetKind }[] }) {
+  return (
+    <ul className="space-y-1 border-t border-border/60 pt-2">
+      {KIND_ORDER.map((kind) => (
+        <li
+          key={kind}
+          className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+        >
+          <span className="min-w-0 truncate">{KIND_COUNT_LABEL[kind]}</span>
+          <span className="shrink-0 tabular-nums font-medium text-foreground">
+            {assets.filter((a) => a.kind === kind).length}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type KindFilter = 'all' | AssetKind;
 
 export function TechnicianDisposalPage() {
   const [assets, setAssets] = useState<PredisposalEligibleAsset[]>([]);
+  const [preDisposedAssets, setPreDisposedAssets] = useState<PreDisposedAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
@@ -56,8 +84,12 @@ export function TechnicianDisposalPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await listPredisposalEligibleAssetsFn();
+      const [rows, preDisposed] = await Promise.all([
+        listPredisposalEligibleAssetsFn(),
+        listPreDisposedAssetsFn(),
+      ]);
       setAssets(rows);
+      setPreDisposedAssets(preDisposed);
       setSelected(new Set());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load assets');
@@ -167,6 +199,26 @@ export function TechnicianDisposalPage() {
             View pre-disposed
           </Link>
         </Button>
+      </div>
+
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:mb-6 sm:grid-cols-2">
+        <InsightStatCard
+          icon={PackageCheck}
+          label="Total Return Asset"
+          value={assets.length}
+          tone="emerald"
+        >
+          <KindCountList assets={assets} />
+        </InsightStatCard>
+        <InsightStatCard
+          icon={Recycle}
+          label="Total pre-disposed"
+          value={preDisposedAssets.length}
+          tone="amber"
+          href="/technician/pre-disposed"
+        >
+          <KindCountList assets={preDisposedAssets} />
+        </InsightStatCard>
       </div>
 
       <Card className="rounded-[14px] border-border shadow-sm">
