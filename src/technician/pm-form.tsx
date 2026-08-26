@@ -250,6 +250,7 @@ export function PmFormPage() {
     setChecklist(null);
     setChecks({});
     setRemarks('');
+    setStep(1);
   };
 
   const pickLevel = (next: string) => {
@@ -261,23 +262,14 @@ export function PmFormPage() {
     setChecklist(null);
     setChecks({});
     setRemarks('');
+    setStep(2);
   };
 
-  const pickZone = (next: string) => {
-    setZone(next);
-    setAssets([]);
-    setCategoryFilter('all');
-    setSelectedAssetId(null);
-    setChecklist(null);
-    setChecks({});
-    setRemarks('');
-  };
-
-  const loadAssets = async () => {
+  const loadAssets = async (nextZone = zone) => {
     setAssetsLoading(true);
     try {
       const rows = await listPmAssetsAtPlaceFn({
-        data: { building, level, zone },
+        data: { building, level, zone: nextZone },
       });
       setAssets(rows);
       setStep(3);
@@ -288,7 +280,20 @@ export function PmFormPage() {
     }
   };
 
+  const pickZone = (next: string) => {
+    if (assetsLoading) return;
+    setZone(next);
+    setAssets([]);
+    setCategoryFilter('all');
+    setSelectedAssetId(null);
+    setChecklist(null);
+    setChecks({});
+    setRemarks('');
+    void loadAssets(next);
+  };
+
   const pickAsset = async (asset: PmPlaceAsset) => {
+    if (checklistLoading) return;
     const key = `${asset.kind}:${asset.assetId}`;
     setSelectedAssetId(key);
     setChecks({});
@@ -304,6 +309,7 @@ export function PmFormPage() {
     try {
       const detail = await getPmChecklistDetailFn({ data: asset.checklistId });
       setChecklist(detail);
+      setStep(4);
     } catch (e) {
       setChecklist(null);
       toast.error(e instanceof Error ? e.message : 'Failed to load checklist');
@@ -413,11 +419,7 @@ export function PmFormPage() {
                 ))}
               </div>
             )}
-            <StepFooter
-              backHref="/technician/preventive-maintenance"
-              onNext={() => setStep(1)}
-              nextDisabled={!building}
-            />
+            <StepFooter backHref="/technician/preventive-maintenance" />
           </CardContent>
         </Card>
       )}
@@ -444,7 +446,7 @@ export function PmFormPage() {
                 />
               ))}
             </div>
-            <StepFooter onBack={goBack} onNext={() => setStep(2)} nextDisabled={!level} />
+            <StepFooter onBack={goBack} />
           </CardContent>
         </Card>
       )}
@@ -470,12 +472,10 @@ export function PmFormPage() {
                 />
               ))}
             </div>
-            <StepFooter
-              onBack={goBack}
-              onNext={() => void loadAssets()}
-              nextDisabled={!zone || assetsLoading}
-              nextLabel={assetsLoading ? 'Loading…' : 'Continue'}
-            />
+            {assetsLoading && (
+              <p className="mt-4 text-center text-sm text-muted-foreground">Loading assets…</p>
+            )}
+            <StepFooter onBack={goBack} />
           </CardContent>
         </Card>
       )}
@@ -586,12 +586,10 @@ export function PmFormPage() {
               </div>
             )}
 
-            <StepFooter
-              onBack={goBack}
-              onNext={() => setStep(4)}
-              nextDisabled={!selectedAssetId || !checklist || checklistLoading}
-              nextLabel={checklistLoading ? 'Loading…' : 'Start checklist'}
-            />
+            {checklistLoading && (
+              <p className="text-center text-sm text-muted-foreground">Loading checklist…</p>
+            )}
+            <StepFooter onBack={goBack} />
           </CardContent>
         </Card>
       )}
