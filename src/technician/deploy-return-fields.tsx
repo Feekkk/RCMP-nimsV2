@@ -54,18 +54,22 @@ export function DatePickerField({
   onChange,
   required,
   minDate,
+  holidays = [],
 }: {
   label: string;
   value: string;
   onChange: (isoDate: string) => void;
   required?: boolean;
-  /** ISO YYYY-MM-DD; dates before this are not selectable. */
   minDate?: string;
+  holidays?: { date: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const selected = value ? isoToLocalDate(value) : undefined;
   const minLocal = minDate ? isoToLocalDate(minDate) : undefined;
   const ddmmyy = value ? formatIsoToDdMmYy(value) : null;
+  const holidayDates = holidays
+    .map((holiday) => isoToLocalDate(holiday.date))
+    .filter((date): date is Date => date != null);
 
   return (
     <FormField label={label} required={required}>
@@ -107,8 +111,17 @@ export function DatePickerField({
             }}
             disabled={minLocal ? { before: minLocal } : undefined}
             defaultMonth={selected ?? minLocal}
+            modifiers={{ holiday: holidayDates }}
+            modifiersClassNames={{
+              holiday: 'text-rose-600 dark:text-rose-400',
+            }}
             initialFocus
           />
+          {holidayDates.length > 0 ? (
+            <p className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
+              Dates in rose are Perak public holidays.
+            </p>
+          ) : null}
         </PopoverContent>
       </Popover>
       <input

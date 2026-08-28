@@ -15,6 +15,7 @@ import {
   DASHBOARD_ASSET_STORE_STATUS_IDS,
   DASHBOARD_REQUEST_STATUS_LABEL,
   type DashboardAssetKindStats,
+  type DashboardHoliday,
   type DashboardRequestStatus,
   type DashboardStatusCount,
   type DashboardTimetableEntry,
@@ -378,6 +379,15 @@ function MonthNav({
   );
 }
 
+function holidayNamesByDate(holidays: DashboardHoliday[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const holiday of holidays) {
+    const existing = map.get(holiday.date);
+    map.set(holiday.date, existing ? `${existing} · ${holiday.name}` : holiday.name);
+  }
+  return map;
+}
+
 function RequestDayList({
   dayIso,
   entries,
@@ -430,6 +440,7 @@ function RequestDayList({
 
 export function RequestTimetable({
   entries,
+  holidays = [],
   viewMonth,
   loading,
   isCurrentMonth,
@@ -439,6 +450,7 @@ export function RequestTimetable({
   requestHref,
 }: {
   entries: DashboardTimetableEntry[];
+  holidays?: DashboardHoliday[];
   viewMonth: { year: number; month: number };
   loading: boolean;
   isCurrentMonth: boolean;
@@ -452,6 +464,7 @@ export function RequestTimetable({
     () => buildMonthCells(viewMonth.year, viewMonth.month),
     [viewMonth.year, viewMonth.month],
   );
+  const holidayByDate = useMemo(() => holidayNamesByDate(holidays), [holidays]);
   const [selectedDayIso, setSelectedDayIso] = useState(todayIso);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -481,12 +494,13 @@ export function RequestTimetable({
     }
   }, [dayRequests, selectedId]);
 
+  const selectedHoliday = holidayByDate.get(selectedDayIso);
   const selected = dayRequests.find((e) => e.requestId === selectedId) ?? null;
 
   return (
     <DashboardPanel
       title="Request timetable"
-      description={monthLabel(viewMonth.year, viewMonth.month)}
+      description={`${monthLabel(viewMonth.year, viewMonth.month)} · Perak public holidays`}
       headerExtra={
         <MonthNav
           isCurrentMonth={isCurrentMonth}
@@ -505,6 +519,10 @@ export function RequestTimetable({
               {DASHBOARD_REQUEST_STATUS_LABEL[s]}
             </span>
           ))}
+          <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-rose-500" />
+            Public holiday
+          </span>
         </div>
 
         <div className="p-4 sm:p-6">
@@ -531,45 +549,61 @@ export function RequestTimetable({
                   const isToday = cell.iso === todayIso;
                   const dayEntries = entriesOnDay(entries, cell.iso);
                   const hasRequests = dayEntries.length > 0;
+                  const holidayName = holidayByDate.get(cell.iso);
 
                   return (
                     <button
                       key={cell.iso}
                       type="button"
                       onClick={() => setSelectedDayIso(cell.iso)}
+                      title={holidayName}
                       className={cn(
-                        'relative min-h-[4.5rem] border-b border-r border-border p-2 text-left transition-colors last:border-r-0',
+                        'flex min-h-[5.75rem] flex-col border-b border-r border-border p-2 text-left transition-colors last:border-r-0',
                         'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                         isSelected && 'bg-rose-50/80 dark:bg-rose-950/25',
-                        !isSelected && isToday && 'bg-lavender/[0.06]',
+                        !isSelected && holidayName && 'bg-rose-50/55 dark:bg-rose-950/20',
+                        !isSelected && !holidayName && isToday && 'bg-lavender/[0.06]',
                       )}
                     >
                       <span
                         className={cn(
-                          'inline-flex h-7 min-w-7 items-center justify-center rounded-full text-sm font-medium tabular-nums',
+                          'inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full text-sm font-medium tabular-nums',
                           isSelected
                             ? 'bg-orange-500 text-white shadow-sm'
-                            : cell.inMonth
-                              ? 'text-foreground'
-                              : 'text-muted-foreground/50',
+                            : holidayName
+                              ? cell.inMonth
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-rose-400/70 dark:text-rose-500/50'
+                              : cell.inMonth
+                                ? 'text-foreground'
+                                : 'text-muted-foreground/50',
                         )}
                       >
                         {cell.day}
                       </span>
-                      {hasRequests && (
-                        <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1">
-                          {dayEntries.slice(0, 3).map((entry) => (
-                            <span
-                              key={entry.requestId}
-                              className={cn('h-1.5 w-1.5 rounded-full', STATUS_BAR[entry.status])}
-                              title={`#${entry.requestId} ${entry.requesterName}`}
-                            />
-                          ))}
-                          {dayEntries.length > 3 && (
-                            <span className="text-[9px] text-muted-foreground">+{dayEntries.length - 3}</span>
-                          )}
-                        </div>
+                      {holidayName ? (
+                        <p className="mt-1 line-clamp-2 min-h-0 flex-1 text-[9px] leading-tight text-rose-700 dark:text-rose-300">
+                          {holidayName}
+                        </p>
+                      ) : (
+                        <span className="flex-1" />
                       )}
+                      <div className="mt-1.5 flex h-2.5 shrink-0 flex-wrap items-center gap-1">
+                        {hasRequests
+                          ? dayEntries.slice(0, 3).map((entry) => (
+                              <span
+                                key={entry.requestId}
+                                className={cn('h-1.5 w-1.5 rounded-full', STATUS_BAR[entry.status])}
+                                title={`#${entry.requestId} ${entry.requesterName}`}
+                              />
+                            ))
+                          : null}
+                        {dayEntries.length > 3 ? (
+                          <span className="text-[9px] leading-none text-muted-foreground">
+                            +{dayEntries.length - 3}
+                          </span>
+                        ) : null}
+                      </div>
                     </button>
                   );
                 })}
@@ -577,6 +611,13 @@ export function RequestTimetable({
             </div>
           )}
         </div>
+
+        {selectedHoliday ? (
+          <div className="border-t border-border bg-rose-50/70 px-4 py-2.5 text-xs text-rose-800 dark:bg-rose-950/30 dark:text-rose-200 sm:px-6">
+            <span className="font-semibold">Public holiday</span>
+            <span className="text-rose-700/80 dark:text-rose-300/80"> · {selectedHoliday}</span>
+          </div>
+        ) : null}
 
         <RequestDayList
           dayIso={selectedDayIso}

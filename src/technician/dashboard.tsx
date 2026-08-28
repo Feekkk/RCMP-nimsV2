@@ -50,6 +50,7 @@ export function TechnicianDashboardPage() {
 
   const stats = data?.stats;
   const timetable = data?.timetable ?? [];
+  const holidays = data?.holidays ?? [];
 
   return (
     <TechnicianShell>
@@ -87,6 +88,7 @@ export function TechnicianDashboardPage() {
       <div className="mb-6">
         <RequestTimetable
           entries={timetable}
+          holidays={holidays}
           viewMonth={viewMonth}
           loading={loading}
           isCurrentMonth={isCurrentMonth}

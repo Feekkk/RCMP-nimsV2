@@ -35,6 +35,11 @@ export type DashboardTimetableEntry = {
   needsAction: boolean;
 };
 
+export type DashboardHoliday = {
+  date: string;
+  name: string;
+};
+
 export const DASHBOARD_ASSET_STORE_STATUS_IDS = [1, 2, 4, 5] as const;
 export const DASHBOARD_ASSET_DEPLOY_STATUS_IDS = [3] as const;
 export const DASHBOARD_ASSET_STATUS_IDS = [1, 2, 3, 4, 5] as const;
@@ -130,6 +135,7 @@ export type TechnicianDashboardCharts = {
 export type TechnicianDashboardData = {
   stats: TechnicianDashboardStats;
   timetable: DashboardTimetableEntry[];
+  holidays: DashboardHoliday[];
   weekStart: string;
   weekEnd: string;
   charts: TechnicianDashboardCharts;

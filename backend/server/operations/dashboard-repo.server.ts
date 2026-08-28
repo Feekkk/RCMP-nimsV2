@@ -13,6 +13,7 @@ import {
   type TechnicianDashboardData,
   type TechnicianDashboardStats,
 } from '@shared/lib/dashboard-schema';
+import { fetchMalaysiaHolidaysForCalendar } from '@backend/server/operations/malaysia-holidays.server';
 import type { RequestItemRow } from '@shared/lib/request-schema';
 import { REQUEST_STATUS_ACTIVE } from '@shared/lib/request-schema';
 import { LAPTOP_ASSIGNMENT_BUCKETS } from '@shared/lib/inventory-schema';
@@ -339,6 +340,7 @@ export async function getTechnicianDashboard(
     laptopDeployByDivision,
     avDeployByBuilding,
     networkDeployByBuilding,
+    holidays,
   ] = await Promise.all([
     loadAssetKindStats(pool, 'laptop'),
     loadAssetKindStats(pool, 'av'),
@@ -347,6 +349,7 @@ export async function getTechnicianDashboard(
     loadLaptopDeployDivisionCounts(pool),
     loadPlaceDeployBuildingCounts(pool, 'av'),
     loadPlaceDeployBuildingCounts(pool, 'network'),
+    fetchMalaysiaHolidaysForCalendar(calendar.year, calendar.month),
   ]);
   laptop.deployByDivision = laptopDeployByDivision;
   av.deployByBuilding = avDeployByBuilding;
@@ -455,6 +458,7 @@ export async function getTechnicianDashboard(
   return {
     stats,
     timetable,
+    holidays,
     weekStart,
     weekEnd,
     charts: {

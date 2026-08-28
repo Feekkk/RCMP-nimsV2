@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import {
   ArrowLeft,
   ArrowRight,
+  AlertCircle,
   Check,
   ClipboardCheck,
   FileText,
@@ -54,11 +55,13 @@ import {
   requestItemKindFromAssetType,
 } from '@shared/lib/request-asset-types';
 import { submitUserRequestFn } from '@backend/server/requests/request.functions';
+import { getMalaysiaHolidaysFn } from '@backend/server/operations/malaysia-holidays.functions';
 import { DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { UserPageChrome } from '@/user/user-chrome';
 import { UserProfileCompleteDialog } from '@/user/profile-complete-dialog';
 import { getUserProfileFn } from '@backend/server/auth/auth.functions';
-import { localDateToIso } from '@shared/lib/date-format';
+import { formatDateLabel, localDateToIso } from '@shared/lib/date-format';
+import type { DashboardHoliday } from '@shared/lib/dashboard-schema';
 import { cn } from '@/lib/utils';
 
 const STEPS = [
@@ -87,6 +90,7 @@ export function UserRequestFormPage() {
   const [usageLocation, setUsageLocation] = useState('');
   const [remarks, setRemarks] = useState('');
   const [items, setItems] = useState<UserRequestItemDraft[]>([]);
+  const [holidays, setHolidays] = useState<DashboardHoliday[]>([]);
 
   useEffect(() => {
     const user = readUserSession();
@@ -112,6 +116,15 @@ export function UserRequestFormPage() {
         setProfileReady(true);
       });
   }, [navigate]);
+
+  useEffect(() => {
+    const year = new Date().getFullYear();
+    void getMalaysiaHolidaysFn({ data: { years: [year, year + 1] } })
+      .then(setHolidays)
+      .catch(() => {
+        setHolidays([]);
+      });
+  }, []);
 
   const profileComplete = session != null && isUserProfileComplete(session);
 
@@ -305,6 +318,7 @@ export function UserRequestFormPage() {
                 returnDate={returnDate}
                 programType={programType}
                 usageLocation={usageLocation}
+                holidays={holidays}
                 onBorrowDateChange={setBorrowDate}
                 onReturnDateChange={setReturnDate}
                 onProgramTypeChange={setProgramType}
@@ -324,6 +338,7 @@ export function UserRequestFormPage() {
                 onRemarksChange={setRemarks}
                 items={items}
                 requesterName={session.fullName}
+                holidays={holidays}
               />
             )}
           </CardContent>
@@ -458,11 +473,53 @@ function SlaStep({
   );
 }
 
+function holidayNamesOn(iso: string, holidays: DashboardHoliday[]): string[] {
+  return holidays.filter((holiday) => holiday.date === iso).map((holiday) => holiday.name);
+}
+
+function HolidayDateNotice({
+  borrowDate,
+  returnDate,
+  holidays,
+}: {
+  borrowDate: string;
+  returnDate: string;
+  holidays: DashboardHoliday[];
+}) {
+  const borrowNames = borrowDate ? holidayNamesOn(borrowDate, holidays) : [];
+  const returnNames = returnDate ? holidayNamesOn(returnDate, holidays) : [];
+  if (borrowNames.length === 0 && returnNames.length === 0) return null;
+
+  return (
+    <Alert className="border-rose-200 bg-rose-50/80 text-rose-950 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-100">
+      <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+      <AlertDescription className="space-y-1.5 text-xs sm:text-sm">
+        <p className="font-medium">Public holiday reminder</p>
+        {borrowNames.length > 0 ? (
+          <p>
+            Borrow date ({formatDateLabel(borrowDate)}) is a public holiday: {borrowNames.join(' · ')}.
+          </p>
+        ) : null}
+        {returnNames.length > 0 ? (
+          <p>
+            Return date ({formatDateLabel(returnDate)}) is a public holiday: {returnNames.join(' · ')}.
+          </p>
+        ) : null}
+        <p className="text-rose-800/90 dark:text-rose-200/90">
+          ITD office may be closed. You can still submit, but collection or return may need to be on a working
+          day.
+        </p>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 function DetailsStep({
   borrowDate,
   returnDate,
   programType,
   usageLocation,
+  holidays,
   onBorrowDateChange,
   onReturnDateChange,
   onProgramTypeChange,
@@ -472,6 +529,7 @@ function DetailsStep({
   returnDate: string;
   programType: string;
   usageLocation: string;
+  holidays: DashboardHoliday[];
   onBorrowDateChange: (v: string) => void;
   onReturnDateChange: (v: string) => void;
   onProgramTypeChange: (v: string) => void;
@@ -488,6 +546,7 @@ function DetailsStep({
           value={borrowDate}
           onChange={onBorrowDateChange}
           minDate={todayIso}
+          holidays={holidays}
           required
         />
         <DatePickerField
@@ -495,9 +554,11 @@ function DetailsStep({
           value={returnDate}
           onChange={onReturnDateChange}
           minDate={minReturnDate}
+          holidays={holidays}
           required
         />
       </div>
+      <HolidayDateNotice borrowDate={borrowDate} returnDate={returnDate} holidays={holidays} />
       <FormField label="Program type" required>
         <Select value={programType || undefined} onValueChange={onProgramTypeChange}>
           <SelectTrigger className="rounded-[8px]">
@@ -745,6 +806,7 @@ function PreviewStep({
   remarks,
   onRemarksChange,
   items,
+  holidays,
 }: {
   requesterName: string;
   borrowDate: string;
@@ -754,10 +816,12 @@ function PreviewStep({
   remarks: string;
   onRemarksChange: (v: string) => void;
   items: UserRequestItemDraft[];
+  holidays: DashboardHoliday[];
 }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Review your request before submitting.</p>
+      <HolidayDateNotice borrowDate={borrowDate} returnDate={returnDate} holidays={holidays} />
       <dl className="space-y-3 rounded-[12px] border border-border bg-muted/20 p-4 text-sm">
         <PreviewRow label="Requester" value={requesterName} />
         <PreviewRow label="Borrow date" value={borrowDate || '—'} />
