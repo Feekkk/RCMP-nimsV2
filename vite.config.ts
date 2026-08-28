@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import path from "path";
 import { pathToFileURL } from "url";
 import { defineConfig, loadEnv } from "vite";
@@ -181,6 +182,23 @@ function overdueReturnEmailSchedulerPlugin() {
   };
 }
 
+function readLatestCommitAsSystemUpdate() {
+  try {
+    const subject = execSync("git log -1 --pretty=%s", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    const stripped = subject.replace(
+      /^(feat|fix|bug|add|update|chore|docs|refactor|temporary):\s*/i,
+      "",
+    );
+    if (!stripped) return "";
+    return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+  } catch {
+    return "";
+  }
+}
+
 export default defineConfig(({ mode }) => {
   // Load VITE_ env vars and define them for SSR
   // Note: loadEnv strips the prefix, so we add it back
@@ -189,6 +207,10 @@ export default defineConfig(({ mode }) => {
   for (const [key, value] of Object.entries(env)) {
     envDefine[`import.meta.env.${key}`] = JSON.stringify(value);
   }
+
+  envDefine["import.meta.env.VITE_SYSTEM_UPDATE"] = JSON.stringify(
+    env.VITE_SYSTEM_UPDATE || readLatestCommitAsSystemUpdate(),
+  );
 
   // Server-side OAuth / DB (not exposed to client bundle)
   const serverEnv = loadEnv(mode, process.cwd(), [

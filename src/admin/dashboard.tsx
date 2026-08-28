@@ -9,8 +9,10 @@ import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import { getTechnicianDashboardFn } from '@backend/server/operations/dashboard.functions';
 import { AdminShell } from '@/admin/admin-shell';
 import {
+  dashboardTodayLine,
   InventoryStatCard,
   RequestTimetable,
+  SystemUpdateNotice,
   useDashboardMonthState,
 } from '@/dashboard/dashboard-widgets';
 
@@ -42,12 +44,6 @@ export function AdminDashboardPage() {
     void load();
   }, [load]);
 
-  const todayLabel = new Intl.DateTimeFormat(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date());
-
   const stats = data?.stats;
   const timetable = data?.timetable ?? [];
   const holidays = data?.holidays ?? [];
@@ -57,9 +53,11 @@ export function AdminDashboardPage() {
       <div className="mb-5 sm:mb-6">
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Dashboard</h1>
         <p className="text-xs text-muted-foreground sm:text-sm">
-          {todayLabel} · Live inventory & requests
+          {dashboardTodayLine('Live inventory & requests')}
         </p>
       </div>
+
+      <SystemUpdateNotice />
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <InventoryStatCard
