@@ -123,7 +123,10 @@ export function compareAssetIdNewestYearFirst(
 
 export function assetIdNewestYearFirstSql(column = 'asset_id'): string {
   const currentYear = getAssetIdYearDigits();
-  return `(CASE WHEN FLOOR((${column} % 100000) / 1000) = ${currentYear} THEN 0 ELSE 1 END), FLOOR((${column} % 100000) / 1000) DESC, ${column} DESC`;
+  const yy = String(currentYear).padStart(2, '0');
+  const numeric = `${column} REGEXP '^[0-9]+$'`;
+  const yearDigits = `SUBSTRING(${column}, GREATEST(CAST(LENGTH(${column}) AS SIGNED) - 4, 1), 2)`;
+  return `(CASE WHEN ${numeric} THEN 0 ELSE 1 END), (CASE WHEN ${numeric} AND ${yearDigits} = '${yy}' THEN 0 ELSE 1 END), (CASE WHEN ${numeric} THEN ${yearDigits} ELSE '00' END) DESC, ${column} DESC`;
 }
 
 export function getAssetIdRange(prefix: number, yearDigits: number): { min: number; max: number } {

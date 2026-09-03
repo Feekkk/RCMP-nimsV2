@@ -73,6 +73,8 @@ export type CancelBookedNotTakenInput = {
   cancelledBy: string;
 };
 
+export type CancelBookedUnavailableInput = CancelBookedNotTakenInput;
+
 export type CheckoutUserRequestInput = {
   requestId: number;
   checkedOutBy: string;

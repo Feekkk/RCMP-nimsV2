@@ -393,6 +393,11 @@ export async function handleRequestAction(request: Request, action: string): Pro
       await cancelBookedAssignmentNotTaken({ ...body, cancelledBy: actor } as never);
       return apiOk({ ok: true });
     }
+    if (action === 'cancel-unavailable') {
+      const { cancelBookedAssignmentUnavailable } = await import('@backend/server/requests/request-repo.server');
+      await cancelBookedAssignmentUnavailable({ ...body, cancelledBy: actor } as never);
+      return apiOk({ ok: true });
+    }
     return apiError('Unknown request action.', 404, 'not_found');
   } catch (error) {
     return handleApiError(error);

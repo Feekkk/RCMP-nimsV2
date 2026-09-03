@@ -76,6 +76,7 @@ import { sendRequestReturnEmailFn } from '@backend/server/email/request-return-e
 import {
   bookPoolAssetToRequestFn,
   cancelBookedAssignmentNotTakenFn,
+  cancelBookedAssignmentUnavailableFn,
   changeBookedAssignmentFn,
   checkoutUserRequestFn,
   listAvailablePoolAssetsFn,
@@ -294,7 +295,6 @@ export function TechnicianRequestPage() {
   const [returning, setReturning] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const [reqs, available] = await Promise.all([
         listPendingRequestsFn(),
@@ -443,6 +443,28 @@ export function TechnicianRequestPage() {
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not mark not taken');
+    } finally {
+      setActionKey(null);
+    }
+  };
+
+  const handleBookedUnavailable = async (assignment: RequestAssignmentRow) => {
+    const session = readTechnicianSession();
+    if (!session?.staffId) {
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
+      return;
+    }
+
+    const key = `unavail-${assignment.assignmentId}`;
+    setActionKey(key);
+    try {
+      await cancelBookedAssignmentUnavailableFn({
+        data: { assignmentId: assignment.assignmentId, cancelledBy: session.staffId },
+      });
+      toast.success('Slot marked unavailable — asset returned to pool');
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not mark unavailable');
     } finally {
       setActionKey(null);
     }
@@ -641,7 +663,6 @@ export function TechnicianRequestPage() {
     const isOpen = openId === req.requestId;
     const totalNeeded = req.items.reduce((n, i) => n + i.quantity, 0);
     const totalCheckedOut = req.assignments.filter((a) => a.checkoutAt != null).length;
-    const totalReturned = req.items.reduce((n, i) => n + i.returnedCount, 0);
     const awaitingReturn = checkedOutAwaitingReturn(req);
     const toCheckout = bookedAwaitingCheckout(req);
     const overdue = requestIsOverdue(req);
@@ -669,47 +690,7 @@ export function TechnicianRequestPage() {
             )}
           />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">{req.requesterName}</span>
-              <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
-                #{req.requestId}
-              </Badge>
-              {overdue && (
-                <Badge
-                  variant="outline"
-                  className="gap-1 rounded-[6px] border-rose-300 bg-rose-100 text-[10px] text-rose-800 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200"
-                >
-                  <AlertTriangle className="h-3 w-3" aria-hidden />
-                  Overdue
-                </Badge>
-              )}
-              {awaitingReturn.length > 0 && !overdue && (
-                <Badge
-                  variant="outline"
-                  className="rounded-[6px] border-sky-200 bg-sky-50 text-[10px] text-sky-800"
-                >
-                  {awaitingReturn.length} to return
-                </Badge>
-              )}
-              {toCheckout.length > 0 && (
-                <Badge
-                  variant="outline"
-                  className="rounded-[6px] border-violet-200 bg-violet-50 text-[10px] text-violet-800"
-                >
-                  {toCheckout.length} ready to checkout
-                </Badge>
-              )}
-              {emptySlots > 0 && (
-                <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
-                  {emptySlots} slot{emptySlots === 1 ? '' : 's'} open
-                </Badge>
-              )}
-              {totalReturned > 0 && (
-                <Badge variant="secondary" className="rounded-[6px] text-[10px] tabular-nums">
-                  {totalReturned} returned
-                </Badge>
-              )}
-            </div>
+            <p className="font-semibold">{req.requesterName}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {req.requesterEmail}
               {req.requesterPhone ? ` · ${req.requesterPhone}` : ''}
@@ -727,23 +708,28 @@ export function TechnicianRequestPage() {
                 : ''}
             </p>
           </div>
-          {toCheckout.length > 0 && (
-            <div
-              className="flex shrink-0 flex-wrap items-center gap-1.5"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
+          <div className="flex shrink-0 items-center">
+            <span
+              className={cn(
+                'inline-flex h-8 items-center rounded-[8px] px-3 text-xs font-medium',
+                overdue
+                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
+                  : awaitingReturn.length > 0
+                    ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200'
+                    : toCheckout.length > 0
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+              )}
             >
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 rounded-[8px] text-xs"
-                disabled={checkoutRequestId === req.requestId}
-                onClick={() => void handleCheckoutRequest(req)}
-              >
-                {checkoutRequestId === req.requestId ? 'Checking out…' : 'Checkout'}
-              </Button>
-            </div>
-          )}
+              {overdue
+                ? 'Overdue'
+                : awaitingReturn.length > 0
+                  ? 'Return'
+                  : toCheckout.length > 0
+                    ? 'Ready to checkout'
+                    : 'Pending Asset'}
+            </span>
+          </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border px-4 py-4">
           <p className="mb-3 text-xs text-muted-foreground">
@@ -890,26 +876,48 @@ export function TechnicianRequestPage() {
                             <TableCell>
                               {isBookedAwaitingCheckout ? (
                                 <TooltipProvider delayDuration={300}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-8 w-8 shrink-0 rounded-[8px]"
-                                        disabled={actionKey === `cancel-${a.assignmentId}`}
-                                        aria-label="Not taken"
-                                        onClick={() => void handleBookedNotTaken(a)}
-                                      >
-                                        {actionKey === `cancel-${a.assignmentId}` ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <UserX className="h-4 w-4" />
-                                        )}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">Not taken</TooltipContent>
-                                  </Tooltip>
+                                  <div className="flex items-center gap-1">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="icon"
+                                          className="h-8 w-8 shrink-0 rounded-[8px]"
+                                          disabled={actionKey != null}
+                                          aria-label="Unavailable"
+                                          onClick={() => void handleBookedUnavailable(a)}
+                                        >
+                                          {actionKey === `unavail-${a.assignmentId}` ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <Ban className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">Unavailable</TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="icon"
+                                          className="h-8 w-8 shrink-0 rounded-[8px]"
+                                          disabled={actionKey != null}
+                                          aria-label="Not taken"
+                                          onClick={() => void handleBookedNotTaken(a)}
+                                        >
+                                          {actionKey === `cancel-${a.assignmentId}` ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <UserX className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">Not taken</TooltipContent>
+                                    </Tooltip>
+                                  </div>
                                 </TooltipProvider>
                               ) : (
                                 <span className="text-xs text-muted-foreground">—</span>
@@ -1032,9 +1040,7 @@ export function TechnicianRequestPage() {
               <Button
                 type="button"
                 size="sm"
-                className="gap-1.5 rounded-[8px]"
-                disabled={checkoutRequestId === req.requestId}
-                onClick={() => void handleCheckoutRequest(req)}
+                className="gap-1.5 rounded-[8px] bg-emerald-600 text-white hover:bg-emerald-600/90 dark:bg-emerald-700 dark:hover:bg-emerald-700/90"
               >
                 {checkoutRequestId === req.requestId
                   ? 'Checking out…'

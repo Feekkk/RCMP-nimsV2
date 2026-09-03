@@ -64,6 +64,7 @@ import { Route as ApiV1RequestsPoolRouteImport } from './routes/api/v1/requests.
 import { Route as ApiV1RequestsPendingRouteImport } from './routes/api/v1/requests.pending'
 import { Route as ApiV1RequestsLogRouteImport } from './routes/api/v1/requests.log'
 import { Route as ApiV1RequestsCheckoutRouteImport } from './routes/api/v1/requests.checkout'
+import { Route as ApiV1RequestsCancelUnavailableRouteImport } from './routes/api/v1/requests.cancel-unavailable'
 import { Route as ApiV1RequestsCancelNotTakenRouteImport } from './routes/api/v1/requests.cancel-not-taken'
 import { Route as ApiV1RequestsBookRouteImport } from './routes/api/v1/requests.book'
 import { Route as ApiV1AuthRefreshRouteImport } from './routes/api/v1/auth.refresh'
@@ -360,6 +361,12 @@ const ApiV1RequestsCheckoutRoute = ApiV1RequestsCheckoutRouteImport.update({
   path: '/api/v1/requests/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1RequestsCancelUnavailableRoute =
+  ApiV1RequestsCancelUnavailableRouteImport.update({
+    id: '/api/v1/requests/cancel-unavailable',
+    path: '/api/v1/requests/cancel-unavailable',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiV1RequestsCancelNotTakenRoute =
   ApiV1RequestsCancelNotTakenRouteImport.update({
     id: '/api/v1/requests/cancel-not-taken',
@@ -492,6 +499,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/auth/refresh': typeof ApiV1AuthRefreshRoute
   '/api/v1/requests/book': typeof ApiV1RequestsBookRoute
   '/api/v1/requests/cancel-not-taken': typeof ApiV1RequestsCancelNotTakenRoute
+  '/api/v1/requests/cancel-unavailable': typeof ApiV1RequestsCancelUnavailableRoute
   '/api/v1/requests/checkout': typeof ApiV1RequestsCheckoutRoute
   '/api/v1/requests/log': typeof ApiV1RequestsLogRoute
   '/api/v1/requests/pending': typeof ApiV1RequestsPendingRoute
@@ -564,6 +572,7 @@ export interface FileRoutesByTo {
   '/api/v1/auth/refresh': typeof ApiV1AuthRefreshRoute
   '/api/v1/requests/book': typeof ApiV1RequestsBookRoute
   '/api/v1/requests/cancel-not-taken': typeof ApiV1RequestsCancelNotTakenRoute
+  '/api/v1/requests/cancel-unavailable': typeof ApiV1RequestsCancelUnavailableRoute
   '/api/v1/requests/checkout': typeof ApiV1RequestsCheckoutRoute
   '/api/v1/requests/log': typeof ApiV1RequestsLogRoute
   '/api/v1/requests/pending': typeof ApiV1RequestsPendingRoute
@@ -637,6 +646,7 @@ export interface FileRoutesById {
   '/api/v1/auth/refresh': typeof ApiV1AuthRefreshRoute
   '/api/v1/requests/book': typeof ApiV1RequestsBookRoute
   '/api/v1/requests/cancel-not-taken': typeof ApiV1RequestsCancelNotTakenRoute
+  '/api/v1/requests/cancel-unavailable': typeof ApiV1RequestsCancelUnavailableRoute
   '/api/v1/requests/checkout': typeof ApiV1RequestsCheckoutRoute
   '/api/v1/requests/log': typeof ApiV1RequestsLogRoute
   '/api/v1/requests/pending': typeof ApiV1RequestsPendingRoute
@@ -711,6 +721,7 @@ export interface FileRouteTypes {
     | '/api/v1/auth/refresh'
     | '/api/v1/requests/book'
     | '/api/v1/requests/cancel-not-taken'
+    | '/api/v1/requests/cancel-unavailable'
     | '/api/v1/requests/checkout'
     | '/api/v1/requests/log'
     | '/api/v1/requests/pending'
@@ -783,6 +794,7 @@ export interface FileRouteTypes {
     | '/api/v1/auth/refresh'
     | '/api/v1/requests/book'
     | '/api/v1/requests/cancel-not-taken'
+    | '/api/v1/requests/cancel-unavailable'
     | '/api/v1/requests/checkout'
     | '/api/v1/requests/log'
     | '/api/v1/requests/pending'
@@ -855,6 +867,7 @@ export interface FileRouteTypes {
     | '/api/v1/auth/refresh'
     | '/api/v1/requests/book'
     | '/api/v1/requests/cancel-not-taken'
+    | '/api/v1/requests/cancel-unavailable'
     | '/api/v1/requests/checkout'
     | '/api/v1/requests/log'
     | '/api/v1/requests/pending'
@@ -928,6 +941,7 @@ export interface RootRouteChildren {
   ApiV1AuthRefreshRoute: typeof ApiV1AuthRefreshRoute
   ApiV1RequestsBookRoute: typeof ApiV1RequestsBookRoute
   ApiV1RequestsCancelNotTakenRoute: typeof ApiV1RequestsCancelNotTakenRoute
+  ApiV1RequestsCancelUnavailableRoute: typeof ApiV1RequestsCancelUnavailableRoute
   ApiV1RequestsCheckoutRoute: typeof ApiV1RequestsCheckoutRoute
   ApiV1RequestsLogRoute: typeof ApiV1RequestsLogRoute
   ApiV1RequestsPendingRoute: typeof ApiV1RequestsPendingRoute
@@ -1332,6 +1346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1RequestsCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/requests/cancel-unavailable': {
+      id: '/api/v1/requests/cancel-unavailable'
+      path: '/api/v1/requests/cancel-unavailable'
+      fullPath: '/api/v1/requests/cancel-unavailable'
+      preLoaderRoute: typeof ApiV1RequestsCancelUnavailableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/requests/cancel-not-taken': {
       id: '/api/v1/requests/cancel-not-taken'
       path: '/api/v1/requests/cancel-not-taken'
@@ -1507,6 +1528,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1AuthRefreshRoute: ApiV1AuthRefreshRoute,
   ApiV1RequestsBookRoute: ApiV1RequestsBookRoute,
   ApiV1RequestsCancelNotTakenRoute: ApiV1RequestsCancelNotTakenRoute,
+  ApiV1RequestsCancelUnavailableRoute: ApiV1RequestsCancelUnavailableRoute,
   ApiV1RequestsCheckoutRoute: ApiV1RequestsCheckoutRoute,
   ApiV1RequestsLogRoute: ApiV1RequestsLogRoute,
   ApiV1RequestsPendingRoute: ApiV1RequestsPendingRoute,

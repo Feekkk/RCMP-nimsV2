@@ -30,6 +30,7 @@ import type {
   CheckoutUserRequestInput,
   CheckoutUserRequestResult,
   CancelBookedNotTakenInput,
+  CancelBookedUnavailableInput,
   MarkRequestSlotNotTakenInput,
   MarkRequestSlotUnavailableInput,
   RejectUserRequestInput,
@@ -42,6 +43,14 @@ import { requestItemKindFromAssetType } from '@shared/lib/request-asset-types';
 import { isUserProfileComplete } from '@shared/lib/user-profile';
 import { attachDisplayNames, resolveAccountProfile } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
+
+function bindAssetId(assetId: number | string) {
+  return String(assetId);
+}
+
+function sqlAssetIdEq(left: string, right: string) {
+  return `CAST(${left} AS CHAR) = CAST(${right} AS CHAR)`;
+}
 import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 
 /** Source statuses eligible to enter the request pool: new (1) and return (2). */
@@ -135,7 +144,7 @@ async function queryLaptopPool(): Promise<RequestPoolAsset[]> {
             ra.request_id, u.oid AS requester_oid, ra.assignment_id
      FROM laptop l
      LEFT JOIN request_assignment ra
-       ON ra.asset_id = l.asset_id AND ra.returned_at IS NULL
+       ON ${sqlAssetIdEq('ra.asset_id', 'l.asset_id')} AND ra.returned_at IS NULL
      LEFT JOIN request r ON r.request_id = ra.request_id AND r.rejected_at IS NULL
      LEFT JOIN users u ON u.id = r.requested_by
      WHERE l.status_id IN (?, ?, ?)
@@ -165,7 +174,7 @@ async function queryAvPool(): Promise<RequestPoolAsset[]> {
             ra.request_id, u.oid AS requester_oid, ra.assignment_id
      FROM av a
      LEFT JOIN request_assignment ra
-       ON ra.asset_id = a.asset_id AND ra.returned_at IS NULL
+       ON ${sqlAssetIdEq('ra.asset_id', 'a.asset_id')} AND ra.returned_at IS NULL
      LEFT JOIN request r ON r.request_id = ra.request_id AND r.rejected_at IS NULL
      LEFT JOIN users u ON u.id = r.requested_by
      WHERE a.status_id IN (?, ?, ?)
@@ -215,7 +224,7 @@ export async function markAssetForRequest(input: MarkAssetForRequestInput): Prom
 
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
-    [input.assetId],
+    [bindAssetId(input.assetId)],
   );
   const row = rows[0] as { status_id: number } | undefined;
   if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
@@ -228,7 +237,7 @@ export async function markAssetForRequest(input: MarkAssetForRequestInput): Prom
   const [openAssign] = await pool.query<RowDataPacket[]>(
     `SELECT assignment_id FROM request_assignment
      WHERE asset_id = ? AND returned_at IS NULL LIMIT 1`,
-    [input.assetId],
+    [bindAssetId(input.assetId)],
   );
   if (openAssign[0]) {
     throw new Error(
@@ -238,7 +247,7 @@ export async function markAssetForRequest(input: MarkAssetForRequestInput): Prom
 
   await pool.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
     REQUEST_STATUS_ACTIVE,
-    input.assetId,
+    bindAssetId(input.assetId),
   ]);
 }
 
@@ -267,7 +276,7 @@ export async function removeAssetFromRequestPool(
 
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
-    [input.assetId],
+    [bindAssetId(input.assetId)],
   );
   const row = rows[0] as { status_id: number } | undefined;
   if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
@@ -280,7 +289,7 @@ export async function removeAssetFromRequestPool(
   const [openAssign] = await pool.query<RowDataPacket[]>(
     `SELECT assignment_id FROM request_assignment
      WHERE asset_id = ? AND returned_at IS NULL LIMIT 1`,
-    [input.assetId],
+    [bindAssetId(input.assetId)],
   );
   if (openAssign[0]) {
     throw new Error(
@@ -290,7 +299,7 @@ export async function removeAssetFromRequestPool(
 
   await pool.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
     STATUS_ID.RETURN,
-    input.assetId,
+    bindAssetId(input.assetId),
   ]);
 }
 
@@ -299,7 +308,7 @@ async function assertAssetInPool(kind: RequestAssignableKind, assetId: number) {
   const table = kind === 'laptop' ? 'laptop' : 'av';
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
-    [assetId],
+    [bindAssetId(assetId)],
   );
   const row = rows[0] as { status_id: number } | undefined;
   if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
@@ -318,7 +327,10 @@ async function setAssetRequestStatus(
 ) {
   const table = kind === 'laptop' ? 'laptop' : 'av';
   const q = conn ?? getDbPool();
-  await q.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [statusId, assetId]);
+  await q.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [
+    statusId,
+    bindAssetId(assetId),
+  ]);
 }
 
 /** Book asset: pool (9) → assignment row + status 10 */
@@ -340,7 +352,7 @@ export async function bookPoolAssetToRequest(input: AssignAssetToRequestInput): 
   const [existing] = await pool.query<RowDataPacket[]>(
     `SELECT assignment_id FROM request_assignment
      WHERE asset_id = ? AND returned_at IS NULL`,
-    [input.assetId],
+    [bindAssetId(input.assetId)],
   );
   if (existing[0]) {
     throw new Error(
@@ -359,7 +371,7 @@ export async function bookPoolAssetToRequest(input: AssignAssetToRequestInput): 
       [
         input.requestId,
         input.requestItemId,
-        input.assetId,
+        bindAssetId(input.assetId),
         input.assignedBy,
         input.remarks,
       ],
@@ -400,8 +412,8 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
             COALESCE(l.status_id, av.status_id) AS old_status_id
      FROM request_assignment ra
      INNER JOIN request r ON r.request_id = ra.request_id
-     LEFT JOIN laptop l ON l.asset_id = ra.asset_id
-     LEFT JOIN av av ON av.asset_id = ra.asset_id
+     LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+     LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
      WHERE ra.assignment_id = ? AND ra.returned_at IS NULL`,
     [input.assignmentId],
   );
@@ -424,7 +436,7 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
   }
 
   const oldKind: RequestAssignableKind = row.old_kind === 'laptop' ? 'laptop' : 'av';
-  if (row.asset_id === input.assetId && oldKind === input.kind) {
+  if (String(row.asset_id) === String(input.assetId) && oldKind === input.kind) {
     return;
   }
 
@@ -433,7 +445,7 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
   const [existing] = await pool.query<RowDataPacket[]>(
     `SELECT assignment_id FROM request_assignment
      WHERE asset_id = ? AND returned_at IS NULL AND assignment_id != ?`,
-    [input.assetId, input.assignmentId],
+    [bindAssetId(input.assetId), input.assignmentId],
   );
   if (existing[0]) {
     throw new Error(
@@ -450,7 +462,7 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
     await conn.execute(
       `UPDATE request_assignment SET asset_id = ?, assigned_by = ?, assigned_at = NOW()
        WHERE assignment_id = ?`,
-      [input.assetId, input.changedBy, input.assignmentId],
+      [bindAssetId(input.assetId), input.changedBy, input.assignmentId],
     );
 
     await setAssetRequestStatus(input.kind, input.assetId, REQUEST_STATUS_BOOKED, conn);
@@ -520,10 +532,7 @@ export async function markRequestSlotNotTaken(
   return insertClosedRequestSlot(input, 'Not taken');
 }
 
-/** Booked asset was not collected by the requester — release back to the request pool. */
-export async function cancelBookedAssignmentNotTaken(
-  input: CancelBookedNotTakenInput,
-): Promise<void> {
+async function loadOpenBookedAssignment(assignmentId: number) {
   const pool = getDbPool();
   const [rows] = await pool.query<
     (RowDataPacket & {
@@ -539,10 +548,10 @@ export async function cancelBookedAssignmentNotTaken(
             COALESCE(l.status_id, av.status_id) AS status_id
      FROM request_assignment ra
      INNER JOIN request r ON r.request_id = ra.request_id
-     LEFT JOIN laptop l ON l.asset_id = ra.asset_id
-     LEFT JOIN av av ON av.asset_id = ra.asset_id
+     LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+     LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
      WHERE ra.assignment_id = ? AND ra.returned_at IS NULL`,
-    [input.assignmentId],
+    [assignmentId],
   );
   const row = rows[0];
   if (!row) throw new Error('This booking could not be found. Refresh the page and try again.');
@@ -555,13 +564,23 @@ export async function cancelBookedAssignmentNotTaken(
     throw new Error('This asset has already been checked out.');
   }
   if (row.status_id !== REQUEST_STATUS_BOOKED) {
-    throw new Error(
-      'Only booked assets that have not been collected can be marked as not taken.',
-    );
+    throw new Error('Only booked assets that have not been collected can be updated.');
   }
+  if (row.asset_id == null) {
+    throw new Error('This booking has no assigned asset.');
+  }
+  return {
+    assetId: row.asset_id,
+    kind: (row.kind === 'laptop' ? 'laptop' : 'av') as RequestAssignableKind,
+  };
+}
 
-  const kind: RequestAssignableKind = row.kind === 'laptop' ? 'laptop' : 'av';
-  const conn = await pool.getConnection();
+/** Booked asset was not collected by the requester — release back to the request pool. */
+export async function cancelBookedAssignmentNotTaken(
+  input: CancelBookedNotTakenInput,
+): Promise<void> {
+  const row = await loadOpenBookedAssignment(input.assignmentId);
+  const conn = await getDbPool().getConnection();
   try {
     await conn.beginTransaction();
     await conn.execute(
@@ -570,7 +589,31 @@ export async function cancelBookedAssignmentNotTaken(
        WHERE assignment_id = ?`,
       [input.cancelledBy, input.assignmentId],
     );
-    await setAssetRequestStatus(kind, row.asset_id, REQUEST_STATUS_ACTIVE, conn);
+    await setAssetRequestStatus(row.kind, row.assetId, REQUEST_STATUS_ACTIVE, conn);
+    await conn.commit();
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+/** Booked slot cannot be fulfilled — release the asset and close the slot as unavailable. */
+export async function cancelBookedAssignmentUnavailable(
+  input: CancelBookedUnavailableInput,
+): Promise<void> {
+  const row = await loadOpenBookedAssignment(input.assignmentId);
+  const conn = await getDbPool().getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute(
+      `UPDATE request_assignment
+       SET asset_id = NULL, unavailable_at = NOW(), remarks = 'Unavailable'
+       WHERE assignment_id = ?`,
+      [input.assignmentId],
+    );
+    await setAssetRequestStatus(row.kind, row.assetId, REQUEST_STATUS_ACTIVE, conn);
     await conn.commit();
   } catch (e) {
     await conn.rollback();
@@ -588,8 +631,8 @@ export async function checkoutUserRequest(
     `SELECT ra.assignment_id
      FROM request_assignment ra
      INNER JOIN request r ON r.request_id = ra.request_id
-     LEFT JOIN laptop l ON l.asset_id = ra.asset_id
-     LEFT JOIN av av ON av.asset_id = ra.asset_id
+     LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+     LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
      WHERE ra.request_id = ?
        AND r.rejected_at IS NULL
        AND ra.returned_at IS NULL
@@ -635,8 +678,8 @@ export async function checkoutRequestAssignment(
             COALESCE(l.status_id, av.status_id) AS status_id
      FROM request_assignment ra
      INNER JOIN request r ON r.request_id = ra.request_id
-     LEFT JOIN laptop l ON l.asset_id = ra.asset_id
-     LEFT JOIN av av ON av.asset_id = ra.asset_id
+     LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+     LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
      WHERE ra.assignment_id = ? AND ra.returned_at IS NULL`,
     [input.assignmentId],
   );
@@ -694,8 +737,8 @@ async function returnOneAssignment(
             COALESCE(l.status_id, av.status_id) AS status_id
      FROM request_assignment ra
      INNER JOIN request r ON r.request_id = ra.request_id
-     LEFT JOIN laptop l ON l.asset_id = ra.asset_id
-     LEFT JOIN av av ON av.asset_id = ra.asset_id
+     LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+     LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
      WHERE ra.assignment_id = ?`,
     [assignmentId],
   );
@@ -846,14 +889,14 @@ export async function rejectUserRequest(input: RejectUserRequestInput): Promise<
 
     await conn.execute(
       `UPDATE laptop l
-       INNER JOIN request_assignment ra ON ra.asset_id = l.asset_id
+       INNER JOIN request_assignment ra ON ${sqlAssetIdEq('ra.asset_id', 'l.asset_id')}
        SET l.status_id = ?
        WHERE ra.request_id = ? AND ra.returned_at IS NULL AND l.status_id = ?`,
       [REQUEST_STATUS_ACTIVE, input.requestId, REQUEST_STATUS_BOOKED],
     );
     await conn.execute(
       `UPDATE av a
-       INNER JOIN request_assignment ra ON ra.asset_id = a.asset_id
+       INNER JOIN request_assignment ra ON ${sqlAssetIdEq('ra.asset_id', 'a.asset_id')}
        SET a.status_id = ?
        WHERE ra.request_id = ? AND ra.returned_at IS NULL AND a.status_id = ?`,
       [REQUEST_STATUS_ACTIVE, input.requestId, REQUEST_STATUS_BOOKED],
@@ -960,8 +1003,8 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
               COALESCE(l.status_id, av.status_id) AS asset_status_id
        FROM request_assignment ra
        LEFT JOIN request_item ri ON ri.request_item_id = ra.request_item_id
-       LEFT JOIN laptop l ON l.asset_id = ra.asset_id
-       LEFT JOIN av av ON av.asset_id = ra.asset_id
+       LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+       LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
        WHERE ra.request_id = ? AND ra.returned_at IS NULL`,
       [h.request_id],
     );
@@ -1177,8 +1220,8 @@ export async function listUserRequestHistory(staffId: string): Promise<UserReque
               IF(l.asset_id IS NOT NULL, 'laptop', 'av') AS kind,
               ra.checkout_at, ra.returned_at, ra.unavailable_at, ra.remarks, ra.return_condition
        FROM request_assignment ra
-       LEFT JOIN laptop l ON l.asset_id = ra.asset_id
-       LEFT JOIN av av ON av.asset_id = ra.asset_id
+       LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+       LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
        WHERE ra.request_id = ?`,
       [h.request_id],
     );
@@ -1263,8 +1306,8 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
               IF(l.asset_id IS NOT NULL, 'laptop', 'av') AS kind,
               COALESCE(l.status_id, av.status_id) AS asset_status_id
        FROM request_assignment ra
-       LEFT JOIN laptop l ON l.asset_id = ra.asset_id
-       LEFT JOIN av av ON av.asset_id = ra.asset_id
+       LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+       LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
        WHERE ra.request_id = ?
        ORDER BY ra.assignment_id ASC`,
       [h.request_id],
