@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Pencil, Plus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Loader2, Pencil, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminShell } from '@/admin/admin-shell';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,7 @@ function userToForm(u: AdminUserRow): UserFormState {
 
 export function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
@@ -79,6 +80,18 @@ export function AdminUsersPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const displayed = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      [u.fullName, u.email, u.roleName, u.phone]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [users, search]);
 
   const openCreate = () => {
     setEditing(null);
@@ -135,10 +148,21 @@ export function AdminUsersPage() {
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Manage user</h1>
           <p className="text-sm text-muted-foreground">Provision and update NIMS accounts</p>
         </div>
-        <Button type="button" className="rounded-lg" onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add user
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search name, email, role…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 rounded-lg pl-9"
+            />
+          </div>
+          <Button type="button" className="rounded-lg" onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add user
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -150,7 +174,6 @@ export function AdminUsersPage() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Staff ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
@@ -159,16 +182,15 @@ export function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.length === 0 ? (
+              {displayed.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                    No users found.
+                  <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                    {users.length === 0 ? 'No users found.' : 'No users match your search.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((u) => (
+                displayed.map((u) => (
                   <TableRow key={u.staffId}>
-                    <TableCell className="font-mono text-sm">{u.staffId}</TableCell>
                     <TableCell className="font-medium">{u.fullName}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                     <TableCell>{u.roleName}</TableCell>
