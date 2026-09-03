@@ -148,7 +148,8 @@ export function DisposalUnitHistoryPage() {
 
   return (
     <DisposalUnitShell>
-      <div className="mb-5 sm:mb-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+      <div className="shrink-0">
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">History</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {filtered.length} record{filtered.length === 1 ? '' : 's'}
@@ -158,7 +159,7 @@ export function DisposalUnitHistoryPage() {
         </p>
       </div>
 
-      <Card className="mb-4 rounded-[14px] border-border shadow-sm">
+      <Card className="shrink-0 rounded-[14px] border-border shadow-sm">
         <CardContent className="space-y-4 p-4">
           <div className="min-w-0 max-w-sm">
             <Label className="mb-1.5 block text-xs text-muted-foreground">Search</Label>
@@ -234,8 +235,8 @@ export function DisposalUnitHistoryPage() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-[14px] border-border shadow-sm">
-        <CardContent className="p-0">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border-border shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-auto p-0">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center py-16 text-center">
               <History className="mb-2 h-8 w-8 text-muted-foreground/40" />
@@ -284,6 +285,7 @@ export function DisposalUnitHistoryPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </DisposalUnitShell>
   );
 }

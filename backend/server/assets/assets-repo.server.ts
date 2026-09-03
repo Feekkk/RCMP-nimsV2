@@ -22,6 +22,7 @@ import {
   type UpdateNetworkInput,
 } from '@shared/lib/inventory-schema';
 import type {
+  DisposalDashboardStats,
   MarkPredisposedAssetInput,
   PreDisposedAsset,
   PredisposalEligibleAsset,
@@ -986,6 +987,56 @@ export async function listPreDisposedAssets(): Promise<PreDisposedAsset[]> {
   const rows = [...laptop, ...av, ...network];
   await attachDisplayNames(rows, 'predisposed_oid', 'predisposed_name');
   return rows.map(mapPreDisposedRow);
+}
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+export async function getDisposalDashboardStats(): Promise<DisposalDashboardStats> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const monthStart = `${year}-${pad2(month + 1)}-01`;
+  const nextMonth = month === 11 ? `${year + 1}-01-01` : `${year}-${pad2(month + 2)}-01`;
+  const yearStart = `${year}-01-01`;
+  const nextYear = `${year + 1}-01-01`;
+
+  const pool = getDbPool();
+  const [rows] = await pool.query<
+    (RowDataPacket & {
+      pending: number;
+      disposed_this_month: number;
+      disposed_this_year: number;
+    })[]
+  >(
+    `SELECT
+       COALESCE(SUM(status_id = ?), 0) AS pending,
+       COALESCE(SUM(status_id = ? AND updated_at >= ? AND updated_at < ?), 0) AS disposed_this_month,
+       COALESCE(SUM(status_id = ? AND updated_at >= ? AND updated_at < ?), 0) AS disposed_this_year
+     FROM (
+       SELECT status_id, updated_at FROM laptop
+       UNION ALL
+       SELECT status_id, updated_at FROM av
+       UNION ALL
+       SELECT status_id, updated_at FROM network
+     ) assets`,
+    [
+      STATUS_ID.PRE_DISPOSED,
+      STATUS_ID.DISPOSED,
+      monthStart,
+      nextMonth,
+      STATUS_ID.DISPOSED,
+      yearStart,
+      nextYear,
+    ],
+  );
+  const row = rows[0];
+  return {
+    pending: Number(row?.pending ?? 0),
+    disposedThisMonth: Number(row?.disposed_this_month ?? 0),
+    disposedThisYear: Number(row?.disposed_this_year ?? 0),
+  };
 }
 
 async function markAssetPredisposed(

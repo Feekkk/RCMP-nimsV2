@@ -1,6 +1,8 @@
-import { CheckCircle2, Clock3, Package, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useCallback, useEffect, useState } from 'react';
+import { CalendarCheck, Clock3, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { InsightStatCard } from '@/components/insight-stat-card';
 import {
   Table,
   TableBody,
@@ -10,130 +12,55 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { DisposalUnitShell } from '@/disposal-unit/disposal-unit-shell';
-import { cn } from '@/lib/utils';
+import { usePagination } from '@/hooks/use-pagination';
+import { formatAssetLifespan, formatDateLabel } from '@shared/lib/date-format';
+import type { DisposalDashboardStats, PreDisposedAsset } from '@shared/lib/disposal-schema';
+import {
+  getDisposalDashboardStatsFn,
+  listDisposalQueueAssetsFn,
+} from '@backend/server/assets/assets.functions';
+import { AssetTablePagination } from '@/technician/asset-table-pagination';
 
-type DisposalStatus = 'pending' | 'processing' | 'disposed';
-
-type DisposalQueueRow = {
-  id: string;
-  assetLabel: string;
-  category: string;
-  serialNum: string;
-  status: DisposalStatus;
-  submittedBy: string;
-  submittedAt: string;
-};
-
-const STATUS_META: Record<
-  DisposalStatus,
-  { label: string; className: string }
-> = {
-  pending: {
-    label: 'Pending',
-    className: 'border-amber-200 bg-amber-50 text-amber-900',
-  },
-  processing: {
-    label: 'Processing',
-    className: 'border-sky-200 bg-sky-50 text-sky-900',
-  },
-  disposed: {
-    label: 'Disposed',
-    className: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-  },
-};
-
-const QUEUE_ROWS: DisposalQueueRow[] = [
-  {
-    id: '1',
-    assetLabel: 'Dell Latitude 5520',
-    category: 'Laptop / Desktop',
-    serialNum: 'DL5520-88421',
-    status: 'pending',
-    submittedBy: 'Ahmad Rizal',
-    submittedAt: '2026-08-11',
-  },
-  {
-    id: '2',
-    assetLabel: 'Cisco Catalyst 2960',
-    category: 'Network',
-    serialNum: 'FCW2134L0AB',
-    status: 'processing',
-    submittedBy: 'Siti Nurhaliza',
-    submittedAt: '2026-08-09',
-  },
-  {
-    id: '3',
-    assetLabel: 'Epson EB-X06 Projector',
-    category: 'AV',
-    serialNum: 'X06-77291',
-    status: 'pending',
-    submittedBy: 'Lim Wei Jie',
-    submittedAt: '2026-08-08',
-  },
-  {
-    id: '4',
-    assetLabel: 'HP EliteDesk 800 G6',
-    category: 'Laptop / Desktop',
-    serialNum: '2UA0410XYZ',
-    status: 'disposed',
-    submittedBy: 'Nur Aisyah',
-    submittedAt: '2026-08-02',
-  },
-  {
-    id: '5',
-    assetLabel: 'Ubiquiti UniFi AP AC Pro',
-    category: 'Network',
-    serialNum: 'FCEC1234ABCD',
-    status: 'pending',
-    submittedBy: 'Ahmad Rizal',
-    submittedAt: '2026-08-01',
-  },
-];
-
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
+function formatAssetName(asset: PreDisposedAsset) {
+  const name = [asset.brand, asset.model].filter(Boolean).join(' ').trim();
+  return name || '—';
 }
 
-function CountCard({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  tint,
-}: {
-  icon: typeof Package;
-  label: string;
-  value: number;
-  hint: string;
-  tint: string;
-}) {
-  return (
-    <div className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]', tint)}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      </div>
-      <div>
-        <p className="text-3xl font-bold tabular-nums tracking-tight text-foreground">{value}</p>
-        <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
-      </div>
-    </div>
-  );
+function formatProposedDate(value: string | null) {
+  if (!value) return '—';
+  return formatDateLabel(value);
 }
 
 export function DisposalUnitDashboardPage() {
-  const pending = QUEUE_ROWS.filter((row) => row.status === 'pending').length;
-  const processing = QUEUE_ROWS.filter((row) => row.status === 'processing').length;
-  const disposed = QUEUE_ROWS.filter((row) => row.status === 'disposed').length;
-  const total = QUEUE_ROWS.length;
+  const [assets, setAssets] = useState<PreDisposedAsset[]>([]);
+  const [stats, setStats] = useState<DisposalDashboardStats>({
+    pending: 0,
+    disposedThisMonth: 0,
+    disposedThisYear: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [rows, dashboardStats] = await Promise.all([
+        listDisposalQueueAssetsFn(),
+        getDisposalDashboardStatsFn(),
+      ]);
+      setAssets(rows);
+      setStats(dashboardStats);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load disposal queue');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const pagination = usePagination(assets, { resetKey: assets.length });
 
   const todayLabel = new Intl.DateTimeFormat(undefined, {
     weekday: 'long',
@@ -143,97 +70,117 @@ export function DisposalUnitDashboardPage() {
 
   return (
     <DisposalUnitShell>
-      <div className="mb-5 sm:mb-6">
-        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Dashboard</h1>
-        <p className="text-xs text-muted-foreground sm:text-sm">
-          {todayLabel} · Disposal queue overview
-        </p>
-      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <div className="shrink-0">
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Dashboard</h1>
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            {todayLabel} · Disposal queue overview
+          </p>
+        </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <CountCard
-          icon={Clock3}
-          label="Pending"
-          value={pending}
-          hint="Awaiting disposal review"
-          tint="bg-amber-100 text-amber-900"
-        />
-        <CountCard
-          icon={Package}
-          label="Processing"
-          value={processing}
-          hint="Currently being processed"
-          tint="bg-sky-100 text-sky-900"
-        />
-        <CountCard
-          icon={CheckCircle2}
-          label="Disposed"
-          value={disposed}
-          hint="Completed disposal records"
-          tint="bg-emerald-100 text-emerald-900"
-        />
-        <CountCard
-          icon={Trash2}
-          label="Total"
-          value={total}
-          hint="All queue entries"
-          tint="bg-lavender/20 text-[oklch(0.45_0.12_290)]"
-        />
-      </div>
+        <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <InsightStatCard
+            icon={Clock3}
+            label="Pending"
+            value={stats.pending}
+            hint="Awaiting disposal review"
+            tone="amber"
+          />
+          <InsightStatCard
+            icon={CalendarCheck}
+            label="Disposed (This month)"
+            value={stats.disposedThisMonth}
+            hint="Completed this month"
+            tone="emerald"
+          />
+          <InsightStatCard
+            icon={Trash2}
+            label="Total Disposed (Year)"
+            value={stats.disposedThisYear}
+            hint="Completed this year"
+            tone="violet"
+          />
+        </div>
 
-      <Card className="rounded-[14px] border-border shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/70 px-4 py-3 sm:px-5">
-          <div>
-            <CardTitle className="text-base font-semibold tracking-tight">Disposal queue</CardTitle>
-            <p className="mt-0.5 text-xs text-muted-foreground">{QUEUE_ROWS.length} assets listed</p>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {QUEUE_ROWS.length === 0 ? (
-            <div className="px-4 py-12 text-center text-sm text-muted-foreground sm:px-5">
-              No assets in the disposal queue.
+        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border-border shadow-sm">
+          <CardHeader className="flex shrink-0 flex-row items-center justify-between gap-3 space-y-0 border-b border-border/70 px-4 py-3 sm:px-5">
+            <div>
+              <CardTitle className="text-base font-semibold tracking-tight">Disposal queue</CardTitle>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {loading ? 'Loading…' : `${assets.length} pre-disposed asset${assets.length === 1 ? '' : 's'} listed`}
+              </p>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-11 px-4 sm:px-5">Asset</TableHead>
-                  <TableHead className="h-11 px-4">Category</TableHead>
-                  <TableHead className="h-11 px-4">Serial</TableHead>
-                  <TableHead className="h-11 px-4">Status</TableHead>
-                  <TableHead className="h-11 px-4">Submitted by</TableHead>
-                  <TableHead className="h-11 px-4 sm:px-5">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {QUEUE_ROWS.map((row) => {
-                  const status = STATUS_META[row.status];
-                  return (
-                    <TableRow key={row.id}>
-                      <TableCell className="px-4 py-3 font-medium text-foreground sm:px-5">
-                        {row.assetLabel}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">{row.category}</TableCell>
-                      <TableCell className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {row.serialNum}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge variant="outline" className={cn('rounded-[6px] font-semibold', status.className)}>
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">{row.submittedBy}</TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground sm:px-5">
-                        {formatDate(row.submittedAt)}
+          </CardHeader>
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+            <div className="min-h-0 flex-1 overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="h-11 px-4 sm:px-5">Asset ID</TableHead>
+                    <TableHead className="h-11 px-4">Asset Name</TableHead>
+                    <TableHead className="h-11 px-4">Serial Number</TableHead>
+                    <TableHead className="h-11 px-4">Life span</TableHead>
+                    <TableHead className="h-11 px-4">Proposed By</TableHead>
+                    <TableHead className="h-11 px-4 sm:px-5">Date Submitted</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-16 text-center text-sm text-muted-foreground">
+                        Loading…
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  ) : pagination.paginatedItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-16 text-center text-sm text-muted-foreground">
+                        No pre-disposed assets in the disposal queue.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    pagination.paginatedItems.map((asset) => (
+                      <TableRow key={`${asset.kind}:${asset.assetId}`}>
+                        <TableCell className="px-4 py-3 font-medium text-foreground sm:px-5">
+                          <code className="text-xs">{asset.assetId}</code>
+                          {asset.assetIdOld ? (
+                            <p className="text-[10px] text-muted-foreground">{asset.assetIdOld}</p>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-foreground">{formatAssetName(asset)}</TableCell>
+                        <TableCell className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {asset.serialNum ?? '—'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                          {formatAssetLifespan(asset.poDate, asset.assetId)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {asset.predisposedBy ?? '—'}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground sm:px-5">
+                          {formatProposedDate(asset.predisposedAt)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {!loading ? (
+              <AssetTablePagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                pageSize={pagination.pageSize}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                totalItems={pagination.totalItems}
+                totalLoaded={assets.length}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
+              />
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
     </DisposalUnitShell>
   );
 }

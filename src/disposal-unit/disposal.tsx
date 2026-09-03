@@ -219,7 +219,8 @@ export function DisposalUnitDisposalPage() {
 
   return (
     <DisposalUnitShell>
-      <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Disposal</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -240,7 +241,7 @@ export function DisposalUnitDisposalPage() {
         </Button>
       </div>
 
-      <Card className="mb-4 rounded-[14px] border-border shadow-sm">
+      <Card className="shrink-0 rounded-[14px] border-border shadow-sm">
         <CardContent className="space-y-3 p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(10rem,0.85fr)_minmax(10rem,0.85fr)_minmax(10rem,0.85fr)] xl:items-end">
             <div className="min-w-0 space-y-1.5">
@@ -287,7 +288,7 @@ export function DisposalUnitDisposalPage() {
       </Card>
 
       {selected.size > 0 ? (
-        <div className="mb-4 flex flex-col gap-3 rounded-[12px] border border-[oklch(0.45_0.12_290)]/25 bg-lavender/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex shrink-0 flex-col gap-3 rounded-[12px] border border-[oklch(0.45_0.12_290)]/25 bg-lavender/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-foreground">
             <span className="font-semibold tabular-nums">{selected.size}</span> asset
             {selected.size === 1 ? '' : 's'} selected for batch disposal
@@ -313,8 +314,8 @@ export function DisposalUnitDisposalPage() {
         </div>
       ) : null}
 
-      <Card className="overflow-hidden rounded-[14px] border-border shadow-sm">
-        <CardContent className="p-0">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border-border shadow-sm">
+        <CardContent className="min-h-0 flex-1 overflow-auto p-0">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -388,6 +389,7 @@ export function DisposalUnitDisposalPage() {
           </Table>
         </CardContent>
       </Card>
+      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="rounded-[14px]">

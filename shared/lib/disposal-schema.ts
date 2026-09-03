@@ -34,3 +34,9 @@ export type MarkAssetsPredisposedResult = {
 export type RemoveAssetsFromPredisposalInput = MarkAssetsPredisposedInput;
 
 export type RemoveAssetsFromPredisposalResult = MarkAssetsPredisposedResult;
+
+export type DisposalDashboardStats = {
+  pending: number;
+  disposedThisMonth: number;
+  disposedThisYear: number;
+};

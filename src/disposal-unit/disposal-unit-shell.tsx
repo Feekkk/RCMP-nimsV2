@@ -33,14 +33,14 @@ export function DisposalUnitShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="relative flex min-h-svh bg-background">
+    <div className="relative flex h-svh overflow-hidden bg-background">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-[160px] right-[8%] h-[480px] w-[480px] rounded-full bg-lavender/[0.08] blur-[90px]" />
       </div>
 
       <DisposalUnitSideBar className="sticky top-0 z-40 hidden h-svh shrink-0 md:flex" onSignOut={handleSignOut} />
 
-      <div className="relative flex min-w-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md md:hidden">
           <div className="flex h-14 items-center px-4">
             <Sheet>
@@ -62,7 +62,7 @@ export function DisposalUnitShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="relative mx-auto w-full max-w-6xl flex-1 px-4 pb-5 pt-8 sm:px-6 sm:pb-6 sm:pt-10">
+        <main className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5 md:px-8">
           {children}
         </main>
       </div>
