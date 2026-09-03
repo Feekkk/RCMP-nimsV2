@@ -213,14 +213,14 @@ export function TechnicianLaptopPage() {
 											onClick={() =>
 												void navigate({
 													to: '/technician/asset/$kind/$assetId',
-													params: { kind: 'laptop', assetId: c.assetId },
+													params: { kind: 'laptop', assetId: String(c.assetId) },
 												})
 											}
 										>
 											<TableCell>
 												<Link
 													to="/technician/asset/$kind/$assetId"
-													params={{ kind: 'laptop', assetId: c.assetId }}
+													params={{ kind: 'laptop', assetId: String(c.assetId) }}
 													className="text-primary underline-offset-2 hover:underline"
 													onClick={(e) => e.stopPropagation()}
 												>

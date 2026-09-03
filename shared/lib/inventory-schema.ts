@@ -7,6 +7,23 @@ export { WARRANTY_FIELD_COLUMNS } from '@/lib/warranty-field-utils';
 
 export type AssetKind = 'laptop' | 'av' | 'network';
 
+export type AssetId = string | number;
+
+export function parseAssetKindParam(raw: unknown): AssetKind | null {
+  return raw === 'laptop' || raw === 'av' || raw === 'network' ? raw : null;
+}
+
+export function parseAssetIdParam(raw: unknown): string | null {
+  const assetId = String(raw ?? '').trim();
+  if (!assetId || assetId.length > 32) return null;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(assetId)) return null;
+  return assetId;
+}
+
+export function sameAssetId(a: AssetId, b: AssetId): boolean {
+  return String(a) === String(b);
+}
+
 export const ASSET_KIND_LABEL: Record<AssetKind, string> = {
   laptop: 'Laptop / Desktop',
   av: 'AV equipment',
@@ -88,7 +105,7 @@ export function formatStatusLabel(statusId: number): string {
 
 export type LaptopAsset = {
   kind: 'laptop';
-  assetId: number;
+  assetId: AssetId;
   accCode: string | null;
   serialNum: string | null;
   brand: string | null;
@@ -135,7 +152,7 @@ export type PlaceFields = {
 
 export type AvAsset = {
   kind: 'av';
-  assetId: number;
+  assetId: AssetId;
   accCode: string | null;
   assetIdOld: string | null;
   category: string | null;
@@ -150,7 +167,7 @@ export type AvAsset = {
 
 export type NetworkAsset = {
   kind: 'network';
-  assetId: number;
+  assetId: AssetId;
   accCode: string | null;
   category: string | null;
   serialNum: string | null;
@@ -217,9 +234,9 @@ export type UpdateAvInput = Omit<CreateAvInput, 'assetId' | 'statusId' | 'warran
 export type UpdateNetworkInput = Omit<CreateNetworkInput, 'assetId' | 'statusId' | 'warranty'>;
 
 export type UpdateAssetInput =
-  | ({ kind: 'laptop'; assetId: number } & UpdateLaptopInput)
-  | ({ kind: 'av'; assetId: number } & UpdateAvInput)
-  | ({ kind: 'network'; assetId: number } & UpdateNetworkInput);
+  | ({ kind: 'laptop'; assetId: AssetId } & UpdateLaptopInput)
+  | ({ kind: 'av'; assetId: AssetId } & UpdateAvInput)
+  | ({ kind: 'network'; assetId: AssetId } & UpdateNetworkInput);
 
 export type AssetRecord = LaptopAsset | AvAsset | NetworkAsset;
 
@@ -443,8 +460,8 @@ export function isOutstockStatus(statusId: number): boolean {
   return OUTSTOCK_SET.has(statusId);
 }
 
-export function assetViewPath(kind: AssetKind, assetId: number): string {
-  return `/technician/asset/${kind}/${assetId}`;
+export function assetViewPath(kind: AssetKind, assetId: AssetId): string {
+  return `/technician/asset/${kind}/${encodeURIComponent(String(assetId))}`;
 }
 
 export function isBulkImportRequiredColumn(kind: AssetKind, column: string): boolean {

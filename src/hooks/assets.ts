@@ -7,6 +7,7 @@ import {
   isInstockStatus,
   isOutstockStatus,
   OUTSTOCK_STATUS_IDS,
+  type AssetId,
   type AssetKind,
   type AvAsset,
   type CreateAvInput,
@@ -112,7 +113,7 @@ export function useAssets<K extends AssetKind>(kind: K) {
   );
 
   const updateStatus = useCallback(
-    async (assetId: number, statusId: number) => {
+    async (assetId: AssetId, statusId: number) => {
       await updateAssetStatusFn({ data: { kind, assetId, statusId } });
       await refetch();
     },
@@ -125,7 +126,7 @@ export function useAssets<K extends AssetKind>(kind: K) {
 export function filterBySearch<
   T extends {
     model: string | null;
-    assetId: number;
+    assetId: AssetId;
     serialNum?: string | null;
     brand?: string | null;
     remarks?: string | null;

@@ -2,6 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { OpenReturnContext, StaffRecipient, UpdateOpenDeploymentInput } from '@shared/lib/deploy-return-schema';
+import type { AssetId } from '@shared/lib/inventory-schema';
 import { CampusBuildingSelect, DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { StaffRecipientSearch } from '@/technician/staff-recipient-search';
 
@@ -79,7 +80,7 @@ export function validateDeploymentEdit(deployment: OpenReturnContext, form: Depl
 }
 
 export function buildDeploymentUpdateInput(
-  assetId: number,
+  assetId: AssetId,
   deployment: OpenReturnContext,
   form: DeploymentEditState,
 ): UpdateOpenDeploymentInput {

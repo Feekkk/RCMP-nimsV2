@@ -44,7 +44,7 @@ export function AssetLookupButton({ variant = 'technician' }: AssetLookupButtonP
             variant === 'admin'
               ? '/admin/asset/$kind/$assetId'
               : '/technician/asset/$kind/$assetId',
-          params: { kind: result.asset.kind, assetId: result.asset.assetId },
+          params: { kind: result.asset.kind, assetId: String(result.asset.assetId) },
         });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to look up asset');

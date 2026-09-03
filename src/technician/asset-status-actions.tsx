@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import { formatStatusLabel } from '@shared/lib/inventory-schema';
 import {
   getAssetStatusActions,
@@ -16,9 +16,9 @@ import { getWarrantyContextFn } from '@backend/server/requests/warranty-repair.f
 
 type AssetStatusActionsProps = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
   statusId: number;
-  onStatusChange: (assetId: number, newStatusId: number) => Promise<void>;
+  onStatusChange: (assetId: AssetId, newStatusId: number) => Promise<void>;
   disabled?: boolean;
 };
 

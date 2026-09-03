@@ -1,18 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { TechnicianRepairFormPage } from '@/technician/repair-form';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import { parseAssetIdParam, parseAssetKindParam, type AssetId, type AssetKind } from '@shared/lib/inventory-schema';
 
-type RepairSearch = { kind?: AssetKind; assetId?: number };
+type RepairSearch = { kind?: AssetKind; assetId?: AssetId };
 
 export const Route = createFileRoute('/technician/repair')({
   validateSearch: (search: Record<string, unknown>): RepairSearch => {
-    const kind = search.kind;
-    const assetId = Number(search.assetId);
-    const validKind = kind === 'laptop' || kind === 'av' || kind === 'network' ? kind : undefined;
-    return {
-      kind: validKind,
-      assetId: !Number.isNaN(assetId) && assetId > 0 ? assetId : undefined,
-    };
+    const kind = parseAssetKindParam(search.kind) ?? undefined;
+    const assetId = parseAssetIdParam(search.assetId) ?? undefined;
+    return { kind, assetId };
   },
   head: () => ({
     meta: [

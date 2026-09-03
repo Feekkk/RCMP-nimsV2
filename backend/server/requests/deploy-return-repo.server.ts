@@ -1,6 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import type { PoolConnection } from 'mysql2/promise';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import { STATUS_ID } from '@shared/lib/asset-status-actions';
 import type {
   DeployLaptopPlaceInput,
@@ -70,7 +70,7 @@ export async function searchStaffRecipients(query: string): Promise<StaffRecipie
 
 export async function getOpenReturnContext(
   kind: AssetKind,
-  assetId: number,
+  assetId: AssetId,
 ): Promise<OpenReturnContext | null> {
   const pool = getDbPool();
 

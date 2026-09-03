@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { readTechnicianSession } from '@shared/lib/auth-session';
 import { formatDateLabel, normalizeToIsoDate } from '@shared/lib/date-format';
 import type { OpenReturnContext } from '@shared/lib/deploy-return-schema';
+import { sameAssetId } from '@shared/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
 import { Route } from '@/routes/technician/return';
 import {
@@ -96,7 +97,7 @@ export function TechnicianReturnPage() {
   const asset = useMemo(() => {
     if (!kind || !assetId) return null;
     const items = kind === 'laptop' ? laptop.items : kind === 'av' ? av.items : network.items;
-    return items.find((i) => i.assetId === assetId) ?? null;
+    return items.find((i) => sameAssetId(i.assetId, assetId)) ?? null;
   }, [kind, assetId, laptop.items, av.items, network.items]);
 
   const statusIsDeployed = asset?.statusId === STATUS_ID.DEPLOY;

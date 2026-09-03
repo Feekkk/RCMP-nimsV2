@@ -95,15 +95,30 @@ export function parseAssetId(assetId: number): AssetIdParts {
   return { prefix, year, sequence };
 }
 
-export function compareAssetIdNewestYearFirst(a: number, b: number, now: Date = new Date()): number {
+function isNumericAssetId(assetId: string | number): boolean {
+  return /^\d+$/.test(String(assetId));
+}
+
+export function compareAssetIdNewestYearFirst(
+  a: string | number,
+  b: string | number,
+  now: Date = new Date(),
+): number {
+  const aNumeric = isNumericAssetId(a);
+  const bNumeric = isNumericAssetId(b);
+  if (!aNumeric && !bNumeric) {
+    return String(b).localeCompare(String(a), undefined, { numeric: true });
+  }
+  if (!aNumeric) return 1;
+  if (!bNumeric) return -1;
   const currentYear = getAssetIdYearDigits(now);
-  const yearA = parseAssetId(a).year;
-  const yearB = parseAssetId(b).year;
+  const yearA = parseAssetId(Number(a)).year;
+  const yearB = parseAssetId(Number(b)).year;
   const aCurrent = yearA === currentYear ? 0 : 1;
   const bCurrent = yearB === currentYear ? 0 : 1;
   if (aCurrent !== bCurrent) return aCurrent - bCurrent;
   if (yearA !== yearB) return yearB - yearA;
-  return b - a;
+  return Number(b) - Number(a);
 }
 
 export function assetIdNewestYearFirstSql(column = 'asset_id'): string {

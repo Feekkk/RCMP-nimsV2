@@ -1,4 +1,4 @@
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import { parseAssetIdParam, parseAssetKindParam, type AssetId, type AssetKind } from '@shared/lib/inventory-schema';
 import type { WarrantyInput } from '@/lib/warranty-field-utils';
 
 export type { WarrantyInput };
@@ -6,7 +6,7 @@ export { WARRANTY_FIELD_COLUMNS } from '@/lib/warranty-field-utils';
 
 export type WarrantyRecord = {
   warrantyId: number;
-  assetId: number;
+  assetId: AssetId;
   assetType: AssetKind;
   startDate: string;
   endDate: string;
@@ -15,7 +15,7 @@ export type WarrantyRecord = {
 
 export type WarrantyClaimInput = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
   claimDate: string;
   claimTime?: string | null;
   issueSummary: string;
@@ -25,7 +25,7 @@ export type WarrantyClaimInput = {
 
 export type RepairInput = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
   repairDate: string;
   issueSummary: string;
   repairRemarks?: string | null;
@@ -36,16 +36,16 @@ export type RepairInput = {
 
 export type FaultyRepairSearch = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
 };
 
 /** Parsed from /technician/warranty | /repair search params. */
 export function parseFaultyAssetRouteSearch(
   search: Record<string, unknown>,
 ): FaultyRepairSearch | null {
-  const kind = search.kind;
-  const assetId = Number(search.assetId);
-  if ((kind !== 'laptop' && kind !== 'av' && kind !== 'network') || Number.isNaN(assetId) || assetId <= 0) {
+  const kind = parseAssetKindParam(search.kind);
+  const assetId = parseAssetIdParam(search.assetId);
+  if (!kind || !assetId) {
     return null;
   }
   return { kind, assetId };

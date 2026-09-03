@@ -34,6 +34,7 @@ import {
   formatStatusLabel,
   LAPTOP_ASSIGNMENT_BUCKETS,
   matchesAssignmentBucket,
+  type AssetId,
   type AvAsset,
   type LaptopAsset,
   type LaptopAssignmentBucket,
@@ -74,7 +75,7 @@ function matchesFormFactor(category: string | null, formFactor: FormFactor) {
 function getHandoverAssetIds(
   items: LaptopAsset[],
   filter: HandoverInsightFilter,
-): Set<number> {
+): Set<AssetId> {
   return new Set(
     items
       .filter((item) => {
@@ -97,7 +98,7 @@ function handoverFilterLabel(filter: HandoverInsightFilter): string {
 
 function filterDepartmentsByAssetIds(
   departments: LaptopDepartmentHandover[],
-  assetIds: Set<number>,
+  assetIds: Set<AssetId>,
 ): LaptopDepartmentHandover[] {
   return departments
     .map((department) => ({
@@ -569,7 +570,7 @@ function formatActivityWhen(at: string): string {
 
 function countDepartmentFormFactors(
   staff: LaptopDepartmentStaffHandover[],
-  assetCategoryById: Map<number, string | null>,
+  assetCategoryById: Map<AssetId, string | null>,
 ) {
   let laptop = 0;
   let desktop = 0;

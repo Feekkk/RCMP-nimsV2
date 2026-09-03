@@ -145,14 +145,14 @@ export function TechnicianNetworkPage() {
                       onClick={() =>
                         void navigate({
                           to: '/technician/asset/$kind/$assetId',
-                          params: { kind: 'network', assetId: item.assetId },
+                          params: { kind: 'network', assetId: String(item.assetId) },
                         })
                       }
                     >
                       <TableCell>
                         <Link
                           to="/technician/asset/$kind/$assetId"
-                          params={{ kind: 'network', assetId: item.assetId }}
+                          params={{ kind: 'network', assetId: String(item.assetId) }}
                           className="text-primary underline-offset-2 hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >

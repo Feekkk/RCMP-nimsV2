@@ -1,8 +1,10 @@
 import type { RowDataPacket } from 'mysql2';
 import {
   isValidAccCode,
+  sameAssetId,
   type AssetDetail,
   type AssetDetailResponse,
+  type AssetId,
   type AssetKind,
   type AssetTrailEvent,
   type AvAsset,
@@ -191,7 +193,7 @@ async function insertLaptopHandover(
 async function insertPlaceDeployment(
   conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
   kind: 'av' | 'network',
-  assetId: number,
+  assetId: AssetId,
   deployment: BulkPlaceDeploymentImport,
 ) {
   const userId = await resolveUserIdByEmail(conn, deployment.deploymentStaffEmail);
@@ -224,7 +226,7 @@ type PurchaseRow = {
 
 type LaptopRow = RowDataPacket &
   PurchaseRow & {
-    asset_id: number;
+    asset_id: AssetId;
     acc_code: string | null;
     serial_num: string | null;
     brand: string | null;
@@ -364,14 +366,14 @@ function mapNetwork(row: NetworkRow): NetworkAsset {
 
 async function fetchOpenPlaceDeployments(
   kind: 'av' | 'network',
-): Promise<Map<number, { building: string; level: string; zone: string }>> {
+): Promise<Map<AssetId, { building: string; level: string; zone: string }>> {
   const pool = getDbPool();
   const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
   const returnTable = kind === 'av' ? 'av_return' : 'network_return';
-  const map = new Map<number, { building: string; level: string; zone: string }>();
+  const map = new Map<AssetId, { building: string; level: string; zone: string }>();
 
   const [rows] = await pool.query<
-    (RowDataPacket & { asset_id: number; building: string; level: string; zone: string })[]
+    (RowDataPacket & { asset_id: AssetId; building: string; level: string; zone: string })[]
   >(
     `SELECT d.asset_id, d.building, d.level, d.zone
      FROM \`${deployTable}\` d
@@ -398,7 +400,7 @@ async function fetchOpenPlaceDeployments(
 
 function attachOpenPlace<T extends AvAsset | NetworkAsset>(
   assets: T[],
-  placeMap: Map<number, { building: string; level: string; zone: string }>,
+  placeMap: Map<AssetId, { building: string; level: string; zone: string }>,
 ): T[] {
   return assets.map((asset) => {
     const place = placeMap.get(asset.assetId);
@@ -695,9 +697,9 @@ const TABLE_BY_KIND: Record<AssetKind, string> = {
   network: 'network',
 };
 
-export async function updateAssetStatus(kind: AssetKind, assetId: number, statusId: number) {
+export async function updateAssetStatus(kind: AssetKind, assetId: AssetId, statusId: number) {
   const items = await listAssets(kind);
-  const asset = items.find((a) => a.assetId === assetId);
+  const asset = items.find((a) => sameAssetId(a.assetId, assetId));
   if (!asset) {
     throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
   }
@@ -763,7 +765,7 @@ function normalizePurchaseForUpdate(input: PurchaseFields): PurchaseFields {
   };
 }
 
-async function assertAssetExists(kind: AssetKind, assetId: number) {
+async function assertAssetExists(kind: AssetKind, assetId: AssetId) {
   const pool = getDbPool();
   const table = TABLE_BY_KIND[kind];
   const [rows] = await pool.query<RowDataPacket[]>(
@@ -777,7 +779,7 @@ async function assertAssetExists(kind: AssetKind, assetId: number) {
 
 const PURCHASE_SET = `PO_DATE = ?, PO_NUM = ?, DO_DATE = ?, DO_NUM = ?, INVOICE_DATE = ?, INVOICE_NUM = ?, PURCHASE_COST = ?`;
 
-async function updateLaptopDetails(assetId: number, input: UpdateLaptopInput) {
+async function updateLaptopDetails(assetId: AssetId, input: UpdateLaptopInput) {
   const serialNum = input.serialNum.trim();
   const category = input.category.trim();
   if (!serialNum) throw new Error('Serial number is required.');
@@ -811,7 +813,7 @@ async function updateLaptopDetails(assetId: number, input: UpdateLaptopInput) {
   );
 }
 
-async function updateAvDetails(assetId: number, input: UpdateAvInput) {
+async function updateAvDetails(assetId: AssetId, input: UpdateAvInput) {
   const purchase = normalizePurchaseForUpdate(input);
   await assertAssetExists('av', assetId);
   const pool = getDbPool();
@@ -835,7 +837,7 @@ async function updateAvDetails(assetId: number, input: UpdateAvInput) {
   );
 }
 
-async function updateNetworkDetails(assetId: number, input: UpdateNetworkInput) {
+async function updateNetworkDetails(assetId: AssetId, input: UpdateNetworkInput) {
   const purchase = normalizePurchaseForUpdate(input);
   await assertAssetExists('network', assetId);
   const pool = getDbPool();
@@ -1105,7 +1107,7 @@ function pushTrail(events: AssetTrailEvent[], event: Omit<AssetTrailEvent, 'sort
   events.push({ ...event, sortKey, at: event.at || new Date(sortKey).toISOString() });
 }
 
-async function listRequestTrails(assetId: number): Promise<AssetTrailEvent[]> {
+async function listRequestTrails(assetId: AssetId): Promise<AssetTrailEvent[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<
     (RowDataPacket & {
@@ -1172,7 +1174,7 @@ async function listRequestTrails(assetId: number): Promise<AssetTrailEvent[]> {
   return events;
 }
 
-async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
+async function listLaptopTrails(assetId: AssetId): Promise<AssetTrailEvent[]> {
   const pool = getDbPool();
   const events: AssetTrailEvent[] = [];
 
@@ -1279,7 +1281,7 @@ async function listLaptopTrails(assetId: number): Promise<AssetTrailEvent[]> {
 
 async function listPlaceDeployTrails(
   kind: 'av' | 'network',
-  assetId: number,
+  assetId: AssetId,
 ): Promise<AssetTrailEvent[]> {
   const pool = getDbPool();
   const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
@@ -1364,7 +1366,7 @@ async function listPlaceDeployTrails(
   return events;
 }
 
-async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<AssetTrailEvent[]> {
+async function listMaintenanceTrails(kind: AssetKind, assetId: AssetId): Promise<AssetTrailEvent[]> {
   const pool = getDbPool();
   const events: AssetTrailEvent[] = [];
 
@@ -1433,7 +1435,7 @@ async function listMaintenanceTrails(kind: AssetKind, assetId: number): Promise<
   return events;
 }
 
-export async function getAssetDetail(kind: AssetKind, assetId: number): Promise<AssetDetailResponse | null> {
+export async function getAssetDetail(kind: AssetKind, assetId: AssetId): Promise<AssetDetailResponse | null> {
   const pool = getDbPool();
 
   if (kind === 'laptop') {
@@ -1496,7 +1498,7 @@ export async function getAssetDetail(kind: AssetKind, assetId: number): Promise<
 }
 
 /** Looks up which table an asset ID actually belongs to (DB-driven, no prefix guesswork). */
-export async function findAssetKindByAssetId(assetId: number): Promise<AssetKind | null> {
+export async function findAssetKindByAssetId(assetId: AssetId): Promise<AssetKind | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT 'laptop' AS kind FROM laptop WHERE asset_id = ?
@@ -1512,7 +1514,7 @@ export async function findAssetKindByAssetId(assetId: number): Promise<AssetKind
 }
 
 /** Resolves an asset by its current asset ID, checking every asset table. */
-export async function findAssetByAnyId(assetId: number): Promise<AssetDetailResponse | null> {
+export async function findAssetByAnyId(assetId: AssetId): Promise<AssetDetailResponse | null> {
   const kind = await findAssetKindByAssetId(assetId);
   if (!kind) return null;
   return getAssetDetail(kind, assetId);
@@ -1535,13 +1537,13 @@ export async function findAssetByCode(code: string): Promise<AssetDetailResponse
   const trimmed = code.trim();
   if (!trimmed) return null;
 
+  const byExact = await findAssetByAnyId(trimmed);
+  if (byExact) return byExact;
+
   const digits = trimmed.replace(/\D/g, '');
-  if (digits) {
-    const assetId = Number(digits);
-    if (Number.isFinite(assetId) && assetId > 0) {
-      const byId = await findAssetByAnyId(assetId);
-      if (byId) return byId;
-    }
+  if (digits && digits !== trimmed) {
+    const byDigits = await findAssetByAnyId(digits);
+    if (byDigits) return byDigits;
   }
 
   return findAvAssetByOldId(trimmed);
@@ -1550,7 +1552,7 @@ export async function findAssetByCode(code: string): Promise<AssetDetailResponse
 /** Full lifecycle trail for export / reporting (newest first). */
 export async function getAssetTrailEvents(
   kind: AssetKind,
-  assetId: number,
+  assetId: AssetId,
   createdAt: string | null = null,
 ): Promise<AssetTrailEvent[]> {
   return buildAssetTrails(kind, assetId, createdAt);
@@ -1558,7 +1560,7 @@ export async function getAssetTrailEvents(
 
 async function buildAssetTrails(
   kind: AssetKind,
-  assetId: number,
+  assetId: AssetId,
   createdAt: string | null,
 ): Promise<AssetTrailEvent[]> {
   const events: AssetTrailEvent[] = [];

@@ -421,7 +421,7 @@ export function TechnicianHandoverStaffPage() {
                           <TableCell>
                             <Link
                               to="/technician/asset/$kind/$assetId"
-                              params={{ kind: 'laptop', assetId: asset.assetId }}
+                              params={{ kind: 'laptop', assetId: String(asset.assetId) }}
                               className="inline-flex items-center gap-1.5 text-primary underline-offset-2 hover:underline"
                             >
                               <Laptop className="h-3.5 w-3.5 text-muted-foreground" />

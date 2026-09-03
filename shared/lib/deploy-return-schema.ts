@@ -1,9 +1,9 @@
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import { STATUS_ID } from '@shared/lib/asset-status-actions';
 
 export type DeployReturnSearch = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
 };
 
 export const RETURN_CONDITIONS = ['Good', 'Bad'] as const;
@@ -72,7 +72,7 @@ export type OpenReturnContext =
   | { kind: 'network'; record: PlaceDeploymentOpen };
 
 export type DeployLaptopStaffInput = {
-  assetId: number;
+  assetId: AssetId;
   staffId: string;
   employeeNo: string;
   handoverDate: string;
@@ -81,7 +81,7 @@ export type DeployLaptopStaffInput = {
 };
 
 export type DeployLaptopPlaceInput = {
-  assetId: number;
+  assetId: AssetId;
   staffId: string;
   building: string;
   level?: string | null;
@@ -94,7 +94,7 @@ export type DeployLaptopPlaceInput = {
 
 export type DeployPlaceInput = {
   kind: 'av' | 'network';
-  assetId: number;
+  assetId: AssetId;
   staffId: string;
   building: string;
   level: string;
@@ -106,7 +106,7 @@ export type DeployPlaceInput = {
 export type UpdateLaptopStaffHandoverInput = {
   kind: 'laptop';
   type: 'staff';
-  assetId: number;
+  assetId: AssetId;
   handoverId: number;
   handoverStaffId: number;
   employeeNo: string;
@@ -117,7 +117,7 @@ export type UpdateLaptopStaffHandoverInput = {
 export type UpdateLaptopPlaceHandoverInput = {
   kind: 'laptop';
   type: 'place';
-  assetId: number;
+  assetId: AssetId;
   handoverId: number;
   building: string;
   level?: string | null;
@@ -129,7 +129,7 @@ export type UpdateLaptopPlaceHandoverInput = {
 
 export type UpdatePlaceDeploymentInput = {
   kind: 'av' | 'network';
-  assetId: number;
+  assetId: AssetId;
   deploymentId: number;
   building: string;
   level: string;

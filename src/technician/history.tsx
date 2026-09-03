@@ -134,7 +134,7 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
             {entry.assetKind != null && entry.assetId != null && (
               <Link
                 to="/technician/asset/$kind/$assetId"
-                params={{ kind: entry.assetKind, assetId: entry.assetId }}
+                params={{ kind: entry.assetKind, assetId: String(entry.assetId) }}
                 className="text-[oklch(0.45_0.12_290)] hover:underline"
               >
                 {ASSET_KIND_LABEL[entry.assetKind]} #{entry.assetId}

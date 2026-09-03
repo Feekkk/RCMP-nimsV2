@@ -229,7 +229,7 @@ export function formatAssetAge(
 /** Lifespan from PO date, or from asset ID year (PPYYSSS → 20YY-01-01) when PO is missing. */
 export function formatAssetLifespan(
   poDate: string | null | undefined,
-  assetId: number,
+  assetId: string | number,
 ): string {
   let start: Date | undefined;
 
@@ -239,10 +239,12 @@ export function formatAssetLifespan(
     if (parsed) start = parsed;
   }
 
-  if (!start) {
-    const { year } = parseAssetId(assetId);
+  if (!start && /^\d+$/.test(String(assetId))) {
+    const { year } = parseAssetId(Number(assetId));
     start = new Date(2000 + year, 0, 1);
   }
+
+  if (!start) return '—';
 
   const today = new Date();
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());

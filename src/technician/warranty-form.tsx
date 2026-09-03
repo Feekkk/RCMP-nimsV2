@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { readTechnicianSession } from '@shared/lib/auth-session';
 import { formatDateLabel, normalizeToIsoDate } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
+import { sameAssetId } from '@shared/lib/inventory-schema';
 import { createWarrantyClaimFn, getWarrantyContextFn } from '@backend/server/requests/warranty-repair.functions';
 import { parseFaultyAssetRouteSearch, type WarrantyContext } from '@shared/lib/warranty-repair-schema';
 import { TechnicianShell } from '@/technician/technician-shell';
@@ -36,7 +37,7 @@ export function TechnicianWarrantyFormPage() {
   const asset = useMemo(() => {
     if (!kind || !assetId) return null;
     const items = kind === 'laptop' ? laptop.items : kind === 'av' ? av.items : network.items;
-    return items.find((i) => i.assetId === assetId) ?? null;
+    return items.find((i) => sameAssetId(i.assetId, assetId)) ?? null;
   }, [kind, assetId, laptop.items, av.items, network.items]);
 
   useEffect(() => {

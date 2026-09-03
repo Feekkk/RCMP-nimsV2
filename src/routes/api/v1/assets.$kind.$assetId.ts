@@ -1,18 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import { parseAssetIdParam, parseAssetKindParam } from '@shared/lib/inventory-schema';
 import { handleAssetDetail } from '@backend/server/api/api-handlers.server';
-
-function parseKind(raw: string): AssetKind | null {
-  if (raw === 'laptop' || raw === 'av' || raw === 'network') return raw;
-  return null;
-}
 
 export const Route = createFileRoute('/api/v1/assets/$kind/$assetId')({
   params: {
     parse: (params) => {
-      const kind = parseKind(params.kind);
-      const assetId = Number(params.assetId);
-      if (!kind || Number.isNaN(assetId) || assetId <= 0) {
+      const kind = parseAssetKindParam(params.kind);
+      const assetId = parseAssetIdParam(params.assetId);
+      if (!kind || !assetId) {
         throw new Error('Invalid asset path.');
       }
       return { kind, assetId };

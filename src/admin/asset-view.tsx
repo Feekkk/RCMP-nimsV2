@@ -1,5 +1,5 @@
 import { AdminShell } from '@/admin/admin-shell';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import { AssetViewContent } from '@/technician/asset-view';
 
 const ADMIN_ASSET_LIST_PATH: Record<AssetKind, string> = {
@@ -8,7 +8,7 @@ const ADMIN_ASSET_LIST_PATH: Record<AssetKind, string> = {
   network: '/admin/network',
 };
 
-export function AdminAssetViewPage({ kind, assetId }: { kind: AssetKind; assetId: number }) {
+export function AdminAssetViewPage({ kind, assetId }: { kind: AssetKind; assetId: AssetId }) {
   return (
     <AdminShell>
       <AssetViewContent

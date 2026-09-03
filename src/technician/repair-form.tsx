@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { readTechnicianSession } from '@shared/lib/auth-session';
 import { normalizeToIsoDate } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
+import { sameAssetId } from '@shared/lib/inventory-schema';
 import { parseFaultyAssetRouteSearch } from '@shared/lib/warranty-repair-schema';
 import { createRepairFn } from '@backend/server/requests/warranty-repair.functions';
 import { TechnicianShell } from '@/technician/technician-shell';
@@ -33,7 +34,7 @@ export function TechnicianRepairFormPage() {
   const asset = useMemo(() => {
     if (!kind || !assetId) return null;
     const items = kind === 'laptop' ? laptop.items : kind === 'av' ? av.items : network.items;
-    return items.find((i) => i.assetId === assetId) ?? null;
+    return items.find((i) => sameAssetId(i.assetId, assetId)) ?? null;
   }, [kind, assetId, laptop.items, av.items, network.items]);
 
   const refreshAssets = () => {

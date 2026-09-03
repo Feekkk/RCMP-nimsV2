@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import type {
   DeployLaptopPlaceInput,
   DeployLaptopStaffInput,
@@ -21,7 +21,7 @@ export const searchStaffFn = createServerFn({ method: 'GET' })
 
 export const getOpenReturnContextFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
-  .inputValidator((input: { kind: AssetKind; assetId: number }) => input)
+  .inputValidator((input: { kind: AssetKind; assetId: AssetId }) => input)
   .handler(async ({ data: input }) => {
     const { getOpenReturnContext } = await import('@backend/server/requests/deploy-return-repo.server');
     return getOpenReturnContext(input.kind, input.assetId);

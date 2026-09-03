@@ -1,18 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { TechnicianAssetViewPage } from '@/technician/asset-view';
-import type { AssetKind } from '@shared/lib/inventory-schema';
-
-function parseKind(raw: string): AssetKind | null {
-  if (raw === 'laptop' || raw === 'av' || raw === 'network') return raw;
-  return null;
-}
+import { parseAssetIdParam, parseAssetKindParam } from '@shared/lib/inventory-schema';
 
 export const Route = createFileRoute('/technician/asset/$kind/$assetId')({
   params: {
     parse: (params) => {
-      const kind = parseKind(params.kind);
-      const assetId = Number(params.assetId);
-      if (!kind || Number.isNaN(assetId) || assetId <= 0) {
+      const kind = parseAssetKindParam(params.kind);
+      const assetId = parseAssetIdParam(params.assetId);
+      if (!kind || !assetId) {
         throw new Error('This asset link is not valid. Open the asset from the inventory list.');
       }
       return { kind, assetId };

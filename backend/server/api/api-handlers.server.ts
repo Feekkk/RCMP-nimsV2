@@ -1,5 +1,5 @@
 import { isDisposalUnitRole, isStaffRole } from '@shared/lib/auth-session';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import {
   authUserPayload,
   issueTokenPair,
@@ -237,7 +237,7 @@ export async function handleAssetLookup(request: Request): Promise<Response> {
 export async function handleAssetDetail(
   request: Request,
   kind: AssetKind,
-  assetId: number,
+  assetId: AssetId,
 ): Promise<Response> {
   try {
     const auth = await requireStaff(request);

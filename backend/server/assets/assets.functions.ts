@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import type {
+  AssetId,
   AssetKind,
   CreateAvInput,
   CreateLaptopInput,
@@ -105,7 +106,7 @@ export const bulkCreateNetworkImportFn = createServerFn({ method: 'POST' })
 
 export type UpdateAssetStatusInput = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
   statusId: number;
 };
 
@@ -125,7 +126,7 @@ export const updateAssetFn = createServerFn({ method: 'POST' })
     return updateAssetDetails(input);
   });
 
-export type GetAssetDetailInput = { kind: AssetKind; assetId: number };
+export type GetAssetDetailInput = { kind: AssetKind; assetId: AssetId };
 
 export const getAssetDetailFn = createServerFn({ method: 'GET' })
   .middleware([staffMiddleware])

@@ -1,4 +1,4 @@
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 
 export const ACTIVITY_LOG_CATEGORIES = [
   'request',
@@ -31,6 +31,6 @@ export type ActivityLogEntry = {
   detail: string | null;
   actor: string | null;
   assetKind: AssetKind | null;
-  assetId: number | null;
+  assetId: AssetId | null;
   requestId: number | null;
 };

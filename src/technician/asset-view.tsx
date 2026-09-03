@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AssetDetail, AssetDetailResponse, AssetKind, AssetTrailEvent } from '@shared/lib/inventory-schema';
+import type { AssetDetail, AssetDetailResponse, AssetId, AssetKind, AssetTrailEvent } from '@shared/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, formatAccCodeDisplay } from '@shared/lib/inventory-schema';
 import type { OpenReturnContext } from '@shared/lib/deploy-return-schema';
 import { formatAssetAge, formatDateLabel, formatPurchaseDateLabel, parseDdMmYyToIso } from '@shared/lib/date-format';
@@ -305,7 +305,7 @@ function TrailsTable({ trails, readOnly }: { trails: AssetTrailEvent[]; readOnly
 
 type AssetViewContentProps = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
   readOnly?: boolean;
   backTo: string;
   backLabel?: string;
@@ -350,7 +350,7 @@ export function AssetViewContent({
   const asset = data?.asset;
   const assetAge = asset ? formatAssetAge(asset.poDate, asset.createdAt) : null;
 
-  const handleStatusChange = async (_assetId: number, statusId: number) => {
+  const handleStatusChange = async (_assetId: AssetId, statusId: number) => {
     const { updateAssetStatusFn } = await import('@backend/server/assets/assets.functions');
     await updateAssetStatusFn({ data: { kind, assetId, statusId } });
     await load();
@@ -523,7 +523,7 @@ export function AssetViewContent({
 
 type TechnicianAssetViewPageProps = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
 };
 
 export function TechnicianAssetViewPage({ kind, assetId }: TechnicianAssetViewPageProps) {

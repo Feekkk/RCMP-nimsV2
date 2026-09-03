@@ -1,5 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import type {
   RepairInput,
   WarrantyClaimInput,
@@ -60,7 +60,7 @@ export async function insertWarranty(
   );
 }
 
-export async function getWarrantyForAsset(kind: AssetKind, assetId: number): Promise<WarrantyRecord | null> {
+export async function getWarrantyForAsset(kind: AssetKind, assetId: AssetId): Promise<WarrantyRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<WarrantyRow[]>(
     `SELECT warranty_id, asset_id, asset_type, warranty_start_date, warranty_end_date, warranty_remarks
@@ -73,7 +73,7 @@ export async function getWarrantyForAsset(kind: AssetKind, assetId: number): Pro
   return rows[0] ? mapWarranty(rows[0]) : null;
 }
 
-export async function getWarrantyContext(kind: AssetKind, assetId: number): Promise<WarrantyContext> {
+export async function getWarrantyContext(kind: AssetKind, assetId: AssetId): Promise<WarrantyContext> {
   const pool = getDbPool();
   const warranty = await getWarrantyForAsset(kind, assetId);
   const isActive = warranty ? isWarrantyActive(warranty) : false;

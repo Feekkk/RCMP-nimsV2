@@ -10,6 +10,7 @@ import { readTechnicianSession } from '@shared/lib/auth-session';
 import { normalizeToIsoDate } from '@shared/lib/date-format';
 import type { DeployReturnSearch } from '@shared/lib/deploy-return-schema';
 import type { StaffRecipient } from '@shared/lib/deploy-return-schema';
+import { parseAssetIdParam, parseAssetKindParam, sameAssetId } from '@shared/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
 import {
   deployLaptopPlaceFn,
@@ -29,11 +30,9 @@ import { StaffRecipientSearch } from '@/technician/staff-recipient-search';
 type LaptopDeployMode = 'staff' | 'place';
 
 function parseSearch(search: Record<string, unknown>): DeployReturnSearch | null {
-  const kind = search.kind;
-  const assetId = Number(search.assetId);
-  if ((kind !== 'laptop' && kind !== 'av' && kind !== 'network') || Number.isNaN(assetId) || assetId <= 0) {
-    return null;
-  }
+  const kind = parseAssetKindParam(search.kind);
+  const assetId = parseAssetIdParam(search.assetId);
+  if (!kind || !assetId) return null;
   return { kind, assetId };
 }
 
@@ -50,7 +49,7 @@ export function TechnicianDeployPage() {
     if (!params) return null;
     const items =
       params.kind === 'laptop' ? laptop.items : params.kind === 'av' ? av.items : network.items;
-    return items.find((i) => i.assetId === params.assetId) ?? null;
+    return items.find((i) => sameAssetId(i.assetId, params.assetId)) ?? null;
   }, [params, laptop.items, av.items, network.items]);
 
   const [laptopMode, setLaptopMode] = useState<LaptopDeployMode>('staff');
