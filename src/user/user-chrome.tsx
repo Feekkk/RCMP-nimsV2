@@ -1,29 +1,29 @@
 import { Link } from '@tanstack/react-router';
-import { History, LogOut, UserPen } from 'lucide-react';
+import { ClipboardPlus, History, LogOut, UserRound } from 'lucide-react';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 import { Button } from '@/components/ui/button';
-import type { SessionUser } from '@shared/lib/auth-session';
+import { cn } from '@/lib/utils';
+
+const tabs = [
+  { id: 'request' as const, to: '/user/request', label: 'Request', icon: ClipboardPlus },
+  { id: 'history' as const, to: '/user/history', label: 'History', icon: History },
+  { id: 'profile' as const, to: '/user/edit-profile', label: 'Profile', icon: UserRound },
+];
 
 export function UserPageChrome({
-  session,
   onSignOut,
   active,
 }: {
-  session: Pick<SessionUser, 'fullName'>;
   onSignOut: () => void;
   active?: 'request' | 'history' | 'profile';
 }) {
   return (
-    <header className="sticky top-0 z-10 border-b border-border/80 bg-card/90 backdrop-blur-sm">
-      <div className="mx-auto max-w-2xl px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
+    <>
+      <header className="sticky top-0 z-10 border-b border-border/80 bg-card/90 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <Link to="/user/request" className="flex shrink-0 items-center gap-2">
             <NimsLogo size="sm" variant="light" />
           </Link>
-          <div className="min-w-0 flex-1 text-center">
-            <p className="truncate text-sm font-medium">Information Technology Department</p>
-            <p className="truncate text-xs text-muted-foreground">{session.fullName}</p>
-          </div>
           <Button
             type="button"
             variant="ghost"
@@ -35,39 +35,31 @@ export function UserPageChrome({
             <span className="sr-only">Sign out</span>
           </Button>
         </div>
-        <nav className="mt-3 flex flex-wrap gap-2" aria-label="User navigation">
-          <Button
-            variant={active === 'request' ? 'secondary' : 'outline'}
-            size="sm"
-            className="h-8 flex-1 rounded-[8px] text-xs sm:flex-none"
-            asChild
-          >
-            <Link to="/user/request">New request</Link>
-          </Button>
-          <Button
-            variant={active === 'history' ? 'secondary' : 'outline'}
-            size="sm"
-            className="h-8 flex-1 gap-1 rounded-[8px] text-xs sm:flex-none"
-            asChild
-          >
-            <Link to="/user/history">
-              <History className="h-3.5 w-3.5" />
-              History
-            </Link>
-          </Button>
-          <Button
-            variant={active === 'profile' ? 'secondary' : 'outline'}
-            size="sm"
-            className="h-8 flex-1 gap-1 rounded-[8px] text-xs sm:flex-none"
-            asChild
-          >
-            <Link to="/user/edit-profile">
-              <UserPen className="h-3.5 w-3.5" />
-              Edit profile
-            </Link>
-          </Button>
-        </nav>
-      </div>
-    </header>
+      </header>
+      <nav
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-border/80 bg-card/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-md"
+        aria-label="User navigation"
+      >
+        <div className="mx-auto grid max-w-2xl grid-cols-3">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = active === tab.id;
+            return (
+              <Link
+                key={tab.id}
+                to={tab.to}
+                className={cn(
+                  'flex flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium transition-colors',
+                  isActive ? 'text-primary' : 'text-muted-foreground',
+                )}
+              >
+                <Icon className={cn('h-5 w-5', isActive && 'stroke-[2.25]')} />
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

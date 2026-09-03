@@ -228,8 +228,8 @@ export function UserRequestFormPage() {
 
   if (submittedId != null) {
     return (
-      <div className="relative min-h-screen bg-background">
-        <UserPageChrome session={session} onSignOut={handleSignOut} active="request" />
+      <div className="relative min-h-screen bg-background pb-[calc(4.75rem+env(safe-area-inset-bottom))]">
+        <UserPageChrome onSignOut={handleSignOut} active="request" />
         <div className="mx-auto max-w-lg px-4 py-16 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <Check className="h-7 w-7" />
@@ -270,12 +270,12 @@ export function UserRequestFormPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background pb-[calc(4.75rem+env(safe-area-inset-bottom))]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-[180px] right-[5%] h-[480px] w-[480px] rounded-full bg-lavender/[0.1] blur-[90px]" />
       </div>
 
-      <UserPageChrome session={session} onSignOut={handleSignOut} active="request" />
+      <UserPageChrome onSignOut={handleSignOut} active="request" />
 
       <UserProfileCompleteDialog
         session={session}

@@ -88,8 +88,8 @@ export function UserEditProfilePage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-background">
-      <UserPageChrome session={session} onSignOut={handleSignOut} active="profile" />
+    <div className="relative min-h-screen bg-background pb-[calc(4.75rem+env(safe-area-inset-bottom))]">
+      <UserPageChrome onSignOut={handleSignOut} active="profile" />
 
       <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
         <div className="mb-6">
