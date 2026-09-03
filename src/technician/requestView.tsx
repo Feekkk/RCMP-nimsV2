@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Laptop, Search, Tv, X } from 'lucide-react';
+import { Laptop, Loader2, Search, Tv, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,11 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  REQUEST_STATUS_ACTIVE,
-  REQUEST_STATUS_BOOKED,
-  REQUEST_STATUS_CHECKOUT,
-} from '@shared/lib/request-schema';
+import { REQUEST_STATUS_ACTIVE } from '@shared/lib/request-schema';
 import type { RequestAssignableKind, RequestPoolAsset } from '@shared/lib/request-schema';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
@@ -163,6 +158,7 @@ export function TechnicianRequestViewPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="font-semibold">Kind</TableHead>
                   <TableHead className="font-semibold">ID</TableHead>
+                  <TableHead className="font-semibold">Old ID</TableHead>
                   <TableHead className="font-semibold">Model</TableHead>
                   <TableHead className="font-semibold">Brand</TableHead>
                   <TableHead className="font-semibold">Category</TableHead>
@@ -173,13 +169,13 @@ export function TechnicianRequestViewPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                       {assets.length === 0
                         ? 'No assets in the request pool yet. Add assets from the previous page.'
                         : 'No assets match your filters.'}
@@ -192,34 +188,22 @@ export function TechnicianRequestViewPage() {
                       <TableCell>
                         <code className="text-xs">{a.assetId}</code>
                       </TableCell>
+                      <TableCell>
+                        {a.assetIdOld ? (
+                          <code className="text-xs">{a.assetIdOld}</code>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{a.model ?? '—'}</TableCell>
                       <TableCell className="text-muted-foreground">{a.brand ?? '—'}</TableCell>
                       <TableCell className="text-muted-foreground">{a.category ?? '—'}</TableCell>
                       <TableCell>
                         <div className="space-y-1.5">
                           <AssetStatusBadge statusId={a.statusId} />
-                          {a.assignmentId ? (
-                            <>
-                              <span className="block text-sm font-medium">Request #{a.requestId}</span>
-                              {a.requesterName && (
-                                <span className="block text-xs text-muted-foreground">{a.requesterName}</span>
-                              )}
-                              <Badge variant="secondary" className="rounded-[6px] text-[10px]">
-                                {a.statusId === REQUEST_STATUS_CHECKOUT
-                                  ? 'Checked out'
-                                  : a.statusId === REQUEST_STATUS_BOOKED
-                                    ? 'Booked'
-                                    : 'Assigned'}
-                              </Badge>
-                            </>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="rounded-[6px] border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
-                            >
-                              Available
-                            </Badge>
-                          )}
+                          {a.assignmentId && a.requesterName ? (
+                            <span className="block text-xs text-muted-foreground">{a.requesterName}</span>
+                          ) : null}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -227,13 +211,17 @@ export function TechnicianRequestViewPage() {
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            className="h-8 gap-1 rounded-[8px] text-xs"
+                            size="icon"
+                            className="h-8 w-8 rounded-[8px]"
                             disabled={removingKey === assetKey(a.kind, a.assetId)}
+                            aria-label="Remove from pool"
                             onClick={() => void handleRemoveFromPool(a)}
                           >
-                            <X className="h-3.5 w-3.5" />
-                            {removingKey === assetKey(a.kind, a.assetId) ? 'Removing…' : 'Remove'}
+                            {removingKey === assetKey(a.kind, a.assetId) ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <X className="h-3.5 w-3.5" />
+                            )}
                           </Button>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>

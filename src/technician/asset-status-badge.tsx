@@ -16,9 +16,11 @@ export function getStatusBadgeClassName(statusId: number): string {
     case STATUS_ID.RETURN:
       return 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200';
     case STATUS_ID.REQUEST_ACTIVE:
+      return 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200';
     case STATUS_ID.REQUEST_BOOKED:
+      return 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200';
     case STATUS_ID.REQUEST_CHECKOUT:
-      return 'border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-50 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200';
+      return 'border-red-200 bg-red-50 text-red-800 hover:bg-red-50 dark:border-red-800 dark:bg-red-950 dark:text-red-200';
     default:
       return 'border-border bg-muted text-muted-foreground';
   }
