@@ -1034,6 +1034,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
         remarks: string | null;
         model: string | null;
         brand: string | null;
+        asset_id_old: string | null;
         asset_type: string | null;
         pool_kind: string | null;
         asset_status_id: number | null;
@@ -1041,6 +1042,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
     >(
       `SELECT ra.assignment_id, ra.request_item_id, ra.asset_id, ra.unavailable_at,
               ra.assigned_at, ra.checkout_at, ra.remarks,
+              av.asset_id_old,
               COALESCE(l.model, av.model) AS model,
               COALESCE(l.brand, av.brand) AS brand,
               ri.asset_type,
@@ -1068,6 +1070,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
         assignmentId: a.assignment_id,
         requestItemId: a.request_item_id,
         assetId: a.asset_id,
+        assetIdOld: a.asset_id_old ?? null,
         kind,
         model: a.model,
         brand: a.brand,

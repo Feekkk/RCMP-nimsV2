@@ -90,10 +90,11 @@ import { RequestReturnFields } from '@/technician/request-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 
 function poolAssetLabel(a: RequestPoolAsset): string {
+  const ids = [`#${a.assetId}`, a.assetIdOld].filter(Boolean);
   if (a.kind === 'laptop') {
-    return [`#${a.assetId}`, a.model, a.brand].filter(Boolean).join(' · ');
+    return [...ids, a.model, a.brand].filter(Boolean).join(' · ');
   }
-  return [a.assetIdOld, `#${a.assetId}`, a.category, a.brand].filter(Boolean).join(' · ');
+  return [...ids, a.category, a.brand].filter(Boolean).join(' · ');
 }
 
 function slotMarkLabel(mark: RequestSlotMark): string {
@@ -103,7 +104,13 @@ function slotMarkLabel(mark: RequestSlotMark): string {
 function bookedAssetLabel(a: RequestAssignmentRow): string {
   if (a.slotMark) return slotMarkLabel(a.slotMark);
   const kind = a.kind === 'laptop' ? 'Laptop' : 'AV';
-  return [kind, a.assetId != null ? `#${a.assetId}` : null, a.model, a.brand]
+  return [
+    kind,
+    a.assetId != null ? `#${a.assetId}` : null,
+    a.assetIdOld,
+    a.model,
+    a.brand,
+  ]
     .filter(Boolean)
     .join(' · ');
 }

@@ -47,6 +47,7 @@ export type RequestAssignmentRow = {
   assignmentId: number;
   requestItemId: number | null;
   assetId: number | null;
+  assetIdOld: string | null;
   kind: RequestAssignableKind;
   model: string | null;
   brand: string | null;
