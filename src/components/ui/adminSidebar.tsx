@@ -1,13 +1,12 @@
 import * as React from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Download, LayoutDashboard, LogOut, Settings, Sparkles, Users } from 'lucide-react';
+import { Download, LayoutDashboard, LogOut, Settings, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 
 const DASH = '/admin/dashboard' as const;
-const PROMPT = '/admin/prompt' as const;
 const USERS = '/admin/users' as const;
 const EXPORT = '/admin/export' as const;
 const SETTINGS = '/admin/settings' as const;
@@ -58,9 +57,6 @@ function AdminSideBarNav() {
         active={pathname === USERS || pathname.startsWith(`${USERS}/`)}
       >
         Manage user
-      </NavLink>
-      <NavLink to={PROMPT} icon={Sparkles} active={pathname === PROMPT || pathname.startsWith(`${PROMPT}/`)}>
-        AI Chatbot
       </NavLink>
       <NavLink
         to={EXPORT}
