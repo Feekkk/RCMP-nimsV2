@@ -108,7 +108,13 @@ export const bookPoolAssetToRequestFn = createServerFn({ method: 'POST' })
   .inputValidator((input: AssignAssetToRequestInput) => input)
   .handler(async ({ data: input, context }) => {
     const { bookPoolAssetToRequest } = await import('@backend/server/requests/request-repo.server');
-    return bookPoolAssetToRequest({ ...input, assignedBy: context.staffId });
+    const booked = await bookPoolAssetToRequest({ ...input, assignedBy: context.staffId });
+    if (!booked.collectionReady) return booked;
+    const { trySendRequestReadyEmail } = await import(
+      '@backend/server/email/request-ready-email.server'
+    );
+    const email = await trySendRequestReadyEmail(input.requestId);
+    return { ...booked, ...email };
   });
 
 export const changeBookedAssignmentFn = createServerFn({ method: 'POST' })

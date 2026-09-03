@@ -360,7 +360,7 @@ export function TechnicianRequestPage() {
     const key = `book-${req.requestId}-${group.kind}`;
     setActionKey(key);
     try {
-      await bookPoolAssetToRequestFn({
+      const booked = await bookPoolAssetToRequestFn({
         data: {
           requestId: req.requestId,
           requestItemId: resolved.item.requestItemId,
@@ -370,7 +370,14 @@ export function TechnicianRequestPage() {
           remarks: null,
         },
       });
-      toast.success(`Booked ${kind} #${assetId} (status ${REQUEST_STATUS_BOOKED})`);
+      if (booked.collectionReady && booked.emailSent) {
+        toast.success('All items booked — requester notified to collect at ITD');
+      } else if (booked.collectionReady && booked.emailError) {
+        toast.success(`Booked ${kind} #${assetId}`);
+        toast.warning(booked.emailError);
+      } else {
+        toast.success(`Booked ${kind} #${assetId} (status ${REQUEST_STATUS_BOOKED})`);
+      }
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Booking failed');

@@ -149,6 +149,13 @@ export type AssignAssetToRequestInput = {
   remarks: string | null;
 };
 
+export type BookPoolAssetResult = {
+  assignmentId: number;
+  collectionReady: boolean;
+  emailSent?: boolean;
+  emailError?: string;
+};
+
 export type MarkAssetForRequestInput = {
   kind: RequestAssignableKind;
   assetId: number;

@@ -363,7 +363,15 @@ export async function handleRequestAction(request: Request, action: string): Pro
     }
     if (action === 'book') {
       const { bookPoolAssetToRequest } = await import('@backend/server/requests/request-repo.server');
-      return apiOk(await bookPoolAssetToRequest({ ...body, bookedBy: actor } as never));
+      const booked = await bookPoolAssetToRequest({ ...body, assignedBy: actor } as never);
+      if (booked.collectionReady) {
+        const { trySendRequestReadyEmail } = await import(
+          '@backend/server/email/request-ready-email.server'
+        );
+        const email = await trySendRequestReadyEmail(Number(body.requestId));
+        return apiOk({ ...booked, ...email });
+      }
+      return apiOk(booked);
     }
     if (action === 'checkout-staff') {
       const { checkoutRequestAssignment } = await import('@backend/server/requests/request-repo.server');

@@ -2,6 +2,7 @@ import type { RowDataPacket } from 'mysql2';
 import type {
   ActiveForRequestAsset,
   AssignAssetToRequestInput,
+  BookPoolAssetResult,
   MarkAssetForRequestInput,
   PendingRequest,
   RemoveAssetFromRequestPoolInput,
@@ -333,8 +334,48 @@ async function setAssetRequestStatus(
   ]);
 }
 
+async function getRequestBookingFill(requestId: number) {
+  const pool = getDbPool();
+  const [qtyRows] = await pool.query<(RowDataPacket & { qty: number })[]>(
+    `SELECT COALESCE(SUM(quantity), 0) AS qty FROM request_item WHERE request_id = ?`,
+    [requestId],
+  );
+  const [openRows] = await pool.query<(RowDataPacket & { cnt: number })[]>(
+    `SELECT COUNT(*) AS cnt FROM request_assignment
+     WHERE request_id = ? AND returned_at IS NULL`,
+    [requestId],
+  );
+  const [returnedRows] = await pool.query<(RowDataPacket & { cnt: number })[]>(
+    `SELECT COUNT(*) AS cnt FROM request_assignment
+     WHERE request_id = ? AND returned_at IS NOT NULL`,
+    [requestId],
+  );
+  const [bookedRows] = await pool.query<(RowDataPacket & { cnt: number })[]>(
+    `SELECT COUNT(*) AS cnt
+     FROM request_assignment ra
+     LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
+     LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
+     WHERE ra.request_id = ?
+       AND ra.returned_at IS NULL
+       AND ra.unavailable_at IS NULL
+       AND ra.asset_id IS NOT NULL
+       AND ra.checkout_at IS NULL
+       AND COALESCE(l.status_id, av.status_id) = ?`,
+    [requestId, REQUEST_STATUS_BOOKED],
+  );
+  const quantity = Number(qtyRows[0]?.qty ?? 0);
+  const open = Number(openRows[0]?.cnt ?? 0);
+  const returned = Number(returnedRows[0]?.cnt ?? 0);
+  return {
+    emptySlots: Math.max(0, quantity - open - returned),
+    bookedAwaitingCheckout: Number(bookedRows[0]?.cnt ?? 0),
+  };
+}
+
 /** Book asset: pool (9) → assignment row + status 10 */
-export async function bookPoolAssetToRequest(input: AssignAssetToRequestInput): Promise<number> {
+export async function bookPoolAssetToRequest(
+  input: AssignAssetToRequestInput,
+): Promise<BookPoolAssetResult> {
   const pool = getDbPool();
 
   const [reqRows] = await pool.query<RowDataPacket[]>(
@@ -381,7 +422,11 @@ export async function bookPoolAssetToRequest(input: AssignAssetToRequestInput): 
     await setAssetRequestStatus(input.kind, input.assetId, REQUEST_STATUS_BOOKED, conn);
 
     await conn.commit();
-    return assignmentId;
+    const fill = await getRequestBookingFill(input.requestId);
+    return {
+      assignmentId,
+      collectionReady: fill.emptySlots === 0 && fill.bookedAwaitingCheckout > 0,
+    };
   } catch (e) {
     await conn.rollback();
     throw e;
