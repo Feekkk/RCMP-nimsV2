@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Laptop as LaptopIcon, Monitor, Search, Users } from 'lucide-react';
+import { Box, Laptop as LaptopIcon, Monitor, Search, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -278,7 +278,10 @@ export function TechnicianLaptopPage() {
 														{c.category ?? 'Laptop'}
 													</span>
 												) : (
-													<span className="text-sm">{c.category ?? '—'}</span>
+													<span className="inline-flex items-center gap-1.5 text-sm">
+														<Box className="h-4 w-4 text-[oklch(0.45_0.12_290)]" />
+														{c.category ?? '—'}
+													</span>
 												)}
 											</TableCell>
 											<TableCell className="font-medium text-foreground">{c.model}</TableCell>
