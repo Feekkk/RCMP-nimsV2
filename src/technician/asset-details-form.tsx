@@ -22,8 +22,9 @@ import {
   purchaseFormToInput,
   type PurchaseFormState,
 } from '@shared/lib/purchase-field-utils';
-import { LAPTOP_CATEGORY_OPTIONS } from '@/hooks/assetid-generator';
+import { canonicalizeLaptopCategory } from '@/hooks/assetid-generator';
 import { PurchaseFieldsSection } from '@/technician/asset-purchase-fields';
+import { LaptopCategoryFields } from '@/technician/laptop-category-fields';
 import {
   AssetDeploymentEditFields,
   buildDeploymentUpdateInput,
@@ -82,14 +83,6 @@ function blankToNull(value: string): string | null {
   return trimmed ? trimmed : null;
 }
 
-function laptopCategoryOptions(current: string): string[] {
-  const options: string[] = [...LAPTOP_CATEGORY_OPTIONS];
-  if (current && !options.some((option) => option.toLowerCase() === current.toLowerCase())) {
-    options.unshift(current);
-  }
-  return options;
-}
-
 function Field({
   label,
   children,
@@ -129,7 +122,7 @@ function buildUpdateInput(asset: AssetDetail, form: AssetDetailsFormState): Upda
       kind: 'laptop',
       ...shared,
       serialNum: form.serialNum.trim(),
-      category: form.category.trim(),
+      category: canonicalizeLaptopCategory(form.category),
       partNumber: blankToNull(form.partNumber),
       processor: blankToNull(form.processor),
       memory: blankToNull(form.memory),
@@ -197,8 +190,8 @@ export function AssetDetailsForm({
       toast.error('Serial number is required.');
       return;
     }
-    if (asset.kind === 'laptop' && !form.category.trim()) {
-      toast.error('Category is required.');
+    if (asset.kind === 'laptop' && !canonicalizeLaptopCategory(form.category)) {
+      toast.error('Enter a category name.');
       return;
     }
     const cost = form.purchase.purchaseCost.trim();
@@ -264,23 +257,10 @@ export function AssetDetailsForm({
               </Select>
             </Field>
             {asset.kind === 'laptop' ? (
-              <Field label="Category" required>
-                <Select
-                  value={form.category || undefined}
-                  onValueChange={(value) => patch({ category: value })}
-                >
-                  <SelectTrigger className="rounded-[8px]">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {laptopCategoryOptions(form.category).map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              <LaptopCategoryFields
+                category={form.category}
+                onCategoryChange={(category) => patch({ category })}
+              />
             ) : (
               <Field label="Category">
                 <Input

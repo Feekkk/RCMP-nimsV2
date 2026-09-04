@@ -29,12 +29,15 @@ import {
 } from '@/lib/warranty-field-utils';
 import {
   ASSET_ID_PREFIX,
+  canonicalizeLaptopCategory,
   getAssetIdYearDigits,
   getLaptopAssetIdPrefix,
+  isKnownLaptopCategory,
   LAPTOP_CATEGORY_OPTIONS,
 } from '@/hooks/assetid-generator';
 import { cn } from '@/lib/utils';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { LaptopCategoryFields } from '@/technician/laptop-category-fields';
 import { PurchaseFieldsSection } from '@/technician/asset-purchase-fields';
 import { WarrantyFieldsSection } from '@/technician/warranty-fields';
 import {
@@ -109,11 +112,10 @@ function assetIdHint(kind: AssetKind, category: string): string {
   const year = String(getAssetIdYearDigits()).padStart(2, '0');
   if (kind === 'av') return `${ASSET_ID_PREFIX.av}-${year}-xxx`;
   if (kind === 'network') return `${ASSET_ID_PREFIX.network}-${year}-xxx`;
-  try {
-    return `${getLaptopAssetIdPrefix(category)}-${year}-xxx`;
-  } catch {
-    return 'Select a category';
+  if (!category.trim() || !isKnownLaptopCategory(category)) {
+    return `${ASSET_ID_PREFIX.other}-${year}-xxx`;
   }
+  return `${getLaptopAssetIdPrefix(category)}-${year}-xxx`;
 }
 
 function entrySummary(entry: AssetEntry, index: number): { title: string; subtitle: string } {
@@ -258,8 +260,8 @@ function AssetForm({
         setSelectedKey(entry.key);
         return;
       }
-      if (kind === 'laptop' && !entry.category.trim()) {
-        toast.error(`Category is required for asset ${i + 1}.`);
+      if (kind === 'laptop' && !canonicalizeLaptopCategory(entry.category)) {
+        toast.error(`Enter a category name for asset ${i + 1}.`);
         setSelectedKey(entry.key);
         return;
       }
@@ -290,7 +292,7 @@ function AssetForm({
           entries.map((entry) => ({
             accCode: entry.accCode.trim() || null,
             serialNum: entry.serialNum.trim(),
-            category: entry.category.trim(),
+            category: canonicalizeLaptopCategory(entry.category),
             brand: entry.brand.trim() || null,
             model: entry.model.trim() || null,
             supplier: entry.supplier.trim() || null,
@@ -541,20 +543,10 @@ function AssetEntryCard({
               />
             </Field>
             {kind === 'laptop' && (
-              <Field label="Category" required>
-                <Select value={entry.category} onValueChange={(value) => onChange({ category: value })}>
-                  <SelectTrigger className="rounded-[8px]">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LAPTOP_CATEGORY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              <LaptopCategoryFields
+                category={entry.category}
+                onCategoryChange={(category) => onChange({ category })}
+              />
             )}
             {kind === 'av' && (
               <>

@@ -18,7 +18,7 @@ import {
   type CreateLaptopInput,
   type CreateNetworkInput,
 } from '@shared/lib/inventory-schema';
-import { getLaptopAssetIdPrefix, LAPTOP_CATEGORY_OPTIONS } from '@/hooks/assetid-generator';
+import { canonicalizeLaptopCategory, getLaptopAssetIdPrefix, LAPTOP_CATEGORY_OPTIONS } from '@/hooks/assetid-generator';
 import { parseOptionalDate, parsePurchaseFromRow } from '@shared/lib/purchase-field-utils';
 import { parseWarrantyFromRow } from '@/lib/warranty-field-utils';
 import {
@@ -177,6 +177,16 @@ const MOCK_CSV: Record<AssetKind, string> = {
       purchase_cost: '899.00',
       status_id: '1',
       remarks: 'Leased desktop (auto 14-xx-xxx)',
+    },
+    {
+      acc_code: '200-0500',
+      serial_num: 'MON-OTHER-01',
+      brand: 'Dell',
+      model: 'P2723D',
+      supplier: 'Dell',
+      category: 'Docking Station',
+      status_id: '1',
+      remarks: 'Other category (auto 10-xx-xxx)',
     },
   ]),
   av: toCsv(BULK_IMPORT_COLUMNS.av, [
@@ -642,9 +652,17 @@ function parseLaptopRows(headers: string[], rows: string[][]) {
     const assetId = parseOptionalLaptopAssetId(row[col.get('asset_id')!] ?? '', rowNum, errors);
     const accCode = parseAccCode(row[col.get('acc_code')!] ?? '', rowNum, errors);
     const serialNum = requireCell(row, col.get('serial_num')!, 'serial_num', rowNum, errors);
-    const category = requireCell(row, col.get('category')!, 'category', rowNum, errors);
+    const rawCategory = requireCell(row, col.get('category')!, 'category', rowNum, errors);
+    const category = rawCategory ? canonicalizeLaptopCategory(rawCategory) : '';
     const statusId = parseStatusId(requireCell(row, col.get('status_id')!, 'status_id', rowNum, errors), rowNum, errors);
     const purchase = parsePurchaseFromRow(row, col, rowNum, errors);
+
+    if (rawCategory && !category) {
+      errors.push({
+        row: rowNum,
+        message: 'Enter a specific category name. Do not use "Others" as the stored value.',
+      });
+    }
 
     if (category) {
       try {

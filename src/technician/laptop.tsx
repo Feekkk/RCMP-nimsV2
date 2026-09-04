@@ -18,10 +18,14 @@ import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { RegisterAssetActions } from '@/technician/register-asset-actions';
 import { filterBySearch, filterByStatus, useAssets } from '@/hooks/assets';
 import {
+	isDesktopCategory,
 	isLeasingCategory,
+	isNotebookCategory,
+	isOtherLaptopCategory,
 	isOwnedDesktopCategory,
 	isOwnedNotebookCategory,
 	LAPTOP_CATEGORY_OPTIONS,
+	LAPTOP_CATEGORY_OTHERS,
 	normalizeCategory,
 } from '@/hooks/assetid-generator';
 import { usePagination } from '@/hooks/use-pagination';
@@ -34,9 +38,9 @@ import {
 } from '@/technician/laptop-stock-summary';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 
-type LaptopCategoryView = 'all' | (typeof LAPTOP_CATEGORY_OPTIONS)[number];
+type LaptopCategoryView = 'all' | (typeof LAPTOP_CATEGORY_OPTIONS)[number] | typeof LAPTOP_CATEGORY_OTHERS;
 
-const LAPTOP_CATEGORY_VIEWS: LaptopCategoryView[] = ['all', ...LAPTOP_CATEGORY_OPTIONS];
+const LAPTOP_CATEGORY_VIEWS: LaptopCategoryView[] = ['all', ...LAPTOP_CATEGORY_OPTIONS, LAPTOP_CATEGORY_OTHERS];
 
 function laptopCategoryHeaderLabel(view: LaptopCategoryView): string {
 	return view === 'all' ? 'Category' : view;
@@ -49,6 +53,7 @@ function nextLaptopCategoryView(view: LaptopCategoryView): LaptopCategoryView {
 
 function matchesLaptopCategory(category: string | null, view: LaptopCategoryView): boolean {
 	if (view === 'all') return true;
+	if (view === LAPTOP_CATEGORY_OTHERS) return isOtherLaptopCategory(category);
 	return normalizeCategory(category ?? '') === normalizeCategory(view);
 }
 
@@ -59,6 +64,7 @@ function matchesFormFactor(
 	if (formFactorFilter === 'all') return true;
 	if (formFactorFilter === 'leasing') return isLeasingCategory(category);
 	if (formFactorFilter === 'laptop') return isOwnedNotebookCategory(category);
+	if (formFactorFilter === 'other') return isOtherLaptopCategory(category);
 	return isOwnedDesktopCategory(category);
 }
 
@@ -68,6 +74,7 @@ export function TechnicianLaptopPage() {
 	const [statusFilter, setStatusFilter] = useState<number | null>(null);
 	const [formFactorFilter, setFormFactorFilter] = useState<LaptopFormFactorFilter>('all');
 	const [divisionFilter, setDivisionFilter] = useState<LaptopAssignmentBucket | null>(null);
+	const [otherCategoryFilter, setOtherCategoryFilter] = useState<string | null>(null);
 	const [categoryView, setCategoryView] = useState<LaptopCategoryView>('all');
 	const { items, isLoading, error, updateStatus } = useAssets('laptop');
 
@@ -75,10 +82,13 @@ export function TechnicianLaptopPage() {
 		if (statusFilter === statusId && formFactorFilter === formFactor) {
 			setStatusFilter(null);
 			setFormFactorFilter('all');
+			setOtherCategoryFilter(null);
 			return;
 		}
 		setFormFactorFilter(formFactor);
 		setStatusFilter(statusId);
+		setDivisionFilter(null);
+		setOtherCategoryFilter(null);
 	};
 
 	const handleDivisionMetricClick = (
@@ -88,25 +98,51 @@ export function TechnicianLaptopPage() {
 		if (divisionFilter === division && formFactorFilter === formFactor) {
 			setDivisionFilter(null);
 			setFormFactorFilter('all');
+			setOtherCategoryFilter(null);
 			return;
 		}
 		setFormFactorFilter(formFactor);
 		setDivisionFilter(division);
+		setStatusFilter(null);
+		setOtherCategoryFilter(null);
+	};
+
+	const handleOtherCategoryClick = (category: string) => {
+		if (
+			otherCategoryFilter &&
+			normalizeCategory(otherCategoryFilter) === normalizeCategory(category) &&
+			formFactorFilter === 'other'
+		) {
+			setOtherCategoryFilter(null);
+			setFormFactorFilter('all');
+			return;
+		}
+		setFormFactorFilter('other');
+		setOtherCategoryFilter(category);
+		setStatusFilter(null);
+		setDivisionFilter(null);
+		setCategoryView('all');
 	};
 
 	const filtered = useMemo(() => {
 		const byFormFactor = items.filter((item) => matchesFormFactor(item.category, formFactorFilter));
+		const byOtherCategory =
+			formFactorFilter === 'other' && otherCategoryFilter
+				? byFormFactor.filter(
+						(item) => normalizeCategory(item.category ?? '') === normalizeCategory(otherCategoryFilter),
+					)
+				: byFormFactor;
 		const byDivision =
 			divisionFilter == null
-				? byFormFactor
-				: byFormFactor.filter((item) => matchesAssignmentBucket(item, divisionFilter));
+				? byOtherCategory
+				: byOtherCategory.filter((item) => matchesAssignmentBucket(item, divisionFilter));
 		const byCategory = byDivision.filter((item) => matchesLaptopCategory(item.category, categoryView));
 		const bySearch = filterBySearch(byCategory, search, (c) => c.category ?? '');
 		return filterByStatus(bySearch, statusFilter);
-	}, [items, search, statusFilter, categoryView, formFactorFilter, divisionFilter]);
+	}, [items, search, statusFilter, categoryView, formFactorFilter, divisionFilter, otherCategoryFilter]);
 
 	const pagination = usePagination(filtered, {
-		resetKey: `${search}|${statusFilter ?? ''}|${categoryView}|${formFactorFilter}|${divisionFilter ?? ''}`,
+		resetKey: `${search}|${statusFilter ?? ''}|${categoryView}|${formFactorFilter}|${divisionFilter ?? ''}|${otherCategoryFilter ?? ''}`,
 	});
 
 	const nextCategoryView = nextLaptopCategoryView(categoryView);
@@ -123,8 +159,10 @@ export function TechnicianLaptopPage() {
 				statusFilter={statusFilter}
 				formFactorFilter={formFactorFilter}
 				divisionFilter={divisionFilter}
+				otherCategoryFilter={otherCategoryFilter}
 				onStatusClick={handleStatusMetricClick}
 				onDivisionClick={handleDivisionMetricClick}
+				onOtherCategoryClick={handleOtherCategoryClick}
 			/>
 
 			<div className="mb-4 flex items-center justify-between">
@@ -145,6 +183,7 @@ export function TechnicianLaptopPage() {
 						if (statusId == null) {
 							setFormFactorFilter('all');
 							setDivisionFilter(null);
+							setOtherCategoryFilter(null);
 						}
 					}}
 					leading={
@@ -228,16 +267,18 @@ export function TechnicianLaptopPage() {
 												</Link>
 											</TableCell>
 											<TableCell>
-												{(c.category ?? '').toLowerCase() === 'desktop' ? (
+												{isDesktopCategory(c.category) ? (
 													<span className="inline-flex items-center gap-1.5 text-sm">
 														<Monitor className="h-4 w-4 text-[oklch(0.45_0.12_290)]" />
-														Desktop
+														{c.category}
 													</span>
-												) : (
+												) : isNotebookCategory(c.category) ? (
 													<span className="inline-flex items-center gap-1.5 text-sm">
 														<LaptopIcon className="h-4 w-4 text-[oklch(0.45_0.12_290)]" />
 														{c.category ?? 'Laptop'}
 													</span>
+												) : (
+													<span className="text-sm">{c.category ?? '—'}</span>
 												)}
 											</TableCell>
 											<TableCell className="font-medium text-foreground">{c.model}</TableCell>

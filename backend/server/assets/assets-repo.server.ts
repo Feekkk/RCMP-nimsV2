@@ -36,7 +36,7 @@ import {
 } from '@shared/lib/asset-status-actions';
 import { formatIsoToDdMmYy, parseDdMmYyToIso, sqlDateToIso } from '@shared/lib/date-format';
 import { purchaseSqlParams } from '@shared/lib/purchase-field-utils';
-import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
+import { assetIdNewestYearFirstSql, canonicalizeLaptopCategory } from '@/hooks/assetid-generator';
 import { allocateAssetIdsFromDb } from '@backend/server/assets/asset-id.server';
 import {
   recordAssetPredisposed,
@@ -69,13 +69,18 @@ export type BulkNetworkImportRow = Omit<CreateNetworkInput, 'assetId'> & {
 };
 
 async function fillLaptopAssetIds(rows: BulkLaptopImportRow[]): Promise<BulkLaptopImportRow[]> {
-  const autoCategories = rows.filter((r) => !hasProvidedLaptopAssetId(r.assetId)).map((r) => r.category);
+  const normalized = rows.map((row) => {
+    const category = canonicalizeLaptopCategory(row.category);
+    if (!category) throw new Error('Category is required.');
+    return { ...row, category };
+  });
+  const autoCategories = normalized.filter((r) => !hasProvidedLaptopAssetId(r.assetId)).map((r) => r.category);
   const generated =
     autoCategories.length > 0
       ? await allocateAssetIdsFromDb({ kind: 'laptop', laptopCategories: autoCategories })
       : [];
   let genIdx = 0;
-  return rows.map((row) => {
+  return normalized.map((row) => {
     if (hasProvidedLaptopAssetId(row.assetId)) {
       return row;
     }
@@ -435,6 +440,8 @@ const NETWORK_INSERT = `INSERT INTO network (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function laptopParams(input: CreateLaptopInput) {
+  const category = canonicalizeLaptopCategory(input.category);
+  if (!category) throw new Error('Category is required.');
   return [
     input.assetId,
     input.accCode ?? null,
@@ -442,7 +449,7 @@ function laptopParams(input: CreateLaptopInput) {
     input.brand ?? null,
     input.model ?? null,
     input.supplier ?? null,
-    input.category,
+    category,
     input.partNumber ?? null,
     input.processor ?? null,
     input.memory ?? null,
@@ -782,7 +789,7 @@ const PURCHASE_SET = `PO_DATE = ?, PO_NUM = ?, DO_DATE = ?, DO_NUM = ?, INVOICE_
 
 async function updateLaptopDetails(assetId: AssetId, input: UpdateLaptopInput) {
   const serialNum = input.serialNum.trim();
-  const category = input.category.trim();
+  const category = canonicalizeLaptopCategory(input.category);
   if (!serialNum) throw new Error('Serial number is required.');
   if (!category) throw new Error('Category is required.');
   const purchase = normalizePurchaseForUpdate(input);

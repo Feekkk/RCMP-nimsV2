@@ -382,11 +382,18 @@ function BulkImportWorkspace({
                       </div>
                     );
                   })}
+                  <div className="flex items-center justify-between gap-3 rounded-[8px] border border-border/60 bg-background px-2.5 py-2 text-xs">
+                    <span className="font-medium text-foreground">Others (custom)</span>
+                    <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                      prefix {ASSET_ID_PREFIX.other}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                   Notebook categories use prefix {ASSET_ID_PREFIX.laptop}; desktop categories use prefix{' '}
-                  {ASSET_ID_PREFIX.desktop}. Leave <code className="text-[10px]">asset_id</code> blank to
-                  auto-generate from category, or supply a varchar ID (up to 32 characters).
+                  {ASSET_ID_PREFIX.desktop}; any other category uses prefix {ASSET_ID_PREFIX.other} and is stored in
+                  title case. Leave <code className="text-[10px]">asset_id</code> blank to auto-generate from
+                  category, or supply a varchar ID (up to 32 characters).
                 </p>
               </div>
             ) : null}

@@ -7,6 +7,7 @@ import type { AssetKind } from '@shared/lib/inventory-schema';
 import { getNextAssetIdFn } from '@backend/server/assets/assets.functions';
 
 export const ASSET_ID_PREFIX = {
+  other: 10,
   laptop: 12,
   desktop: 14,
   network: 24,
@@ -18,6 +19,8 @@ export const LAPTOP_NOTEBOOK_CATEGORIES = ['Notebook', 'Notebook standby', 'Leas
 
 /** Categories that use prefix 14 (Desktop). Matched case-insensitively. */
 export const LAPTOP_DESKTOP_CATEGORIES = ['Desktop AIO', 'Desktop IO sharing', 'Leasing Desktop'] as const;
+
+export const LAPTOP_CATEGORY_OTHERS = 'Others';
 
 export const ASSET_ID_SEQUENCE_MIN = 1;
 export const ASSET_ID_SEQUENCE_MAX = 999;
@@ -61,17 +64,60 @@ export function isOwnedDesktopCategory(category: string | null | undefined): boo
   return isDesktopCategory(category) && !isLeasingCategory(category);
 }
 
-export function getLaptopAssetIdPrefix(category: string): typeof ASSET_ID_PREFIX.laptop | typeof ASSET_ID_PREFIX.desktop {
+export function isKnownLaptopCategory(category: string | null | undefined): boolean {
+  return isNotebookCategory(category) || isDesktopCategory(category);
+}
+
+export function isOtherLaptopCategory(category: string | null | undefined): boolean {
+  if (!category?.trim()) return false;
+  return !isKnownLaptopCategory(category);
+}
+
+export function toTitleCaseCategory(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function canonicalizeLaptopCategory(category: string): string {
+  const trimmed = category.trim().replace(/\s+/g, ' ');
+  if (!trimmed) return '';
+  const key = normalizeCategory(trimmed);
+  if (key === normalizeCategory(LAPTOP_CATEGORY_OTHERS)) return '';
+  const known = LAPTOP_CATEGORY_OPTIONS.find((option) => normalizeCategory(option) === key);
+  return known ?? toTitleCaseCategory(trimmed);
+}
+
+export function laptopCategorySelectValue(
+  category: string,
+): (typeof LAPTOP_CATEGORY_OPTIONS)[number] | typeof LAPTOP_CATEGORY_OTHERS {
+  const known = LAPTOP_CATEGORY_OPTIONS.find(
+    (option) => normalizeCategory(option) === normalizeCategory(category),
+  );
+  return known ?? LAPTOP_CATEGORY_OTHERS;
+}
+
+export type LaptopAssetIdPrefix =
+  | typeof ASSET_ID_PREFIX.laptop
+  | typeof ASSET_ID_PREFIX.desktop
+  | typeof ASSET_ID_PREFIX.other;
+
+export function getLaptopAssetIdPrefix(category: string): LaptopAssetIdPrefix {
   const key = normalizeCategory(category);
+  if (!key) {
+    throw new Error('Laptop category is required.');
+  }
   if (categoryInList(LAPTOP_DESKTOP_CATEGORIES, key)) {
     return ASSET_ID_PREFIX.desktop;
   }
   if (categoryInList(LAPTOP_NOTEBOOK_CATEGORIES, key)) {
     return ASSET_ID_PREFIX.laptop;
   }
-  throw new Error(
-    `Unknown laptop category "${category}". Use: Notebook, Notebook standby, Leasing Laptop, Desktop AIO, Desktop IO sharing, or Leasing Desktop.`,
-  );
+  return ASSET_ID_PREFIX.other;
 }
 
 export function getAssetIdYearDigits(date: Date = new Date()): number {
@@ -149,7 +195,7 @@ export function getPrefixForKind(
   switch (kind) {
     case 'laptop':
       if (!options?.category?.trim()) {
-        throw new Error('Laptop asset ID requires a category to choose prefix 12 or 14');
+        throw new Error('Laptop asset ID requires a category to choose prefix 12, 14, or 10');
       }
       return getLaptopAssetIdPrefix(options.category);
     case 'network':
@@ -200,6 +246,11 @@ export function buildSequentialAssetIds(
 export const LAPTOP_CATEGORY_OPTIONS = [
   ...LAPTOP_NOTEBOOK_CATEGORIES,
   ...LAPTOP_DESKTOP_CATEGORIES,
+] as const;
+
+export const LAPTOP_CATEGORY_SELECT_OPTIONS = [
+  ...LAPTOP_CATEGORY_OPTIONS,
+  LAPTOP_CATEGORY_OTHERS,
 ] as const;
 
 /** Fetches the next asset_id from DB (single add-asset). Re-runs when kind or laptop category changes. */
