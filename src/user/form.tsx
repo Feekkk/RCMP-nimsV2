@@ -9,7 +9,7 @@ import {
   FileText,
   Laptop,
   ListChecks,
-  MessageCircleHeart,
+  Heart,
   Mic,
   Minus,
   Monitor,
@@ -240,28 +240,17 @@ export function UserRequestFormPage() {
             email was sent to you and ITD when notifications are enabled.
           </p>
 
-          <div className="mt-10 rounded-[12px] border border-border/80 bg-muted/40 px-5 py-6 text-left">
-            <div className="flex gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lavender/15 text-[oklch(0.45_0.12_290)]">
-                <MessageCircleHeart className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">Got a minute?</p>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Your experience helps the IT Department improve equipment requests and support for everyone
-                  on campus. A short note goes a long way. Thank you.
-                </p>
-                <Button
-                  className="mt-4 w-full rounded-[8px] sm:w-auto"
-                  onClick={() => {
-                    window.location.href = 'https://itd.rcmp.edu.my/feedback';
-                  }}
-                >
-                  <MessageCircleHeart className="mr-2 h-4 w-4" />
-                  Share feedback
-                </Button>
-              </div>
-            </div>
+          <div className="mt-10 flex items-center justify-between rounded-full border border-foreground/10 bg-foreground px-5 py-2.5">
+            <p className="text-sm font-bold text-background">What do you think</p>
+            <a
+              href="https://itd.rcmp.edu.my/feedback"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Share feedback"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-background/80 text-background transition-colors hover:bg-background/10"
+            >
+              <Heart className="h-4 w-4" strokeWidth={1.75} />
+            </a>
           </div>
         </div>
         <Toaster />

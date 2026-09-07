@@ -1145,6 +1145,8 @@ export function TechnicianRequestPage() {
                 type="button"
                 size="sm"
                 className="gap-1.5 rounded-[8px] bg-emerald-600 text-white hover:bg-emerald-600/90 dark:bg-emerald-700 dark:hover:bg-emerald-700/90"
+                disabled={checkoutRequestId === req.requestId}
+                onClick={() => void handleCheckoutRequest(req)}
               >
                 {checkoutRequestId === req.requestId
                   ? 'Checking out…'
