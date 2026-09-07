@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -34,120 +34,32 @@ import {
 } from '@/components/ui/table';
 import { DisposalUnitShell } from '@/disposal-unit/disposal-unit-shell';
 import { isoToLocalDate } from '@shared/lib/date-format';
+import {
+  ACC_CODE_OPTIONS,
+  ASSET_KIND_LABEL,
+  formatAccCodeDisplay,
+  type AssetKind,
+} from '@shared/lib/inventory-schema';
+import type { PreDisposedAsset } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
-import { DatePickerField } from '@/technician/deploy-return-fields';
+import { usePagination } from '@/hooks/use-pagination';
+import { AssetTablePagination } from '@/technician/asset-table-pagination';
+import { listDisposalQueueAssetsFn } from '@backend/server/assets/assets.functions';
 
-type ProposedAsset = {
-  id: string;
-  assetLabel: string;
-  category: string;
-  assetId: string;
-  assetIdOld: string | null;
-  serialNum: string;
-  proposedBy: string;
-  proposedAt: string;
-};
+type KindFilter = 'all' | AssetKind;
+type AccCodeFilter = 'all' | string;
 
-const INITIAL_ROWS: ProposedAsset[] = [
-  {
-    id: '1',
-    assetLabel: 'Dell Latitude 5520',
-    category: 'Laptop / Desktop',
-    assetId: '1226001',
-    assetIdOld: null,
-    serialNum: 'DL5520-88421',
-    proposedBy: 'Ahmad Rizal',
-    proposedAt: '2026-08-11',
-  },
-  {
-    id: '2',
-    assetLabel: 'Cisco Catalyst 2960',
-    category: 'Network',
-    assetId: '2426003',
-    assetIdOld: null,
-    serialNum: 'FCW2134L0AB',
-    proposedBy: 'Siti Nurhaliza',
-    proposedAt: '2026-08-09',
-  },
-  {
-    id: '3',
-    assetLabel: 'Epson EB-X06 Projector',
-    category: 'AV',
-    assetId: '8826001',
-    assetIdOld: 'AV-2019-044',
-    serialNum: 'X06-77291',
-    proposedBy: 'Lim Wei Jie',
-    proposedAt: '2026-08-08',
-  },
-  {
-    id: '4',
-    assetLabel: 'Ubiquiti UniFi AP AC Pro',
-    category: 'Network',
-    assetId: '2426008',
-    assetIdOld: null,
-    serialNum: 'FCEC1234ABCD',
-    proposedBy: 'Ahmad Rizal',
-    proposedAt: '2026-08-01',
-  },
-  {
-    id: '5',
-    assetLabel: 'HP ProBook 450 G8',
-    category: 'Laptop / Desktop',
-    assetId: '1226014',
-    assetIdOld: null,
-    serialNum: '5CD1234ABC',
-    proposedBy: 'Nur Aisyah',
-    proposedAt: '2026-07-29',
-  },
-  {
-    id: '6',
-    assetLabel: 'Logitech Meetup Camera',
-    category: 'AV',
-    assetId: '8826006',
-    assetIdOld: 'AV-2021-118',
-    serialNum: 'LM-20441',
-    proposedBy: 'Lim Wei Jie',
-    proposedAt: '2026-07-22',
-  },
-  {
-    id: '7',
-    assetLabel: 'TP-Link Archer C7',
-    category: 'Network',
-    assetId: '2426011',
-    assetIdOld: null,
-    serialNum: 'TP-C7-9912',
-    proposedBy: 'Siti Nurhaliza',
-    proposedAt: '2026-07-18',
-  },
-];
-
-const CATEGORIES = ['all', 'Laptop / Desktop', 'AV', 'Network'] as const;
-
-function startOfDayMs(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+function assetKey(kind: AssetKind, assetId: number) {
+  return `${kind}:${assetId}`;
 }
 
-function endOfDayMs(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).getTime();
+function formatAssetName(asset: PreDisposedAsset) {
+  const name = [asset.brand, asset.model].filter(Boolean).join(' ').trim();
+  return name || '—';
 }
 
-function matchesDateFilter(isoDate: string, fromIso: string, toIso: string) {
-  if (!fromIso && !toIso) return true;
-  const event = isoToLocalDate(isoDate);
-  if (!event) return false;
-  const eventMs = event.getTime();
-  if (fromIso) {
-    const from = isoToLocalDate(fromIso);
-    if (from && eventMs < startOfDayMs(from)) return false;
-  }
-  if (toIso) {
-    const to = isoToLocalDate(toIso);
-    if (to && eventMs > endOfDayMs(to)) return false;
-  }
-  return true;
-}
-
-function formatDate(value: string) {
+function formatDate(value: string | null) {
+  if (!value) return '—';
   const date = isoToLocalDate(value);
   if (!date) return value;
   return new Intl.DateTimeFormat(undefined, {
@@ -157,13 +69,13 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-function categoryBadgeClassName(category: string) {
-  switch (category) {
-    case 'Laptop / Desktop':
+function categoryBadgeClassName(kind: AssetKind) {
+  switch (kind) {
+    case 'laptop':
       return 'border-violet-200 bg-violet-50 font-medium text-violet-800 hover:bg-violet-50';
-    case 'AV':
+    case 'av':
       return 'border-amber-200 bg-amber-50 font-medium text-amber-900 hover:bg-amber-50';
-    case 'Network':
+    case 'network':
       return 'border-sky-200 bg-sky-50 font-medium text-sky-800 hover:bg-sky-50';
     default:
       return 'border-border bg-muted/40 font-medium text-muted-foreground';
@@ -171,50 +83,75 @@ function categoryBadgeClassName(category: string) {
 }
 
 export function DisposalUnitDisposalPage() {
-  const [rows, setRows] = useState(INITIAL_ROWS);
+  const [rows, setRows] = useState<PreDisposedAsset[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [category, setCategory] = useState<KindFilter>('all');
+  const [accCode, setAccCode] = useState<AccCodeFilter>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const dateRangeInvalid = useMemo(() => {
-    if (!dateFrom || !dateTo) return false;
-    const from = isoToLocalDate(dateFrom);
-    const to = isoToLocalDate(dateTo);
-    return Boolean(from && to && from > to);
-  }, [dateFrom, dateTo]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const assets = await listDisposalQueueAssetsFn();
+      setRows(assets);
+      setSelected(new Set());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load pre-disposed assets');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const filtered = useMemo(() => {
-    if (dateRangeInvalid) return [];
     const q = search.trim().toLowerCase();
     return rows.filter((row) => {
-      if (category !== 'all' && row.category !== category) return false;
-      if (!matchesDateFilter(row.proposedAt, dateFrom, dateTo)) return false;
+      if (category !== 'all' && row.kind !== category) return false;
+      if (accCode !== 'all' && (row.accCode ?? '') !== accCode) return false;
       if (!q) return true;
-      return [row.assetLabel, row.assetId, row.assetIdOld ?? '', row.serialNum, row.proposedBy]
+      return [
+        formatAssetName(row),
+        String(row.assetId),
+        row.assetIdOld ?? '',
+        row.serialNum ?? '',
+        row.predisposedBy ?? '',
+        ASSET_KIND_LABEL[row.kind],
+        row.category ?? '',
+        row.accCode ?? '',
+        formatAccCodeDisplay(row.accCode) ?? '',
+      ]
         .join(' ')
         .toLowerCase()
         .includes(q);
     });
-  }, [rows, search, category, dateFrom, dateTo, dateRangeInvalid]);
+  }, [rows, search, category, accCode]);
+
+  const pagination = usePagination(filtered, {
+    resetKey: `${search}|${category}|${accCode}|${filtered.length}`,
+  });
 
   const allFilteredSelected =
-    filtered.length > 0 && filtered.every((row) => selected.has(row.id));
+    filtered.length > 0 &&
+    filtered.every((row) => selected.has(assetKey(row.kind, row.assetId)));
   const someFilteredSelected =
-    filtered.some((row) => selected.has(row.id)) && !allFilteredSelected;
+    filtered.some((row) => selected.has(assetKey(row.kind, row.assetId))) &&
+    !allFilteredSelected;
 
   const selectedRows = useMemo(
-    () => rows.filter((row) => selected.has(row.id)),
+    () => rows.filter((row) => selected.has(assetKey(row.kind, row.assetId))),
     [rows, selected],
   );
 
-  const toggleOne = (id: string, next: boolean) => {
+  const toggleOne = (key: string, next: boolean) => {
     setSelected((prev) => {
       const copy = new Set(prev);
-      if (next) copy.add(id);
-      else copy.delete(id);
+      if (next) copy.add(key);
+      else copy.delete(key);
       return copy;
     });
   };
@@ -223,8 +160,9 @@ export function DisposalUnitDisposalPage() {
     setSelected((prev) => {
       const copy = new Set(prev);
       for (const row of filtered) {
-        if (next) copy.add(row.id);
-        else copy.delete(row.id);
+        const key = assetKey(row.kind, row.assetId);
+        if (next) copy.add(key);
+        else copy.delete(key);
       }
       return copy;
     });
@@ -232,7 +170,7 @@ export function DisposalUnitDisposalPage() {
 
   const handleBatchDispose = () => {
     const count = selected.size;
-    setRows((prev) => prev.filter((row) => !selected.has(row.id)));
+    setRows((prev) => prev.filter((row) => !selected.has(assetKey(row.kind, row.assetId))));
     setSelected(new Set());
     setConfirmOpen(false);
     toast.success(`${count} asset${count === 1 ? '' : 's'} marked as disposed`);
@@ -245,10 +183,11 @@ export function DisposalUnitDisposalPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Disposal</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {filtered.length} proposed asset{filtered.length === 1 ? '' : 's'}
-            {filtered.length !== rows.length ? ` of ${rows.length}` : ''}
-            {' · '}
-            Select assets to dispose in batch
+            {loading
+              ? 'Loading pre-disposed assets…'
+              : `${filtered.length} pre-disposed asset${filtered.length === 1 ? '' : 's'}${
+                  filtered.length !== rows.length ? ` of ${rows.length}` : ''
+                } · Select assets to dispose in batch`}
           </p>
         </div>
         <Button
@@ -264,7 +203,7 @@ export function DisposalUnitDisposalPage() {
 
       <Card className="shrink-0 rounded-[14px] border-border shadow-sm">
         <CardContent className="space-y-3 p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(10rem,0.85fr)_minmax(10rem,0.85fr)_minmax(10rem,0.85fr)] xl:items-end">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(12rem,0.85fr)_minmax(14rem,1fr)] xl:items-end">
             <div className="min-w-0 space-y-1.5">
               <Label className="text-xs text-muted-foreground">Search</Label>
               <div className="relative">
@@ -281,30 +220,36 @@ export function DisposalUnitDisposalPage() {
               <Label className="text-xs text-muted-foreground">Category</Label>
               <Select
                 value={category}
-                onValueChange={(v) => setCategory(v as (typeof CATEGORIES)[number])}
+                onValueChange={(v) => setCategory(v as KindFilter)}
               >
                 <SelectTrigger className="h-10 w-full rounded-[8px] border-border bg-background shadow-none">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All categories</SelectItem>
-                  <SelectItem value="Laptop / Desktop">Laptop / Desktop</SelectItem>
-                  <SelectItem value="AV">AV</SelectItem>
-                  <SelectItem value="Network">Network</SelectItem>
+                  <SelectItem value="laptop">{ASSET_KIND_LABEL.laptop}</SelectItem>
+                  <SelectItem value="av">{ASSET_KIND_LABEL.av}</SelectItem>
+                  <SelectItem value="network">{ASSET_KIND_LABEL.network}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="min-w-0 [&_button]:border-border [&_button]:shadow-none [&_label]:text-muted-foreground [&_.space-y-2]:space-y-1.5">
-              <DatePickerField label="From date" value={dateFrom} onChange={setDateFrom} />
-            </div>
-            <div className="min-w-0 [&_button]:border-border [&_button]:shadow-none [&_label]:text-muted-foreground [&_.space-y-2]:space-y-1.5">
-              <DatePickerField label="To date" value={dateTo} onChange={setDateTo} />
+            <div className="min-w-0 space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Account code</Label>
+              <Select value={accCode} onValueChange={(v) => setAccCode(v as AccCodeFilter)}>
+                <SelectTrigger className="h-10 w-full rounded-[8px] border-border bg-background shadow-none">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All account codes</SelectItem>
+                  {ACC_CODE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.value} ({opt.label})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-
-          {dateRangeInvalid ? (
-            <p className="text-xs text-destructive">End date must be on or after start date.</p>
-          ) : null}
         </CardContent>
       </Card>
 
@@ -336,7 +281,8 @@ export function DisposalUnitDisposalPage() {
       ) : null}
 
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border-border shadow-sm">
-        <CardContent className="min-h-0 flex-1 overflow-auto p-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+          <div className="min-h-0 flex-1 overflow-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -357,39 +303,47 @@ export function DisposalUnitDisposalPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
+                    Loading…
+                  </TableCell>
+                </TableRow>
+              ) : pagination.paginatedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
                     {rows.length === 0
-                      ? 'No assets proposed for disposal.'
+                      ? 'No pre-disposed assets in the disposal queue.'
                       : 'No assets match your filters.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((row) => {
-                  const isSelected = selected.has(row.id);
+                pagination.paginatedItems.map((row) => {
+                  const key = assetKey(row.kind, row.assetId);
+                  const isSelected = selected.has(key);
+                  const label = formatAssetName(row);
                   return (
                     <TableRow
-                      key={row.id}
+                      key={key}
                       className={cn('cursor-pointer', isSelected && 'bg-lavender/5')}
-                      onClick={() => toggleOne(row.id, !isSelected)}
+                      onClick={() => toggleOne(key, !isSelected)}
                     >
                       <TableCell className="px-4 py-3 sm:px-5" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={isSelected}
-                          onCheckedChange={(v) => toggleOne(row.id, v === true)}
-                          aria-label={`Select ${row.assetLabel}`}
+                          onCheckedChange={(v) => toggleOne(key, v === true)}
+                          aria-label={`Select ${label}`}
                         />
                       </TableCell>
                       <TableCell className="px-4 py-3 font-medium text-foreground">
-                        {row.assetLabel}
+                        {label}
                       </TableCell>
                       <TableCell className="px-4 py-3">
                         <Badge
                           variant="outline"
-                          className={cn('rounded-[6px]', categoryBadgeClassName(row.category))}
+                          className={cn('rounded-[6px]', categoryBadgeClassName(row.kind))}
                         >
-                          {row.category}
+                          {ASSET_KIND_LABEL[row.kind]}
                         </Badge>
                       </TableCell>
                       <TableCell className="px-4 py-3">
@@ -399,11 +353,13 @@ export function DisposalUnitDisposalPage() {
                         ) : null}
                       </TableCell>
                       <TableCell className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {row.serialNum}
+                        {row.serialNum ?? '—'}
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">{row.proposedBy}</TableCell>
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {row.predisposedBy ?? '—'}
+                      </TableCell>
                       <TableCell className="px-4 py-3 text-muted-foreground sm:px-5">
-                        {formatDate(row.proposedAt)}
+                        {formatDate(row.predisposedAt)}
                       </TableCell>
                     </TableRow>
                   );
@@ -411,6 +367,20 @@ export function DisposalUnitDisposalPage() {
               )}
             </TableBody>
           </Table>
+          </div>
+          {!loading ? (
+            <AssetTablePagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              pageSize={pagination.pageSize}
+              rangeStart={pagination.rangeStart}
+              rangeEnd={pagination.rangeEnd}
+              totalItems={pagination.totalItems}
+              totalLoaded={filtered.length}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
+          ) : null}
         </CardContent>
       </Card>
       </div>
@@ -427,8 +397,10 @@ export function DisposalUnitDisposalPage() {
           {selectedRows.length > 0 ? (
             <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-[10px] border border-border bg-muted/30 p-3 text-sm">
               {selectedRows.map((row) => (
-                <li key={row.id} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate font-medium text-foreground">{row.assetLabel}</span>
+                <li key={assetKey(row.kind, row.assetId)} className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate font-medium text-foreground">
+                    {formatAssetName(row)}
+                  </span>
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">{row.assetId}</span>
                 </li>
               ))}

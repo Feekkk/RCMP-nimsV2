@@ -13,6 +13,7 @@ export type PredisposalEligibleAsset = {
 };
 
 export type PreDisposedAsset = PredisposalEligibleAsset & {
+  accCode: string | null;
   predisposedAt: string | null;
   predisposedBy: string | null;
 };

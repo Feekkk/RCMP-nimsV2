@@ -934,6 +934,7 @@ export async function listPredisposalEligibleAssets(): Promise<PredisposalEligib
 }
 
 type PreDisposedQueryRow = PredisposalRow & {
+  acc_code: string | null;
   predisposed_at: Date | string | null;
   predisposed_email: string | null;
   predisposed_oid: string | null;
@@ -954,7 +955,7 @@ async function queryPreDisposedAssets(
   const pool = getDbPool();
   const table = TABLE_BY_KIND[kind];
   const [rows] = await pool.query<PreDisposedQueryRow[]>(
-    `SELECT a.asset_id, ${extraSelect} a.model, a.brand, a.category, a.serial_num, a.status_id, a.PO_DATE,
+    `SELECT a.asset_id, ${extraSelect} a.acc_code, a.model, a.brand, a.category, a.serial_num, a.status_id, a.PO_DATE,
             di.predisposed_at, u.email AS predisposed_email, u.oid AS predisposed_oid
      FROM \`${table}\` a
      LEFT JOIN disposal_item di
@@ -980,6 +981,7 @@ function mapPreDisposedRow(r: PreDisposedQueryRow & { kind: AssetKind }): PreDis
     serialNum: r.serial_num,
     statusId: r.status_id,
     poDate: formatDate(r.PO_DATE),
+    accCode: r.acc_code ?? null,
     predisposedAt: formatDateTimeIso(r.predisposed_at),
     predisposedBy: r.predisposed_name?.trim() || r.predisposed_email?.trim() || null,
   };
