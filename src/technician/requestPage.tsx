@@ -89,30 +89,91 @@ import {
 import { RequestReturnFields } from '@/technician/request-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 
-function poolAssetLabel(a: RequestPoolAsset): string {
-  const ids = [`#${a.assetId}`, a.assetIdOld].filter(Boolean);
-  if (a.kind === 'laptop') {
-    return [...ids, a.model, a.brand].filter(Boolean).join(' · ');
-  }
-  return [...ids, a.category, a.brand].filter(Boolean).join(' · ');
+function whatsappChatHref(phone: string): string | null {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 8) return null;
+  const international = digits.startsWith('0') ? `60${digits.slice(1)}` : digits;
+  return `https://wa.me/${international}`;
+}
+
+function outlookComposeHref(email: string): string {
+  return `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(email)}`;
+}
+
+function RequesterContactLinks({ email, phone }: { email: string; phone: string | null }) {
+  const whatsappHref = phone ? whatsappChatHref(phone) : null;
+  if (!email && !phone) return null;
+  return (
+    <p className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+      {email ? (
+        <a
+          href={outlookComposeHref(email)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline-offset-2 hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {email}
+        </a>
+      ) : null}
+      {phone ? (
+        whatsappHref ? (
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline-offset-2 hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {phone}
+          </a>
+        ) : (
+          <span className="text-muted-foreground">{phone}</span>
+        )
+      ) : null}
+    </p>
+  );
 }
 
 function slotMarkLabel(mark: RequestSlotMark): string {
   return mark === 'not_taken' ? 'Not taken' : 'Unavailable';
 }
 
-function bookedAssetLabel(a: RequestAssignmentRow): string {
-  if (a.slotMark) return slotMarkLabel(a.slotMark);
-  const kind = a.kind === 'laptop' ? 'Laptop' : 'AV';
-  return [
-    kind,
-    a.assetId != null ? `#${a.assetId}` : null,
-    a.assetIdOld,
-    a.model,
-    a.brand,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+function poolAssetSearchText(a: {
+  assetId: number | null;
+  assetIdOld: string | null;
+  category?: string | null;
+  brand: string | null;
+  model: string | null;
+}): string {
+  return [a.assetId, a.assetIdOld, a.category, a.brand, a.model].filter(Boolean).join(' ');
+}
+
+function PoolAssetSelectDetails({
+  assetId,
+  assetIdOld,
+  category,
+  brand,
+  model,
+}: {
+  assetId: number | string | null;
+  assetIdOld: string | null;
+  category?: string | null;
+  brand: string | null;
+  model: string | null;
+}) {
+  const meta = [category, brand, model].filter(Boolean).join(' · ');
+  return (
+    <div className="min-w-0 text-left">
+      <p className="font-mono text-xs leading-tight">{assetId ?? '—'}</p>
+      {assetIdOld ? (
+        <p className="text-[10px] leading-tight text-muted-foreground">{assetIdOld}</p>
+      ) : null}
+      {meta ? (
+        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{meta}</p>
+      ) : null}
+    </div>
+  );
 }
 
 function bookedAwaitingCheckout(req: PendingRequest): RequestAssignmentRow[] {
@@ -705,10 +766,6 @@ export function TechnicianRequestPage() {
           />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{req.requesterName}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {req.requesterEmail}
-              {req.requesterPhone ? ` · ${req.requesterPhone}` : ''}
-            </p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               {totalCheckedOut}/{totalNeeded} checked out
               {daysLeft != null &&
@@ -746,6 +803,7 @@ export function TechnicianRequestPage() {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border px-4 py-4">
+          <RequesterContactLinks email={req.requesterEmail} phone={req.requesterPhone} />
           <p className="mb-3 text-xs text-muted-foreground">
             {formatDateLabel(req.borrowDate)} → {formatDateLabel(req.returnDate)} · {req.programType}{' '}
             · {req.usageLocation}
@@ -839,12 +897,22 @@ export function TechnicianRequestPage() {
                                   }
                                   onValueChange={(v) => void handleChangeBooked(a, v)}
                                 >
-                                  <SelectTrigger className="h-8 max-w-md rounded-[6px] text-xs">
+                                  <SelectTrigger className="h-auto min-h-8 max-w-md rounded-[6px] py-1.5 text-xs [&>span]:line-clamp-none">
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value={`${a.kind}:${a.assetId}`}>
-                                      {bookedAssetLabel(a)} (current)
+                                  <SelectContent className="min-w-[min(100vw-2rem,22rem)]">
+                                    <SelectItem
+                                      value={`${a.kind}:${a.assetId}`}
+                                      textValue={poolAssetSearchText(a)}
+                                      className="items-start py-2"
+                                    >
+                                      <PoolAssetSelectDetails
+                                        assetId={a.assetId}
+                                        assetIdOld={a.assetIdOld}
+                                        category={null}
+                                        brand={a.brand}
+                                        model={a.model}
+                                      />
                                     </SelectItem>
                                     {options
                                       .filter(
@@ -854,20 +922,34 @@ export function TechnicianRequestPage() {
                                         <SelectItem
                                           key={`${p.kind}-${p.assetId}`}
                                           value={`${p.kind}:${p.assetId}`}
+                                          textValue={poolAssetSearchText(p)}
+                                          className="items-start py-2"
                                         >
-                                          {poolAssetLabel(p)}
+                                          <PoolAssetSelectDetails
+                                            assetId={p.assetId}
+                                            assetIdOld={p.assetIdOld}
+                                            category={p.category}
+                                            brand={p.brand}
+                                            model={p.model}
+                                          />
                                         </SelectItem>
                                       ))}
                                   </SelectContent>
                                 </Select>
                               ) : (
-                                <span className="inline-flex items-center gap-1.5 text-sm">
+                                <span className="inline-flex items-start gap-1.5 text-sm">
                                   {a.kind === 'laptop' ? (
-                                    <Laptop className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                    <Laptop className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                   ) : (
-                                    <Tv className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                    <Tv className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                   )}
-                                  {bookedAssetLabel(a)}
+                                  <PoolAssetSelectDetails
+                                    assetId={a.assetId}
+                                    assetIdOld={a.assetIdOld}
+                                    category={null}
+                                    brand={a.brand}
+                                    model={a.model}
+                                  />
                                 </span>
                               )}
                             </TableCell>
@@ -945,14 +1027,14 @@ export function TechnicianRequestPage() {
                                 disabled={actionKey === bookKey}
                                 onValueChange={(v) => void handleBookOnSelect(req, group, v)}
                               >
-                                <SelectTrigger className="h-8 max-w-md rounded-[6px] text-xs">
+                                <SelectTrigger className="h-auto min-h-8 max-w-md rounded-[6px] py-1.5 text-xs [&>span]:line-clamp-none">
                                   <SelectValue
                                     placeholder={
                                       actionKey === bookKey ? 'Booking…' : 'Select asset…'
                                     }
                                   />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="min-w-[min(100vw-2rem,22rem)]">
                                   {options.length === 0 ? (
                                     <SelectItem value="_none" disabled>
                                       No assets in pool
@@ -962,8 +1044,16 @@ export function TechnicianRequestPage() {
                                       <SelectItem
                                         key={`${poolAsset.kind}-${poolAsset.assetId}`}
                                         value={`${poolAsset.kind}:${poolAsset.assetId}`}
+                                        textValue={poolAssetSearchText(poolAsset)}
+                                        className="items-start py-2"
                                       >
-                                        {poolAssetLabel(poolAsset)}
+                                        <PoolAssetSelectDetails
+                                          assetId={poolAsset.assetId}
+                                          assetIdOld={poolAsset.assetIdOld}
+                                          category={poolAsset.category}
+                                          brand={poolAsset.brand}
+                                          model={poolAsset.model}
+                                        />
                                       </SelectItem>
                                     ))
                                   )}
