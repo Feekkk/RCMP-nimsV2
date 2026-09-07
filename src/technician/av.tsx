@@ -33,7 +33,6 @@ export function TechnicianAvPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [stockFilter, setStockFilter] = useState<AssetStockBreakdownFilter | null>(null);
-  const [showLegacyIdColumn, setShowLegacyIdColumn] = useState(false);
   const [placeColumnView, setPlaceColumnView] = useState<PlaceColumnView>('place');
   const { items, isLoading, error, updateStatus } = useAssets('av');
 
@@ -114,16 +113,7 @@ export function TechnicianAvPage() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
-                  <TableHead className="whitespace-nowrap font-semibold">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 rounded-[6px] px-1 -mx-1 text-left hover:text-foreground hover:underline underline-offset-2"
-                      title={showLegacyIdColumn ? 'Show current asset ID' : 'Show legacy asset ID'}
-                      onClick={() => setShowLegacyIdColumn((v) => !v)}
-                    >
-                      {showLegacyIdColumn ? 'Legacy ID' : 'ID'}
-                    </button>
-                  </TableHead>
+                  <TableHead className="whitespace-nowrap font-semibold">ID</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Category</TableHead>
                   <TableHead className="min-w-[180px] font-semibold">Model</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Brand</TableHead>
@@ -147,12 +137,7 @@ export function TechnicianAvPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pagination.paginatedItems.map((item) => {
-                    const displayId = showLegacyIdColumn
-                      ? item.assetIdOld ?? '—'
-                      : String(item.assetId);
-
-                    return (
+                  pagination.paginatedItems.map((item) => (
                     <TableRow
                       key={item.assetId}
                       className="cursor-pointer hover:bg-muted/50"
@@ -170,8 +155,11 @@ export function TechnicianAvPage() {
                           className="text-primary underline-offset-2 hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <code className="text-xs">{displayId}</code>
+                          <code className="text-xs">{item.assetId}</code>
                         </Link>
+                        {item.assetIdOld ? (
+                          <p className="text-[10px] text-muted-foreground">{item.assetIdOld}</p>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5 text-sm">
@@ -198,8 +186,7 @@ export function TechnicianAvPage() {
                         />
                       </TableCell>
                     </TableRow>
-                    );
-                  })
+                  ))
                 )}
               </TableBody>
             </Table>

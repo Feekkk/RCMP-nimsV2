@@ -41,10 +41,11 @@ type ProposedAsset = {
   id: string;
   assetLabel: string;
   category: string;
+  assetId: string;
+  assetIdOld: string | null;
   serialNum: string;
   proposedBy: string;
   proposedAt: string;
-  reason: string;
 };
 
 const INITIAL_ROWS: ProposedAsset[] = [
@@ -52,64 +53,71 @@ const INITIAL_ROWS: ProposedAsset[] = [
     id: '1',
     assetLabel: 'Dell Latitude 5520',
     category: 'Laptop / Desktop',
+    assetId: '1226001',
+    assetIdOld: null,
     serialNum: 'DL5520-88421',
     proposedBy: 'Ahmad Rizal',
     proposedAt: '2026-08-11',
-    reason: 'End of life / beyond repair',
   },
   {
     id: '2',
     assetLabel: 'Cisco Catalyst 2960',
     category: 'Network',
+    assetId: '2426003',
+    assetIdOld: null,
     serialNum: 'FCW2134L0AB',
     proposedBy: 'Siti Nurhaliza',
     proposedAt: '2026-08-09',
-    reason: 'Obsolete hardware',
   },
   {
     id: '3',
     assetLabel: 'Epson EB-X06 Projector',
     category: 'AV',
+    assetId: '8826001',
+    assetIdOld: 'AV-2019-044',
     serialNum: 'X06-77291',
     proposedBy: 'Lim Wei Jie',
     proposedAt: '2026-08-08',
-    reason: 'Damaged optics',
   },
   {
     id: '4',
     assetLabel: 'Ubiquiti UniFi AP AC Pro',
     category: 'Network',
+    assetId: '2426008',
+    assetIdOld: null,
     serialNum: 'FCEC1234ABCD',
     proposedBy: 'Ahmad Rizal',
     proposedAt: '2026-08-01',
-    reason: 'Replaced by newer model',
   },
   {
     id: '5',
     assetLabel: 'HP ProBook 450 G8',
     category: 'Laptop / Desktop',
+    assetId: '1226014',
+    assetIdOld: null,
     serialNum: '5CD1234ABC',
     proposedBy: 'Nur Aisyah',
     proposedAt: '2026-07-29',
-    reason: 'Battery swollen',
   },
   {
     id: '6',
     assetLabel: 'Logitech Meetup Camera',
     category: 'AV',
+    assetId: '8826006',
+    assetIdOld: 'AV-2021-118',
     serialNum: 'LM-20441',
     proposedBy: 'Lim Wei Jie',
     proposedAt: '2026-07-22',
-    reason: 'Faulty microphone array',
   },
   {
     id: '7',
     assetLabel: 'TP-Link Archer C7',
     category: 'Network',
+    assetId: '2426011',
+    assetIdOld: null,
     serialNum: 'TP-C7-9912',
     proposedBy: 'Siti Nurhaliza',
     proposedAt: '2026-07-18',
-    reason: 'End of support',
   },
 ];
 
@@ -149,6 +157,19 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+function categoryBadgeClassName(category: string) {
+  switch (category) {
+    case 'Laptop / Desktop':
+      return 'border-violet-200 bg-violet-50 font-medium text-violet-800 hover:bg-violet-50';
+    case 'AV':
+      return 'border-amber-200 bg-amber-50 font-medium text-amber-900 hover:bg-amber-50';
+    case 'Network':
+      return 'border-sky-200 bg-sky-50 font-medium text-sky-800 hover:bg-sky-50';
+    default:
+      return 'border-border bg-muted/40 font-medium text-muted-foreground';
+  }
+}
+
 export function DisposalUnitDisposalPage() {
   const [rows, setRows] = useState(INITIAL_ROWS);
   const [search, setSearch] = useState('');
@@ -172,7 +193,7 @@ export function DisposalUnitDisposalPage() {
       if (category !== 'all' && row.category !== category) return false;
       if (!matchesDateFilter(row.proposedAt, dateFrom, dateTo)) return false;
       if (!q) return true;
-      return [row.assetLabel, row.serialNum, row.proposedBy, row.reason]
+      return [row.assetLabel, row.assetId, row.assetIdOld ?? '', row.serialNum, row.proposedBy]
         .join(' ')
         .toLowerCase()
         .includes(q);
@@ -249,7 +270,7 @@ export function DisposalUnitDisposalPage() {
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Asset, serial, reason…"
+                  placeholder="Asset, ID, legacy ID, serial…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-10 rounded-[8px] border-border bg-background pl-9 shadow-none"
@@ -329,8 +350,8 @@ export function DisposalUnitDisposalPage() {
                 </TableHead>
                 <TableHead className="h-11 px-4">Asset</TableHead>
                 <TableHead className="h-11 px-4">Category</TableHead>
+                <TableHead className="h-11 px-4">Asset ID</TableHead>
                 <TableHead className="h-11 px-4">Serial</TableHead>
-                <TableHead className="h-11 px-4">Reason</TableHead>
                 <TableHead className="h-11 px-4">Proposed by</TableHead>
                 <TableHead className="h-11 px-4 sm:px-5">Date</TableHead>
               </TableRow>
@@ -366,16 +387,19 @@ export function DisposalUnitDisposalPage() {
                       <TableCell className="px-4 py-3">
                         <Badge
                           variant="outline"
-                          className="rounded-[6px] border-border bg-muted/40 font-medium text-muted-foreground"
+                          className={cn('rounded-[6px]', categoryBadgeClassName(row.category))}
                         >
                           {row.category}
                         </Badge>
                       </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <code className="text-xs">{row.assetId}</code>
+                        {row.assetIdOld ? (
+                          <p className="text-[10px] text-muted-foreground">{row.assetIdOld}</p>
+                        ) : null}
+                      </TableCell>
                       <TableCell className="px-4 py-3 font-mono text-xs text-muted-foreground">
                         {row.serialNum}
-                      </TableCell>
-                      <TableCell className="max-w-[14rem] px-4 py-3 text-muted-foreground">
-                        <span className="line-clamp-2">{row.reason}</span>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-muted-foreground">{row.proposedBy}</TableCell>
                       <TableCell className="px-4 py-3 text-muted-foreground sm:px-5">
@@ -405,7 +429,7 @@ export function DisposalUnitDisposalPage() {
               {selectedRows.map((row) => (
                 <li key={row.id} className="flex items-center justify-between gap-3">
                   <span className="min-w-0 truncate font-medium text-foreground">{row.assetLabel}</span>
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">{row.serialNum}</span>
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">{row.assetId}</span>
                 </li>
               ))}
             </ul>
