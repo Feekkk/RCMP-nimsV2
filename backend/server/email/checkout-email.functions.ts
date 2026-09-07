@@ -9,3 +9,12 @@ export const sendCheckoutEmailFn = createServerFn({ method: 'POST' })
     const { sendCheckoutEmail } = await import('@backend/server/email/checkout-email.server');
     return sendCheckoutEmail(input);
   });
+
+export const queueCheckoutEmailFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
+  .inputValidator((input: SendCheckoutEmailInput) => input)
+  .handler(async ({ data: input }) => {
+    const { queueCheckoutEmail } = await import('@backend/server/email/checkout-email.server');
+    queueCheckoutEmail(input);
+    return { queued: true };
+  });

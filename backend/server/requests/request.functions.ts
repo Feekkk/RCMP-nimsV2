@@ -98,9 +98,9 @@ export const submitUserRequestFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: input, context }) => {
     const { submitUserRequest } = await import('@backend/server/requests/request-repo.server');
     const result = await submitUserRequest({ ...input, requestedBy: context.staffId });
-    const { trySendRequestEmail } = await import('@backend/server/email/request-email.server');
-    const email = await trySendRequestEmail(result.requestId);
-    return { ...result, ...email };
+    const { queueRequestEmail } = await import('@backend/server/email/request-email.server');
+    queueRequestEmail(result.requestId);
+    return result;
   });
 
 export const bookPoolAssetToRequestFn = createServerFn({ method: 'POST' })
@@ -110,11 +110,11 @@ export const bookPoolAssetToRequestFn = createServerFn({ method: 'POST' })
     const { bookPoolAssetToRequest } = await import('@backend/server/requests/request-repo.server');
     const booked = await bookPoolAssetToRequest({ ...input, assignedBy: context.staffId });
     if (!booked.collectionReady) return booked;
-    const { trySendRequestReadyEmail } = await import(
+    const { queueRequestReadyEmail } = await import(
       '@backend/server/email/request-ready-email.server'
     );
-    const email = await trySendRequestReadyEmail(input.requestId);
-    return { ...booked, ...email };
+    queueRequestReadyEmail(input.requestId);
+    return booked;
   });
 
 export const changeBookedAssignmentFn = createServerFn({ method: 'POST' })

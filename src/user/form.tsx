@@ -202,15 +202,7 @@ export function UserRequestFormPage() {
         },
       });
       setSubmittedId(result.requestId);
-      if (result.emailSent) {
-        toast.success(`Request #${result.requestId} submitted — confirmation sent to you and IT staff`);
-      } else {
-        toast.success(`Request #${result.requestId} submitted`);
-        toast.warning(
-          result.emailError ??
-            'Your request was saved, but the confirmation email could not be sent.',
-        );
-      }
+      toast.success(`Request #${result.requestId} submitted — sending confirmation…`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'The request could not be submitted. Try again.');
     } finally {

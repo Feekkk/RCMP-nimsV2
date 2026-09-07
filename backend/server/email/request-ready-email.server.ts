@@ -155,3 +155,9 @@ export async function trySendRequestReadyEmail(
     };
   }
 }
+
+export function queueRequestReadyEmail(requestId: number): void {
+  void sendRequestReadyEmail(requestId).catch((err) => {
+    console.error(`[request-ready-email] background send failed for request ${requestId}:`, err);
+  });
+}

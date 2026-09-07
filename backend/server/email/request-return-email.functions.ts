@@ -9,3 +9,14 @@ export const sendRequestReturnEmailFn = createServerFn({ method: 'POST' })
     const { sendRequestReturnEmail } = await import('@backend/server/email/request-return-email.server');
     return sendRequestReturnEmail(input);
   });
+
+export const queueRequestReturnEmailFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
+  .inputValidator((input: SendRequestReturnEmailInput) => input)
+  .handler(async ({ data: input }) => {
+    const { queueRequestReturnEmail } = await import(
+      '@backend/server/email/request-return-email.server'
+    );
+    queueRequestReturnEmail(input);
+    return { queued: true };
+  });

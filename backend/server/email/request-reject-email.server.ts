@@ -201,3 +201,9 @@ export async function sendRequestRejectEmail(
     cc: REQUEST_IT_EMAIL,
   };
 }
+
+export function queueRequestRejectEmail(requestId: number): void {
+  void sendRequestRejectEmail(requestId).catch((err) => {
+    console.error(`[request-reject-email] background send failed for request ${requestId}:`, err);
+  });
+}

@@ -231,3 +231,9 @@ export async function sendCheckoutEmail(input: SendCheckoutEmailInput): Promise<
     cc: REQUEST_IT_EMAIL,
   };
 }
+
+export function queueCheckoutEmail(input: SendCheckoutEmailInput): void {
+  void sendCheckoutEmail(input).catch((err) => {
+    console.error(`[checkout-email] background send failed for request ${input.requestId}:`, err);
+  });
+}

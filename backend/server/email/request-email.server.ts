@@ -213,3 +213,9 @@ export async function trySendRequestEmail(
     };
   }
 }
+
+export function queueRequestEmail(requestId: number): void {
+  void sendRequestEmail(requestId).catch((err) => {
+    console.error(`[request-email] background send failed for request ${requestId}:`, err);
+  });
+}

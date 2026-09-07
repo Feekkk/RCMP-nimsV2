@@ -244,3 +244,9 @@ export async function sendRequestReturnEmail(
     cc: REQUEST_IT_EMAIL,
   };
 }
+
+export function queueRequestReturnEmail(input: SendRequestReturnEmailInput): void {
+  void sendRequestReturnEmail(input).catch((err) => {
+    console.error(`[request-return-email] background send failed for request ${input.requestId}:`, err);
+  });
+}

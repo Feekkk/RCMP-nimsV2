@@ -54,7 +54,6 @@ import { readTechnicianSession } from '@shared/lib/auth-session';
 import {
   REQUEST_STATUS_ACTIVE,
   REQUEST_STATUS_BOOKED,
-  REQUEST_STATUS_CHECKOUT,
 } from '@shared/lib/request-schema';
 import type {
   PendingRequest,
@@ -70,9 +69,9 @@ import { cn } from '@/lib/utils';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { TechnicianShell } from '@/technician/technician-shell';
-import { sendCheckoutEmailFn } from '@backend/server/email/checkout-email.functions';
-import { sendRequestRejectEmailFn } from '@backend/server/email/request-reject-email.functions';
-import { sendRequestReturnEmailFn } from '@backend/server/email/request-return-email.functions';
+import { queueCheckoutEmailFn } from '@backend/server/email/checkout-email.functions';
+import { queueRequestRejectEmailFn } from '@backend/server/email/request-reject-email.functions';
+import { queueRequestReturnEmailFn } from '@backend/server/email/request-return-email.functions';
 import {
   bookPoolAssetToRequestFn,
   cancelBookedAssignmentNotTakenFn,
@@ -438,11 +437,8 @@ export function TechnicianRequestPage() {
           remarks: null,
         },
       });
-      if (booked.collectionReady && booked.emailSent) {
-        toast.success('All items booked — requester notified to collect at ITD');
-      } else if (booked.collectionReady && booked.emailError) {
-        toast.success(`Booked ${kind} #${assetId}`);
-        toast.warning(booked.emailError);
+      if (booked.collectionReady) {
+        toast.success('All items booked — notifying requester to collect at ITD');
       } else {
         toast.success(`Booked ${kind} #${assetId} (status ${REQUEST_STATUS_BOOKED})`);
       }
@@ -598,27 +594,16 @@ export function TechnicianRequestPage() {
       const result = await checkoutUserRequestFn({
         data: { requestId: req.requestId, checkedOutBy: session.staffId },
       });
-      try {
-        await sendCheckoutEmailFn({
-          data: {
-            requestId: req.requestId,
-            checkedOutBy: session.staffId,
-            assignmentIds: result.assignmentIds,
-          },
-        });
-        toast.success(
-          `Checked out ${result.checkedOut} asset${result.checkedOut === 1 ? '' : 's'} — notification sent to requester`,
-        );
-      } catch (emailErr) {
-        toast.success(
-          `Checked out ${result.checkedOut} asset${result.checkedOut === 1 ? '' : 's'} (status ${REQUEST_STATUS_CHECKOUT})`,
-        );
-        toast.warning(
-          emailErr instanceof Error
-            ? emailErr.message
-            : 'Checkout saved but notification email could not be sent',
-        );
-      }
+      void queueCheckoutEmailFn({
+        data: {
+          requestId: req.requestId,
+          checkedOutBy: session.staffId,
+          assignmentIds: result.assignmentIds,
+        },
+      }).catch(console.error);
+      toast.success(
+        `Checked out ${result.checkedOut} asset${result.checkedOut === 1 ? '' : 's'} — sending notification…`,
+      );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Checkout failed');
@@ -648,17 +633,8 @@ export function TechnicianRequestPage() {
           rejectionReason: reason,
         },
       });
-      try {
-        await sendRequestRejectEmailFn({ data: rejectRequestId });
-        toast.success('Request rejected — notification sent to requester');
-      } catch (emailErr) {
-        toast.success('Request rejected');
-        toast.warning(
-          emailErr instanceof Error
-            ? emailErr.message
-            : 'Request rejected but notification email could not be sent',
-        );
-      }
+      void queueRequestRejectEmailFn({ data: rejectRequestId }).catch(console.error);
+      toast.success('Request rejected — sending notification…');
       setRejectRequestId(null);
       setRejectReason('');
       await load();
@@ -717,15 +693,7 @@ export function TechnicianRequestPage() {
       toast.success(
         `Returned ${result.returned} asset${result.returned === 1 ? '' : 's'} to the request pool. Sending notification…`,
       );
-      void sendRequestReturnEmailFn({ data: emailPayload })
-        .then(() => toast.success('Return notification sent to requester'))
-        .catch((emailErr) =>
-          toast.warning(
-            emailErr instanceof Error
-              ? emailErr.message
-              : 'Return saved but notification email could not be sent',
-          ),
-        );
+      void queueRequestReturnEmailFn({ data: emailPayload }).catch(console.error);
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Return failed');
@@ -1216,7 +1184,7 @@ export function TechnicianRequestPage() {
             title="Due for return"
             description="Checked out and within or before the return window"
             count={toReturnNotOverdue.length}
-            tone="sky"
+            tone="emerald"
             icon={RotateCcw}
           >
             {renderRequestList(toReturnNotOverdue, '')}
@@ -1227,7 +1195,7 @@ export function TechnicianRequestPage() {
             title="Pending action"
             description="Book assets, mark slots, or checkout booked items"
             count={queues.pending.length}
-            tone="violet"
+            tone="amber"
             icon={ClipboardList}
           >
             {renderRequestList(queues.pending, '')}
@@ -1257,7 +1225,7 @@ export function TechnicianRequestPage() {
           icon={ClipboardList}
           active={viewFilter === 'pending'}
           onClick={() => setViewFilter('pending')}
-          tone="violet"
+          tone="amber"
         />
         <QueueStatCard
           label="To return"
@@ -1266,7 +1234,7 @@ export function TechnicianRequestPage() {
           icon={PackageCheck}
           active={viewFilter === 'to_return'}
           onClick={() => setViewFilter('to_return')}
-          tone="sky"
+          tone="emerald"
         />
         <QueueStatCard
           label="Overdue"
@@ -1442,20 +1410,23 @@ export function TechnicianRequestPage() {
 }
 
 const QUEUE_STAT_TONES = {
-  violet: {
-    card: 'border-violet-200/70 bg-violet-50/70 dark:border-violet-900/80 dark:bg-violet-950/30',
-    badge: 'bg-violet-400 text-violet-950',
-    watermark: 'text-violet-400/25 dark:text-violet-300/15',
+  amber: {
+    card: 'border-amber-200/70 bg-amber-50/70 dark:border-amber-900/80 dark:bg-amber-950/30',
+    badge: 'bg-amber-400 text-amber-950',
+    watermark: 'text-amber-400/25 dark:text-amber-300/15',
+    ring: 'ring-2 ring-amber-400/50',
   },
-  sky: {
-    card: 'border-sky-200/70 bg-sky-50/70 dark:border-sky-900/80 dark:bg-sky-950/30',
-    badge: 'bg-sky-400 text-sky-950',
-    watermark: 'text-sky-400/25 dark:text-sky-300/15',
+  emerald: {
+    card: 'border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-900/80 dark:bg-emerald-950/30',
+    badge: 'bg-emerald-400 text-emerald-950',
+    watermark: 'text-emerald-400/25 dark:text-emerald-300/15',
+    ring: 'ring-2 ring-emerald-400/50',
   },
   rose: {
     card: 'border-rose-200/70 bg-rose-50/70 dark:border-rose-900/80 dark:bg-rose-950/30',
     badge: 'bg-rose-400 text-rose-950',
     watermark: 'text-rose-400/25 dark:text-rose-300/15',
+    ring: 'ring-2 ring-rose-400/50',
   },
 } as const;
 
@@ -1485,7 +1456,7 @@ function QueueStatCard({
       className={cn(
         'relative overflow-hidden rounded-3xl border p-5 text-left shadow-sm transition-all hover:opacity-90',
         colors.card,
-        active && 'ring-2 ring-[oklch(0.45_0.12_290)]/40',
+        active && colors.ring,
       )}
     >
       <div className="relative z-10 flex items-center gap-2.5">
@@ -1516,16 +1487,16 @@ function RequestQueueSection({
   title: string;
   description: string;
   count: number;
-  tone: 'rose' | 'sky' | 'violet';
+  tone: 'rose' | 'emerald' | 'amber';
   icon: typeof ClipboardList;
   children: ReactNode;
 }) {
   const toneClass =
     tone === 'rose'
       ? 'border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/30'
-      : tone === 'sky'
-        ? 'border-sky-200 bg-sky-50/60 dark:border-sky-900 dark:bg-sky-950/30'
-        : 'border-violet-200 bg-violet-50/60 dark:border-violet-900 dark:bg-violet-950/30';
+      : tone === 'emerald'
+        ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/30'
+        : 'border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/30';
 
   return (
     <section className={cn('rounded-[12px] border px-4 py-3', toneClass)}>

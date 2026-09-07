@@ -298,9 +298,9 @@ export async function handleSubmitRequest(request: Request): Promise<Response> {
           })
         : [],
     });
-    const { trySendRequestEmail } = await import('@backend/server/email/request-email.server');
-    const email = await trySendRequestEmail(result.requestId);
-    return apiOk({ ...result, ...email }, 201);
+    const { queueRequestEmail } = await import('@backend/server/email/request-email.server');
+    queueRequestEmail(result.requestId);
+    return apiOk(result, 201);
   } catch (error) {
     return handleApiError(error);
   }
@@ -365,11 +365,10 @@ export async function handleRequestAction(request: Request, action: string): Pro
       const { bookPoolAssetToRequest } = await import('@backend/server/requests/request-repo.server');
       const booked = await bookPoolAssetToRequest({ ...body, assignedBy: actor } as never);
       if (booked.collectionReady) {
-        const { trySendRequestReadyEmail } = await import(
+        const { queueRequestReadyEmail } = await import(
           '@backend/server/email/request-ready-email.server'
         );
-        const email = await trySendRequestReadyEmail(Number(body.requestId));
-        return apiOk({ ...booked, ...email });
+        queueRequestReadyEmail(Number(body.requestId));
       }
       return apiOk(booked);
     }
