@@ -53,7 +53,11 @@ function DisposalUnitSideBarNav() {
       <NavLink
         to={DISPOSAL}
         icon={Trash2}
-        active={pathname === DISPOSAL || pathname.startsWith(`${DISPOSAL}/`)}
+        active={
+          pathname === DISPOSAL ||
+          pathname.startsWith(`${DISPOSAL}/`) ||
+          pathname === '/disposal-unit/disposal-form'
+        }
       >
         Disposal
       </NavLink>

@@ -38,6 +38,7 @@ import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bu
 import { Route as TechnicianAvRouteImport } from './routes/technician/av'
 import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
 import { Route as DisposalUnitHistoryRouteImport } from './routes/disposal-unit/history'
+import { Route as DisposalUnitDisposalFormRouteImport } from './routes/disposal-unit/disposal-form'
 import { Route as DisposalUnitDisposalRouteImport } from './routes/disposal-unit/disposal'
 import { Route as DisposalUnitDashboardRouteImport } from './routes/disposal-unit/dashboard'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
@@ -75,6 +76,7 @@ import { Route as ApiV1AssetsLookupRouteImport } from './routes/api/v1/assets.lo
 import { Route as ApiV1AdminDashboardRouteImport } from './routes/api/v1/admin.dashboard'
 import { Route as ApiAuthMicrosoftCallbackRouteImport } from './routes/api/auth/microsoft.callback'
 import { Route as AdminAssetKindAssetIdRouteImport } from './routes/admin/asset.$kind.$assetId'
+import { Route as UploadDisposeYearBatchFileNameRouteImport } from './routes/upload/dispose.$year.$batch.$fileName'
 import { Route as ApiV1RequestsPoolRemoveRouteImport } from './routes/api/v1/requests.pool.remove'
 import { Route as ApiV1RequestsPoolMarkRouteImport } from './routes/api/v1/requests.pool.mark'
 import { Route as ApiV1AuthMicrosoftTokenRouteImport } from './routes/api/v1/auth.microsoft.token'
@@ -227,6 +229,12 @@ const DisposalUnitHistoryRoute = DisposalUnitHistoryRouteImport.update({
   path: '/disposal-unit/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DisposalUnitDisposalFormRoute =
+  DisposalUnitDisposalFormRouteImport.update({
+    id: '/disposal-unit/disposal-form',
+    path: '/disposal-unit/disposal-form',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DisposalUnitDisposalRoute = DisposalUnitDisposalRouteImport.update({
   id: '/disposal-unit/disposal',
   path: '/disposal-unit/disposal',
@@ -419,6 +427,12 @@ const AdminAssetKindAssetIdRoute = AdminAssetKindAssetIdRouteImport.update({
   path: '/admin/asset/$kind/$assetId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UploadDisposeYearBatchFileNameRoute =
+  UploadDisposeYearBatchFileNameRouteImport.update({
+    id: '/upload/dispose/$year/$batch/$fileName',
+    path: '/upload/dispose/$year/$batch/$fileName',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiV1RequestsPoolRemoveRoute = ApiV1RequestsPoolRemoveRouteImport.update({
   id: '/remove',
   path: '/remove',
@@ -459,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/disposal-unit/dashboard': typeof DisposalUnitDashboardRoute
   '/disposal-unit/disposal': typeof DisposalUnitDisposalRoute
+  '/disposal-unit/disposal-form': typeof DisposalUnitDisposalFormRoute
   '/disposal-unit/history': typeof DisposalUnitHistoryRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
@@ -517,6 +532,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/auth/microsoft/token': typeof ApiV1AuthMicrosoftTokenRoute
   '/api/v1/requests/pool/mark': typeof ApiV1RequestsPoolMarkRoute
   '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
+  '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -532,6 +548,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/disposal-unit/dashboard': typeof DisposalUnitDashboardRoute
   '/disposal-unit/disposal': typeof DisposalUnitDisposalRoute
+  '/disposal-unit/disposal-form': typeof DisposalUnitDisposalFormRoute
   '/disposal-unit/history': typeof DisposalUnitHistoryRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
@@ -590,6 +607,7 @@ export interface FileRoutesByTo {
   '/api/v1/auth/microsoft/token': typeof ApiV1AuthMicrosoftTokenRoute
   '/api/v1/requests/pool/mark': typeof ApiV1RequestsPoolMarkRoute
   '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
+  '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -606,6 +624,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/disposal-unit/dashboard': typeof DisposalUnitDashboardRoute
   '/disposal-unit/disposal': typeof DisposalUnitDisposalRoute
+  '/disposal-unit/disposal-form': typeof DisposalUnitDisposalFormRoute
   '/disposal-unit/history': typeof DisposalUnitHistoryRoute
   '/technician/add-asset': typeof TechnicianAddAssetRoute
   '/technician/av': typeof TechnicianAvRoute
@@ -664,6 +683,7 @@ export interface FileRoutesById {
   '/api/v1/auth/microsoft/token': typeof ApiV1AuthMicrosoftTokenRoute
   '/api/v1/requests/pool/mark': typeof ApiV1RequestsPoolMarkRoute
   '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
+  '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -681,6 +701,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/disposal-unit/dashboard'
     | '/disposal-unit/disposal'
+    | '/disposal-unit/disposal-form'
     | '/disposal-unit/history'
     | '/technician/add-asset'
     | '/technician/av'
@@ -739,6 +760,7 @@ export interface FileRouteTypes {
     | '/api/v1/auth/microsoft/token'
     | '/api/v1/requests/pool/mark'
     | '/api/v1/requests/pool/remove'
+    | '/upload/dispose/$year/$batch/$fileName'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -754,6 +776,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/disposal-unit/dashboard'
     | '/disposal-unit/disposal'
+    | '/disposal-unit/disposal-form'
     | '/disposal-unit/history'
     | '/technician/add-asset'
     | '/technician/av'
@@ -812,6 +835,7 @@ export interface FileRouteTypes {
     | '/api/v1/auth/microsoft/token'
     | '/api/v1/requests/pool/mark'
     | '/api/v1/requests/pool/remove'
+    | '/upload/dispose/$year/$batch/$fileName'
   id:
     | '__root__'
     | '/'
@@ -827,6 +851,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/disposal-unit/dashboard'
     | '/disposal-unit/disposal'
+    | '/disposal-unit/disposal-form'
     | '/disposal-unit/history'
     | '/technician/add-asset'
     | '/technician/av'
@@ -885,6 +910,7 @@ export interface FileRouteTypes {
     | '/api/v1/auth/microsoft/token'
     | '/api/v1/requests/pool/mark'
     | '/api/v1/requests/pool/remove'
+    | '/upload/dispose/$year/$batch/$fileName'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -901,6 +927,7 @@ export interface RootRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   DisposalUnitDashboardRoute: typeof DisposalUnitDashboardRoute
   DisposalUnitDisposalRoute: typeof DisposalUnitDisposalRoute
+  DisposalUnitDisposalFormRoute: typeof DisposalUnitDisposalFormRoute
   DisposalUnitHistoryRoute: typeof DisposalUnitHistoryRoute
   TechnicianAddAssetRoute: typeof TechnicianAddAssetRoute
   TechnicianAvRoute: typeof TechnicianAvRoute
@@ -957,6 +984,7 @@ export interface RootRouteChildren {
   ApiV1AssetsKindAssetIdRoute: typeof ApiV1AssetsKindAssetIdRoute
   ApiV1AuthMicrosoftStartRoute: typeof ApiV1AuthMicrosoftStartRoute
   ApiV1AuthMicrosoftTokenRoute: typeof ApiV1AuthMicrosoftTokenRoute
+  UploadDisposeYearBatchFileNameRoute: typeof UploadDisposeYearBatchFileNameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1162,6 +1190,13 @@ declare module '@tanstack/react-router' {
       path: '/disposal-unit/history'
       fullPath: '/disposal-unit/history'
       preLoaderRoute: typeof DisposalUnitHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disposal-unit/disposal-form': {
+      id: '/disposal-unit/disposal-form'
+      path: '/disposal-unit/disposal-form'
+      fullPath: '/disposal-unit/disposal-form'
+      preLoaderRoute: typeof DisposalUnitDisposalFormRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/disposal-unit/disposal': {
@@ -1423,6 +1458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAssetKindAssetIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upload/dispose/$year/$batch/$fileName': {
+      id: '/upload/dispose/$year/$batch/$fileName'
+      path: '/upload/dispose/$year/$batch/$fileName'
+      fullPath: '/upload/dispose/$year/$batch/$fileName'
+      preLoaderRoute: typeof UploadDisposeYearBatchFileNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/requests/pool/remove': {
       id: '/api/v1/requests/pool/remove'
       path: '/remove'
@@ -1488,6 +1530,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   DisposalUnitDashboardRoute: DisposalUnitDashboardRoute,
   DisposalUnitDisposalRoute: DisposalUnitDisposalRoute,
+  DisposalUnitDisposalFormRoute: DisposalUnitDisposalFormRoute,
   DisposalUnitHistoryRoute: DisposalUnitHistoryRoute,
   TechnicianAddAssetRoute: TechnicianAddAssetRoute,
   TechnicianAvRoute: TechnicianAvRoute,
@@ -1544,6 +1587,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1AssetsKindAssetIdRoute: ApiV1AssetsKindAssetIdRoute,
   ApiV1AuthMicrosoftStartRoute: ApiV1AuthMicrosoftStartRoute,
   ApiV1AuthMicrosoftTokenRoute: ApiV1AuthMicrosoftTokenRoute,
+  UploadDisposeYearBatchFileNameRoute: UploadDisposeYearBatchFileNameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

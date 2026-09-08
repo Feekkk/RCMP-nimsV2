@@ -10,6 +10,7 @@ lerna-debug.log*
 .cursorrules
 .cursorignore
 database
+upload/dispose
 
 node_modules
 dist

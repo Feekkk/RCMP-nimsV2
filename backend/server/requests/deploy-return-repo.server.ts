@@ -41,7 +41,13 @@ async function logPredisposedReturnIfNeeded(
   staffId: string,
 ): Promise<void> {
   if (statusId !== STATUS_ID.PRE_DISPOSED) return;
-  await recordAssetPredisposed(conn, { kind, assetId, staffId });
+  await recordAssetPredisposed(conn, {
+    kind,
+    assetId,
+    staffId,
+    reason: 'return_from_deployment',
+    skipIfQueued: true,
+  });
 }
 
 export async function searchStaffRecipients(query: string): Promise<StaffRecipient[]> {

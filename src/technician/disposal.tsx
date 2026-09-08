@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/table';
 import { formatAssetLifespan } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, type AssetKind } from '@shared/lib/inventory-schema';
-import type { PredisposalEligibleAsset, PreDisposedAsset } from '@shared/lib/disposal-schema';
+import { isLifespanOverYears, type PredisposalEligibleAsset, type PreDisposedAsset } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
@@ -40,7 +40,7 @@ import {
   markAssetsPredisposedFn,
 } from '@backend/server/assets/assets.functions';
 
-function assetKey(kind: AssetKind, assetId: number) {
+function assetKey(kind: AssetKind, assetId: PredisposalEligibleAsset['assetId']) {
   return `${kind}:${assetId}`;
 }
 
@@ -347,6 +347,9 @@ export function TechnicianDisposalPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                           {formatAssetLifespan(a.poDate, a.assetId)}
+                          {isLifespanOverYears(a.poDate, a.doDate) ? (
+                            <p className="text-[10px] text-amber-700">Over 7 years</p>
+                          ) : null}
                         </TableCell>
                         <TableCell>
                           <AssetStatusBadge statusId={a.statusId} />

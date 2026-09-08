@@ -21,11 +21,13 @@ import {
   type UpdateLaptopInput,
   type UpdateNetworkInput,
 } from '@shared/lib/inventory-schema';
-import type {
-  DisposalDashboardStats,
-  MarkPredisposedAssetInput,
-  PreDisposedAsset,
-  PredisposalEligibleAsset,
+import {
+  isPredisposalReason,
+  type DisposalDashboardStats,
+  type MarkPredisposedAssetInput,
+  type PreDisposedAsset,
+  type PredisposalEligibleAsset,
+  type PredisposalReason,
 } from '@shared/lib/disposal-schema';
 import {
   isAllowedStatusTransition,
@@ -39,8 +41,11 @@ import { purchaseSqlParams } from '@shared/lib/purchase-field-utils';
 import { assetIdNewestYearFirstSql, canonicalizeLaptopCategory } from '@/hooks/assetid-generator';
 import { allocateAssetIdsFromDb } from '@backend/server/assets/asset-id.server';
 import {
+  getDisposalDashboardStatsFromTables,
   recordAssetPredisposed,
   recordAssetPredisposalRemoved,
+  reasonFromAssetDates,
+  sqlUtf8AssetId,
   withAssetPredisposalTransaction,
 } from '@backend/server/assets/disposal-repo.server';
 import { attachDisplayNames, getDisplayNameByOid } from '@backend/server/core/azure-directory.server';
@@ -887,7 +892,7 @@ export async function updateAssetDetails(input: UpdateAssetInput) {
 }
 
 type PredisposalRow = RowDataPacket & {
-  asset_id: number;
+  asset_id: string | number;
   asset_id_old?: string | null;
   model: string | null;
   brand: string | null;
@@ -895,6 +900,7 @@ type PredisposalRow = RowDataPacket & {
   serial_num: string | null;
   status_id: number;
   PO_DATE: Date | string | null;
+  DO_DATE: Date | string | null;
 };
 
 async function queryPredisposalEligible(
@@ -905,11 +911,17 @@ async function queryPredisposalEligible(
   const table = TABLE_BY_KIND[kind];
   const placeholders = PREDISPOSAL_ELIGIBLE_STATUS_IDS.map(() => '?').join(', ');
   const [rows] = await pool.query<PredisposalRow[]>(
-    `SELECT asset_id, ${extraSelect} model, brand, category, serial_num, status_id, PO_DATE
+    `SELECT asset_id, ${extraSelect} model, brand, category, serial_num, status_id, PO_DATE, DO_DATE
      FROM \`${table}\`
      WHERE status_id IN (${placeholders})
+       AND NOT EXISTS (
+         SELECT 1 FROM pre_disposal pd
+         WHERE pd.asset_type = ?
+           AND ${sqlUtf8AssetId('pd.asset_id')} = ${sqlUtf8AssetId(`\`${table}\`.asset_id`)}
+           AND pd.status IN ('pending', 'in_disposal')
+       )
      ORDER BY ${assetIdNewestYearFirstSql()}`,
-    [...PREDISPOSAL_ELIGIBLE_STATUS_IDS],
+    [...PREDISPOSAL_ELIGIBLE_STATUS_IDS, kind],
   );
   return rows.map((r) => ({
     kind,
@@ -921,6 +933,7 @@ async function queryPredisposalEligible(
     serialNum: r.serial_num,
     statusId: r.status_id,
     poDate: formatDate(r.PO_DATE),
+    doDate: formatDate(r.DO_DATE),
   }));
 }
 
@@ -934,7 +947,9 @@ export async function listPredisposalEligibleAssets(): Promise<PredisposalEligib
 }
 
 type PreDisposedQueryRow = PredisposalRow & {
+  pre_disposal_id: number;
   acc_code: string | null;
+  reason: string;
   predisposed_at: Date | string | null;
   predisposed_email: string | null;
   predisposed_oid: string | null;
@@ -948,6 +963,10 @@ function formatDateTimeIso(val: Date | string | null | undefined): string | null
   return d.toISOString();
 }
 
+function mapPredisposalReason(value: string): PredisposalReason {
+  return isPredisposalReason(value) ? value : 'manual';
+}
+
 async function queryPreDisposedAssets(
   kind: AssetKind,
   extraSelect = '',
@@ -955,17 +974,17 @@ async function queryPreDisposedAssets(
   const pool = getDbPool();
   const table = TABLE_BY_KIND[kind];
   const [rows] = await pool.query<PreDisposedQueryRow[]>(
-    `SELECT a.asset_id, ${extraSelect} a.acc_code, a.model, a.brand, a.category, a.serial_num, a.status_id, a.PO_DATE,
-            di.predisposed_at, u.email AS predisposed_email, u.oid AS predisposed_oid
+    `SELECT a.asset_id, ${extraSelect} a.acc_code, a.model, a.brand, a.category, a.serial_num, a.status_id, a.PO_DATE, a.DO_DATE,
+            pd.pre_disposal_id, pd.reason, pd.marked_at AS predisposed_at,
+            u.email AS predisposed_email, u.oid AS predisposed_oid
      FROM \`${table}\` a
-     LEFT JOIN disposal_item di
-       ON di.asset_type = ?
-      AND di.asset_id = CAST(a.asset_id AS CHAR)
-      AND di.removed_at IS NULL
-     LEFT JOIN users u ON u.id = di.predisposed_by
-     WHERE a.status_id = ?
-     ORDER BY di.predisposed_at DESC, ${assetIdNewestYearFirstSql('a.asset_id')}`,
-    [kind, STATUS_ID.PRE_DISPOSED],
+     INNER JOIN pre_disposal pd
+       ON pd.asset_type = ?
+      AND ${sqlUtf8AssetId('pd.asset_id')} = ${sqlUtf8AssetId('a.asset_id')}
+      AND pd.status = 'pending'
+     LEFT JOIN users u ON u.id = pd.marked_by
+     ORDER BY pd.marked_at DESC, ${assetIdNewestYearFirstSql('a.asset_id')}`,
+    [kind],
   );
   return rows.map((r) => ({ ...r, kind }));
 }
@@ -981,7 +1000,10 @@ function mapPreDisposedRow(r: PreDisposedQueryRow & { kind: AssetKind }): PreDis
     serialNum: r.serial_num,
     statusId: r.status_id,
     poDate: formatDate(r.PO_DATE),
+    doDate: formatDate(r.DO_DATE),
+    preDisposalId: r.pre_disposal_id,
     accCode: r.acc_code ?? null,
+    reason: mapPredisposalReason(r.reason),
     predisposedAt: formatDateTimeIso(r.predisposed_at),
     predisposedBy: r.predisposed_name?.trim() || r.predisposed_email?.trim() || null,
   };
@@ -998,54 +1020,8 @@ export async function listPreDisposedAssets(): Promise<PreDisposedAsset[]> {
   return rows.map(mapPreDisposedRow);
 }
 
-function pad2(n: number) {
-  return String(n).padStart(2, '0');
-}
-
 export async function getDisposalDashboardStats(): Promise<DisposalDashboardStats> {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const monthStart = `${year}-${pad2(month + 1)}-01`;
-  const nextMonth = month === 11 ? `${year + 1}-01-01` : `${year}-${pad2(month + 2)}-01`;
-  const yearStart = `${year}-01-01`;
-  const nextYear = `${year + 1}-01-01`;
-
-  const pool = getDbPool();
-  const [rows] = await pool.query<
-    (RowDataPacket & {
-      pending: number;
-      disposed_this_month: number;
-      disposed_this_year: number;
-    })[]
-  >(
-    `SELECT
-       COALESCE(SUM(status_id = ?), 0) AS pending,
-       COALESCE(SUM(status_id = ? AND updated_at >= ? AND updated_at < ?), 0) AS disposed_this_month,
-       COALESCE(SUM(status_id = ? AND updated_at >= ? AND updated_at < ?), 0) AS disposed_this_year
-     FROM (
-       SELECT status_id, updated_at FROM laptop
-       UNION ALL
-       SELECT status_id, updated_at FROM av
-       UNION ALL
-       SELECT status_id, updated_at FROM network
-     ) assets`,
-    [
-      STATUS_ID.PRE_DISPOSED,
-      STATUS_ID.DISPOSED,
-      monthStart,
-      nextMonth,
-      STATUS_ID.DISPOSED,
-      yearStart,
-      nextYear,
-    ],
-  );
-  const row = rows[0];
-  return {
-    pending: Number(row?.pending ?? 0),
-    disposedThisMonth: Number(row?.disposed_this_month ?? 0),
-    disposedThisYear: Number(row?.disposed_this_year ?? 0),
-  };
+  return getDisposalDashboardStatsFromTables();
 }
 
 async function markAssetPredisposed(
@@ -1054,10 +1030,9 @@ async function markAssetPredisposed(
 ): Promise<void> {
   await withAssetPredisposalTransaction(async (conn) => {
     const table = TABLE_BY_KIND[input.kind];
-    const [rows] = await conn.execute<(RowDataPacket & { status_id: number })[]>(
-      `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
-      [input.assetId],
-    );
+    const [rows] = await conn.execute<
+      (RowDataPacket & { status_id: number; PO_DATE: Date | string | null; DO_DATE: Date | string | null })[]
+    >(`SELECT status_id, PO_DATE, DO_DATE FROM \`${table}\` WHERE asset_id = ?`, [input.assetId]);
     const row = rows[0];
     if (!row) {
       throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
@@ -1072,6 +1047,7 @@ async function markAssetPredisposed(
       kind: input.kind,
       assetId: input.assetId,
       staffId,
+      reason: reasonFromAssetDates(formatDate(row.PO_DATE), formatDate(row.DO_DATE), 'manual'),
     });
 
     await conn.execute(`UPDATE \`${table}\` SET status_id = ? WHERE asset_id = ?`, [

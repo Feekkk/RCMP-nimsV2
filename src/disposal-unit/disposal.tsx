@@ -1,16 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,7 +31,11 @@ import {
   formatAccCodeDisplay,
   type AssetKind,
 } from '@shared/lib/inventory-schema';
-import type { PreDisposedAsset } from '@shared/lib/disposal-schema';
+import {
+  PREDISPOSAL_REASON_LABEL,
+  serializeDisposalBatchAssets,
+  type PreDisposedAsset,
+} from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
@@ -49,7 +44,7 @@ import { listDisposalQueueAssetsFn } from '@backend/server/assets/assets.functio
 type KindFilter = 'all' | AssetKind;
 type AccCodeFilter = 'all' | string;
 
-function assetKey(kind: AssetKind, assetId: number) {
+function assetKey(kind: AssetKind, assetId: PreDisposedAsset['assetId']) {
   return `${kind}:${assetId}`;
 }
 
@@ -83,13 +78,13 @@ function categoryBadgeClassName(kind: AssetKind) {
 }
 
 export function DisposalUnitDisposalPage() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<PreDisposedAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<KindFilter>('all');
   const [accCode, setAccCode] = useState<AccCodeFilter>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,6 +115,7 @@ export function DisposalUnitDisposalPage() {
         row.assetIdOld ?? '',
         row.serialNum ?? '',
         row.predisposedBy ?? '',
+        PREDISPOSAL_REASON_LABEL[row.reason],
         ASSET_KIND_LABEL[row.kind],
         row.category ?? '',
         row.accCode ?? '',
@@ -168,37 +164,29 @@ export function DisposalUnitDisposalPage() {
     });
   };
 
-  const handleBatchDispose = () => {
-    const count = selected.size;
-    setRows((prev) => prev.filter((row) => !selected.has(assetKey(row.kind, row.assetId))));
-    setSelected(new Set());
-    setConfirmOpen(false);
-    toast.success(`${count} asset${count === 1 ? '' : 's'} marked as disposed`);
+  const goToDisposalForm = () => {
+    if (selectedRows.length === 0) {
+      toast.error('Select at least one asset');
+      return;
+    }
+    void navigate({
+      to: '/disposal-unit/disposal-form',
+      search: { assets: serializeDisposalBatchAssets(selectedRows) },
+    });
   };
 
   return (
     <DisposalUnitShell>
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Disposal</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {loading
-              ? 'Loading pre-disposed assets…'
-              : `${filtered.length} pre-disposed asset${filtered.length === 1 ? '' : 's'}${
-                  filtered.length !== rows.length ? ` of ${rows.length}` : ''
-                } · Select assets to dispose in batch`}
-          </p>
-        </div>
-        <Button
-          type="button"
-          className="shrink-0 gap-1.5 rounded-[8px]"
-          disabled={selected.size === 0}
-          onClick={() => setConfirmOpen(true)}
-        >
-          <Trash2 className="h-4 w-4" />
-          Dispose selected{selected.size > 0 ? ` (${selected.size})` : ''}
-        </Button>
+      <div className="shrink-0">
+        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Disposal</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {loading
+            ? 'Loading pre-disposed assets…'
+            : `${filtered.length} pre-disposed asset${filtered.length === 1 ? '' : 's'}${
+                filtered.length !== rows.length ? ` of ${rows.length}` : ''
+              } · Select assets, then continue to the disposal form`}
+        </p>
       </div>
 
       <Card className="shrink-0 rounded-[14px] border-border shadow-sm">
@@ -270,8 +258,9 @@ export function DisposalUnitDisposalPage() {
             </Button>
             <Button
               type="button"
+              variant="destructive"
               className="h-9 gap-1.5 rounded-[8px]"
-              onClick={() => setConfirmOpen(true)}
+              onClick={goToDisposalForm}
             >
               <Trash2 className="h-4 w-4" />
               Dispose batch
@@ -299,19 +288,20 @@ export function DisposalUnitDisposalPage() {
                 <TableHead className="h-11 px-4">Asset ID</TableHead>
                 <TableHead className="h-11 px-4">Serial</TableHead>
                 <TableHead className="h-11 px-4">Proposed by</TableHead>
+                <TableHead className="h-11 px-4">Reason</TableHead>
                 <TableHead className="h-11 px-4 sm:px-5">Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="py-16 text-center text-sm text-muted-foreground">
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : pagination.paginatedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="py-16 text-center text-sm text-muted-foreground">
                     {rows.length === 0
                       ? 'No pre-disposed assets in the disposal queue.'
                       : 'No assets match your filters.'}
@@ -358,6 +348,9 @@ export function DisposalUnitDisposalPage() {
                       <TableCell className="px-4 py-3 text-muted-foreground">
                         {row.predisposedBy ?? '—'}
                       </TableCell>
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {PREDISPOSAL_REASON_LABEL[row.reason]}
+                      </TableCell>
                       <TableCell className="px-4 py-3 text-muted-foreground sm:px-5">
                         {formatDate(row.predisposedAt)}
                       </TableCell>
@@ -384,36 +377,6 @@ export function DisposalUnitDisposalPage() {
         </CardContent>
       </Card>
       </div>
-
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent className="rounded-[14px]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Dispose selected assets?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You are about to dispose {selectedRows.length} asset
-              {selectedRows.length === 1 ? '' : 's'} in this batch. This action is for UI preview only.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {selectedRows.length > 0 ? (
-            <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-[10px] border border-border bg-muted/30 p-3 text-sm">
-              {selectedRows.map((row) => (
-                <li key={assetKey(row.kind, row.assetId)} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate font-medium text-foreground">
-                    {formatAssetName(row)}
-                  </span>
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">{row.assetId}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-[8px]">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="rounded-[8px]" onClick={handleBatchDispose}>
-              Confirm dispose
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </DisposalUnitShell>
   );
 }

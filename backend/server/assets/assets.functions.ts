@@ -7,7 +7,12 @@ import type {
   CreateNetworkInput,
   UpdateAssetInput,
 } from '@shared/lib/inventory-schema';
-import type { MarkAssetsPredisposedInput, RemoveAssetsFromPredisposalInput } from '@shared/lib/disposal-schema';
+import type {
+  MarkAssetsPredisposedInput,
+  RemoveAssetsFromPredisposalInput,
+  SubmitDisposalBatchInput,
+  UploadDisposalImageInput,
+} from '@shared/lib/disposal-schema';
 import type { NextAssetIdRequest } from '@backend/server/assets/asset-id.server';
 import type {
   BulkAvImportRow,
@@ -190,4 +195,42 @@ export const removeAssetsFromPredisposalFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: input, context }) => {
     const { removeAssetsFromPredisposal } = await import('@backend/server/assets/assets-repo.server');
     return removeAssetsFromPredisposal(input.assets, context.staffId);
+  });
+
+export const submitDisposalBatchFn = createServerFn({ method: 'POST' })
+  .middleware([disposalUnitMiddleware])
+  .inputValidator((input: SubmitDisposalBatchInput) => input)
+  .handler(async ({ data: input, context }) => {
+    const { submitDisposalBatch } = await import('@backend/server/assets/disposal-repo.server');
+    return submitDisposalBatch(input, context.staffId);
+  });
+
+export const listDisposalHistoryFn = createServerFn({ method: 'GET' })
+  .middleware([disposalUnitMiddleware])
+  .handler(async () => {
+    const { listDisposalHistory } = await import('@backend/server/assets/disposal-repo.server');
+    return listDisposalHistory();
+  });
+
+export const getDisposalReportFn = createServerFn({ method: 'GET' })
+  .middleware([disposalUnitMiddleware])
+  .inputValidator((noRujukanPelupusan: string) => noRujukanPelupusan)
+  .handler(async ({ data: noRujukanPelupusan }) => {
+    const { getDisposalReport } = await import('@backend/server/assets/disposal-repo.server');
+    return getDisposalReport(noRujukanPelupusan);
+  });
+
+export const createDisposalUploadBatchFn = createServerFn({ method: 'POST' })
+  .middleware([disposalUnitMiddleware])
+  .handler(async () => {
+    const { createDisposalUploadBatch } = await import('@backend/server/assets/disposal-image.server');
+    return createDisposalUploadBatch();
+  });
+
+export const uploadDisposalImageFn = createServerFn({ method: 'POST' })
+  .middleware([disposalUnitMiddleware])
+  .inputValidator((input: UploadDisposalImageInput) => input)
+  .handler(async ({ data: input }) => {
+    const { saveDisposalImage } = await import('@backend/server/assets/disposal-image.server');
+    return saveDisposalImage(input);
   });

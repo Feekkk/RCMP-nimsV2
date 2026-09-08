@@ -15,6 +15,7 @@ import { DisposalUnitShell } from '@/disposal-unit/disposal-unit-shell';
 import { usePagination } from '@/hooks/use-pagination';
 import { formatAssetLifespan, formatDateLabel } from '@shared/lib/date-format';
 import type { DisposalDashboardStats, PreDisposedAsset } from '@shared/lib/disposal-schema';
+import { PREDISPOSAL_REASON_LABEL } from '@shared/lib/disposal-schema';
 import {
   getDisposalDashboardStatsFn,
   listDisposalQueueAssetsFn,
@@ -121,19 +122,20 @@ export function DisposalUnitDashboardPage() {
                     <TableHead className="h-11 px-4">Serial Number</TableHead>
                     <TableHead className="h-11 px-4">Life span</TableHead>
                     <TableHead className="h-11 px-4">Proposed By</TableHead>
+                    <TableHead className="h-11 px-4">Reason</TableHead>
                     <TableHead className="h-11 px-4 sm:px-5">Date Submitted</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-16 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
                         Loading…
                       </TableCell>
                     </TableRow>
                   ) : pagination.paginatedItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-16 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
                         No pre-disposed assets in the disposal queue.
                       </TableCell>
                     </TableRow>
@@ -155,6 +157,9 @@ export function DisposalUnitDashboardPage() {
                         </TableCell>
                         <TableCell className="px-4 py-3 text-muted-foreground">
                           {asset.predisposedBy ?? '—'}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {PREDISPOSAL_REASON_LABEL[asset.reason]}
                         </TableCell>
                         <TableCell className="px-4 py-3 text-muted-foreground sm:px-5">
                           {formatProposedDate(asset.predisposedAt)}

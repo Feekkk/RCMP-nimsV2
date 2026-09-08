@@ -28,6 +28,7 @@ import {
 import { formatAssetLifespan } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, type AssetKind } from '@shared/lib/inventory-schema';
 import type { PreDisposedAsset } from '@shared/lib/disposal-schema';
+import { PREDISPOSAL_REASON_LABEL } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
@@ -38,7 +39,7 @@ import {
   removeAssetsFromPredisposalFn,
 } from '@backend/server/assets/assets.functions';
 
-function assetKey(kind: AssetKind, assetId: number) {
+function assetKey(kind: AssetKind, assetId: PreDisposedAsset['assetId']) {
   return `${kind}:${assetId}`;
 }
 
@@ -87,6 +88,7 @@ export function TechnicianPreDisposedPage() {
         a.serialNum,
         a.kind,
         a.predisposedBy,
+        PREDISPOSAL_REASON_LABEL[a.reason],
       ]
         .filter(Boolean)
         .join(' ')
@@ -259,19 +261,20 @@ export function TechnicianPreDisposedPage() {
                   <TableHead className="font-semibold">Life-span</TableHead>
                   <TableHead className="font-semibold">Pre-disposed</TableHead>
                   <TableHead className="font-semibold">By</TableHead>
+                  <TableHead className="font-semibold">Reason</TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={11} className="py-10 text-center text-sm text-muted-foreground">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={11} className="py-10 text-center text-sm text-muted-foreground">
                       {assets.length === 0
                         ? 'No assets are currently marked as pre-disposed.'
                         : 'No assets match your filters.'}
@@ -314,6 +317,9 @@ export function TechnicianPreDisposedPage() {
                         </TableCell>
                         <TableCell className="max-w-[10rem] truncate text-sm text-muted-foreground">
                           {a.predisposedBy ?? '—'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                          {PREDISPOSAL_REASON_LABEL[a.reason]}
                         </TableCell>
                         <TableCell>
                           <AssetStatusBadge statusId={a.statusId} />
