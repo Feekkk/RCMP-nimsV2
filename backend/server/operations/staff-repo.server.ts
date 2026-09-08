@@ -47,16 +47,26 @@ function validateStaffFields(input: {
   employeeNo: string;
   fullName: string;
   division: string;
+  email?: string | null;
+  department?: string | null;
 }): { employeeNo: string; fullName: string; division: StaffDivision } {
   const employeeNo = input.employeeNo.trim();
   const fullName = input.fullName.trim();
   const division = input.division.trim();
+  const email = input.email?.trim() ?? '';
+  const faculty = input.department?.trim() ?? '';
 
   if (!employeeNo) {
     throw new Error('Employee number is required.');
   }
   if (!fullName) {
     throw new Error('Full name is required.');
+  }
+  if (!email.includes('@')) {
+    throw new Error('Email is required.');
+  }
+  if (!faculty) {
+    throw new Error('Faculty is required.');
   }
   if (!division) {
     throw new Error('Division is required.');

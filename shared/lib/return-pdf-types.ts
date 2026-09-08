@@ -20,6 +20,7 @@ export type ReturnPdfData = {
 /** Superset of ReturnPdfData used to build both the PDF and the notification email from a single DB fetch. */
 export type ReturnNotificationData = ReturnPdfData & {
   recipientEmail: string | null;
+  category: string | null;
 };
 
 export type ReturnEmailStatus = 'pending' | 'sending' | 'sent' | 'failed';

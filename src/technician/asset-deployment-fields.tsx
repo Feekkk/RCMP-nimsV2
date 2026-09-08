@@ -2,6 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { OpenReturnContext, StaffRecipient, UpdateOpenDeploymentInput } from '@shared/lib/deploy-return-schema';
+import { missingStaffDirectoryFields, staffDirectoryIncompleteMessage } from '@shared/lib/deploy-return-schema';
 import type { AssetId } from '@shared/lib/inventory-schema';
 import { CampusBuildingSelect, DatePickerField, FormField } from '@/technician/deploy-return-fields';
 import { StaffRecipientSearch } from '@/technician/staff-recipient-search';
@@ -25,7 +26,7 @@ export function deploymentToEditState(deployment: OpenReturnContext): Deployment
           employeeNo: record.employeeNo,
           fullName: record.recipientName,
           department: record.department,
-          email: null,
+          email: record.email,
           phone: null,
         },
         date: record.handoverDate,
@@ -67,6 +68,12 @@ export function validateDeploymentEdit(deployment: OpenReturnContext, form: Depl
   }
   if (deployment.kind === 'laptop' && deployment.record.type === 'staff') {
     if (!form.recipient?.employeeNo.trim()) return 'Choose a staff recipient from the directory.';
+    const missing = missingStaffDirectoryFields({
+      fullName: form.recipient.fullName,
+      email: form.recipient.email,
+      faculty: form.recipient.department,
+    });
+    if (missing.length) return staffDirectoryIncompleteMessage(missing);
     return null;
   }
   if (!form.building.trim()) return 'Building is required.';

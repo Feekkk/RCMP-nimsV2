@@ -246,6 +246,10 @@ export async function generateHandoverPdfBuffer(handoverId: number): Promise<Uin
   if (!data) {
     throw new Error('This handover record could not be found. Refresh the page and try again.');
   }
+  const { isLeasingCategory } = await import('@/hooks/assetid-generator');
+  if (isLeasingCategory(data.category)) {
+    throw new Error('Handover PDF is not issued for leasing laptop or desktop.');
+  }
 
   return buildHandoverPdfFromData(data);
 }

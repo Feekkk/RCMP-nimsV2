@@ -67,6 +67,7 @@ export async function getHandoverNotificationData(
     handoverDate: formatDateOnly(row.handover_date),
     recipientName: row.recipient_name,
     recipientEmail: row.recipient_email?.trim() || null,
+    category: row.category?.trim() || null,
     employeeNo: row.employee_no,
     employeeDesignation: row.department?.trim() || '—',
     itemName,

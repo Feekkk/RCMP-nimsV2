@@ -54,7 +54,7 @@ function DeploymentDetails({ deployment }: { deployment: OpenReturnContext | nul
           <DetailItem label="Handover date" value={formatDateLabel(r.handoverDate)} />
           <DetailItem label="Employee number" value={r.employeeNo} />
           <DetailItem label="Name" value={r.recipientName} />
-          <DetailItem label="Department" value={r.department} />
+          <DetailItem label="Faculty" value={r.department} />
           <DetailItem label="Remarks" value={r.handoverRemarks} />
         </div>
       );

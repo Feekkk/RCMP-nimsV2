@@ -173,6 +173,14 @@ export function TechnicianHandoverStaffPage() {
       toast.error('Employee number, full name, and division are required.');
       return;
     }
+    if (!form.email.trim().includes('@')) {
+      toast.error('Email is required.');
+      return;
+    }
+    if (!form.department.trim()) {
+      toast.error('Faculty is required.');
+      return;
+    }
     if (!STAFF_DIVISIONS.includes(division as StaffDivision)) {
       toast.error('Select a division: Services or Academic.');
       return;
@@ -221,7 +229,7 @@ export function TechnicianHandoverStaffPage() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search name, employee no., department, email…"
+            placeholder="Search name, employee no., faculty, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-10 rounded-[10px] pl-9"
@@ -241,7 +249,7 @@ export function TechnicianHandoverStaffPage() {
                 <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground">
                   <TableHead className="whitespace-nowrap font-semibold">Employee no.</TableHead>
                   <TableHead className="min-w-[180px] font-semibold">Full name</TableHead>
-                  <TableHead className="whitespace-nowrap font-semibold">Department</TableHead>
+                  <TableHead className="whitespace-nowrap font-semibold">Faculty</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Division</TableHead>
                   <TableHead className="min-w-[160px] font-semibold">Email</TableHead>
                   <TableHead className="whitespace-nowrap font-semibold">Phone</TableHead>
@@ -311,7 +319,7 @@ export function TechnicianHandoverStaffPage() {
             <DialogDescription>
               {editing
                 ? 'Update staff details and view laptops currently handed over to this person.'
-                : 'Add a staff member to the handover directory. Employee number, full name, and division are required.'}
+                : 'Add a staff member to the handover directory. Employee number, full name, faculty, email, and division are required.'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
@@ -349,7 +357,7 @@ export function TechnicianHandoverStaffPage() {
                 </SelectContent>
               </Select>
             </FormField>
-            <FormField label="Department">
+            <FormField label="Faculty" required>
               <Input
                 value={form.department}
                 onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
@@ -357,7 +365,7 @@ export function TechnicianHandoverStaffPage() {
                 maxLength={128}
               />
             </FormField>
-            <FormField label="Email">
+            <FormField label="Email" required>
               <Input
                 type="email"
                 value={form.email}

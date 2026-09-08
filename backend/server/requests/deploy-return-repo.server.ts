@@ -16,7 +16,12 @@ import type {
   StaffRecipient,
   UpdateOpenDeploymentInput,
 } from '@shared/lib/deploy-return-schema';
-import { canonicalizeCampusBuilding, getReturnStatusIdForCondition } from '@shared/lib/deploy-return-schema';
+import {
+  canonicalizeCampusBuilding,
+  getReturnStatusIdForCondition,
+  missingStaffDirectoryFields,
+  staffDirectoryIncompleteMessage,
+} from '@shared/lib/deploy-return-schema';
 import { parseDdMmYyToIso, sqlDateToIso as formatDateOnly } from '@shared/lib/date-format';
 import { recordAssetPredisposed } from '@backend/server/assets/disposal-repo.server';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
@@ -84,12 +89,13 @@ export async function getOpenReturnContext(
         employee_no: string;
         full_name: string;
         department: string | null;
+        email: string | null;
         technician_oid: string | null;
         technician_name: string;
       })[]
     >(
       `SELECT h.handover_id, hs.handover_staff_id, h.handover_date, h.handover_remarks,
-              hs.employee_no, s.full_name, s.department, tech.oid AS technician_oid
+              hs.employee_no, s.full_name, s.department, s.email, tech.oid AS technician_oid
        FROM handover h
        INNER JOIN handover_staff hs ON hs.handover_id = h.handover_id
        INNER JOIN staff s ON s.employee_no = hs.employee_no
@@ -112,6 +118,7 @@ export async function getOpenReturnContext(
         employeeNo: r.employee_no,
         recipientName: r.full_name,
         department: r.department,
+        email: r.email,
         handledBy: r.technician_name?.trim() || null,
       };
       return { kind: 'laptop', record };
@@ -205,6 +212,7 @@ export async function getOpenReturnContext(
 }
 
 export async function deployLaptopToStaff(input: DeployLaptopStaffInput) {
+  await assertStaffEmployeeNo(input.employeeNo.trim());
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
@@ -304,6 +312,7 @@ export async function deployToPlace(input: DeployPlaceInput) {
 }
 
 export async function returnLaptopStaff(input: ReturnLaptopStaffInput) {
+  await assertHandoverStaffReady(input.handoverStaffId);
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
@@ -468,10 +477,32 @@ function requireDate(raw: string, label: string): string {
   return iso;
 }
 
+function assertStaffDirectoryComplete(staff: {
+  full_name: string | null;
+  email: string | null;
+  department: string | null;
+}) {
+  const missing = missingStaffDirectoryFields({
+    fullName: staff.full_name,
+    email: staff.email,
+    faculty: staff.department,
+  });
+  if (missing.length) {
+    throw new Error(staffDirectoryIncompleteMessage(missing));
+  }
+}
+
 async function assertStaffEmployeeNo(employeeNo: string) {
   const pool = getDbPool();
-  const [rows] = await pool.query<(RowDataPacket & { employee_no: string })[]>(
-    'SELECT employee_no FROM staff WHERE employee_no = ? LIMIT 1',
+  const [rows] = await pool.query<
+    (RowDataPacket & {
+      employee_no: string;
+      full_name: string | null;
+      email: string | null;
+      department: string | null;
+    })[]
+  >(
+    'SELECT employee_no, full_name, email, department FROM staff WHERE employee_no = ? LIMIT 1',
     [employeeNo],
   );
   if (!rows[0]) {
@@ -479,6 +510,29 @@ async function assertStaffEmployeeNo(employeeNo: string) {
       `No staff member matches employee number "${employeeNo}". Check the number or add the person to the staff directory first.`,
     );
   }
+  assertStaffDirectoryComplete(rows[0]);
+}
+
+async function assertHandoverStaffReady(handoverStaffId: number) {
+  const pool = getDbPool();
+  const [rows] = await pool.query<
+    (RowDataPacket & {
+      full_name: string | null;
+      email: string | null;
+      department: string | null;
+    })[]
+  >(
+    `SELECT s.full_name, s.email, s.department
+     FROM handover_staff hs
+     INNER JOIN staff s ON s.employee_no = hs.employee_no
+     WHERE hs.handover_staff_id = ?
+     LIMIT 1`,
+    [handoverStaffId],
+  );
+  if (!rows[0]) {
+    throw new Error('This handover record could not be found. Refresh the page and try again.');
+  }
+  assertStaffDirectoryComplete(rows[0]);
 }
 
 async function updateLaptopStaffHandover(input: Extract<UpdateOpenDeploymentInput, { type: 'staff' }>) {

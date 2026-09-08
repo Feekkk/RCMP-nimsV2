@@ -19,6 +19,7 @@ export type HandoverPdfData = {
 /** Superset of HandoverPdfData used to build both the PDF and the notification email from a single DB fetch. */
 export type HandoverNotificationData = HandoverPdfData & {
   recipientEmail: string | null;
+  category: string | null;
 };
 
 export type HandoverEmailStatus = 'pending' | 'sending' | 'sent' | 'failed';

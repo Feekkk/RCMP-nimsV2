@@ -10,6 +10,7 @@ import { readTechnicianSession } from '@shared/lib/auth-session';
 import { normalizeToIsoDate } from '@shared/lib/date-format';
 import type { DeployReturnSearch } from '@shared/lib/deploy-return-schema';
 import type { StaffRecipient } from '@shared/lib/deploy-return-schema';
+import { missingStaffDirectoryFields, staffDirectoryIncompleteMessage } from '@shared/lib/deploy-return-schema';
 import { parseAssetIdParam, parseAssetKindParam, sameAssetId } from '@shared/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
 import {
@@ -26,6 +27,7 @@ import {
 import { TechnicianShell } from '@/technician/technician-shell';
 import { DatePickerField, CampusBuildingSelect, FormField } from '@/technician/deploy-return-fields';
 import { StaffRecipientSearch } from '@/technician/staff-recipient-search';
+import { isLeasingCategory } from '@/hooks/assetid-generator';
 
 type LaptopDeployMode = 'staff' | 'place';
 
@@ -81,6 +83,7 @@ export function TechnicianDeployPage() {
 
   const { kind, assetId } = params;
   const session = readTechnicianSession();
+  const isLeasingAsset = isLeasingCategory(asset?.category);
 
   const handleSendHandoverEmail = async (handoverId: number) => {
     setEmailLoading(true);
@@ -172,8 +175,13 @@ export function TechnicianDeployPage() {
             setSaving(false);
             return;
           }
-          if (!recipient.email?.trim().includes('@')) {
-            toast.error('Selected staff has no email in the directory — add email before handover');
+          const missingStaff = missingStaffDirectoryFields({
+            fullName: recipient.fullName,
+            email: recipient.email,
+            faculty: recipient.department,
+          });
+          if (missingStaff.length) {
+            toast.error(staffDirectoryIncompleteMessage(missingStaff));
             setSaving(false);
             return;
           }
@@ -409,11 +417,13 @@ export function TechnicianDeployPage() {
       {lastHandoverId != null && (
         <Card className="mt-4 rounded-[14px] border-emerald-500/30 bg-emerald-50/50 shadow-sm dark:bg-emerald-950/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Handover form (3 pages)</CardTitle>
+            <CardTitle className="text-base">
+              {isLeasingAsset ? 'Handover notification' : 'Handover form (3 pages)'}
+            </CardTitle>
             <CardDescription>
-              Software compliance, equipment handover, and liability acknowledgment. An email with the
-              handover PDF is sent automatically to the staff recipient.
-              {emailSent ? ' Sent successfully.' : ' Use the buttons below if it did not send.'}
+              {isLeasingAsset
+                ? `An email is sent automatically to the staff recipient. Leasing handover does not include a PDF.${emailSent ? ' Sent successfully.' : ' Use the button below if it did not send.'}`
+                : `Software compliance, equipment handover, and liability acknowledgment. An email with the handover PDF is sent automatically to the staff recipient.${emailSent ? ' Sent successfully.' : ' Use the buttons below if it did not send.'}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -431,20 +441,22 @@ export function TechnicianDeployPage() {
               )}
               {emailSent ? 'Resend handover email' : 'Send handover email'}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[8px] gap-2"
-              disabled={pdfLoading}
-              onClick={() => void handleDownloadHandoverPdf()}
-            >
-              {pdfLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown className="h-4 w-4" />
-              )}
-              Download PDF
-            </Button>
+            {!isLeasingAsset && (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[8px] gap-2"
+                disabled={pdfLoading}
+                onClick={() => void handleDownloadHandoverPdf()}
+              >
+                {pdfLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
+                Download PDF
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

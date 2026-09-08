@@ -156,6 +156,10 @@ export async function generateReturnPdfBuffer(returnId: number): Promise<Uint8Ar
   if (!data) {
     throw new Error('This return record could not be found. Refresh the page and try again.');
   }
+  const { isLeasingCategory } = await import('@/hooks/assetid-generator');
+  if (isLeasingCategory(data.category)) {
+    throw new Error('Return PDF is not issued for leasing laptop or desktop.');
+  }
 
   return buildReturnPdfFromData(data);
 }

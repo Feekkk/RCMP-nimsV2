@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { readTechnicianSession } from '@shared/lib/auth-session';
 import { formatDateLabel, normalizeToIsoDate } from '@shared/lib/date-format';
 import type { OpenReturnContext } from '@shared/lib/deploy-return-schema';
+import { missingStaffDirectoryFields, staffDirectoryIncompleteMessage } from '@shared/lib/deploy-return-schema';
 import { sameAssetId } from '@shared/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, useAssets } from '@/hooks/assets';
 import { Route } from '@/routes/technician/return';
@@ -25,6 +26,7 @@ import {
 import { TechnicianShell } from '@/technician/technician-shell';
 import { ReturnDetailsFields } from '@/technician/deploy-return-fields';
 import { STATUS_ID } from '@shared/lib/asset-status-actions';
+import { isLeasingCategory } from '@/hooks/assetid-generator';
 
 function DeploymentSummary({ ctx }: { ctx: OpenReturnContext }) {
   if (ctx.kind === 'laptop') {
@@ -37,6 +39,8 @@ function DeploymentSummary({ ctx }: { ctx: OpenReturnContext }) {
             {r.employeeNo})
           </li>
           <li>Handover date: {formatDateLabel(r.handoverDate)}</li>
+          {r.department && <li>Faculty: {r.department}</li>}
+          {r.email && <li>Email: {r.email}</li>}
           {r.handoverRemarks && <li>Remarks: {r.handoverRemarks}</li>}
         </ul>
       );
@@ -148,6 +152,15 @@ export function TechnicianReturnPage() {
 
   const isStaffLaptopReturn =
     openCtx?.kind === 'laptop' && openCtx.record.type === 'staff';
+  const isLeasingAsset = isLeasingCategory(asset?.category);
+  const staffReturnMissing =
+    openCtx?.kind === 'laptop' && openCtx.record.type === 'staff'
+      ? missingStaffDirectoryFields({
+          fullName: openCtx.record.recipientName,
+          email: openCtx.record.email,
+          faculty: openCtx.record.department,
+        })
+      : [];
 
   const handleSendReturnEmail = async (returnId?: number) => {
     const id = returnId ?? lastReturnId;
@@ -246,6 +259,11 @@ export function TechnicianReturnPage() {
       if (openCtx.kind === 'laptop') {
         const r = openCtx.record;
         if (r.type === 'staff') {
+          if (staffReturnMissing.length) {
+            toast.error(staffDirectoryIncompleteMessage(staffReturnMissing));
+            setSaving(false);
+            return;
+          }
           const result = await returnLaptopStaffFn({
             data: {
               handoverStaffId: r.handoverStaffId,
@@ -335,7 +353,12 @@ export function TechnicianReturnPage() {
           ) : loadError ? (
             <p className="text-sm text-destructive">{loadError}</p>
           ) : openCtx ? (
-            <DeploymentSummary ctx={openCtx} />
+            <div className="space-y-2">
+              <DeploymentSummary ctx={openCtx} />
+              {staffReturnMissing.length > 0 && (
+                <p className="text-sm text-destructive">{staffDirectoryIncompleteMessage(staffReturnMissing)}</p>
+              )}
+            </div>
           ) : (
             <div className="space-y-2 text-sm text-destructive">
               <p>No open deployment record found for this asset.</p>
@@ -382,7 +405,7 @@ export function TechnicianReturnPage() {
               <Button
                 type="submit"
                 className="rounded-[8px] bg-foreground text-background hover:opacity-90"
-                disabled={saving || !openCtx || loadingCtx}
+                disabled={saving || !openCtx || loadingCtx || staffReturnMissing.length > 0}
               >
                 {saving ? 'Saving…' : 'Confirm return'}
               </Button>
@@ -391,14 +414,18 @@ export function TechnicianReturnPage() {
         </CardContent>
       </Card>
 
-      {lastReturnId != null && (
+      {lastReturnId != null && (isStaffLaptopReturn || !isLeasingAsset) && (
         <Card className="mt-4 rounded-[14px] border-emerald-500/30 bg-emerald-50/50 shadow-sm dark:bg-emerald-950/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Return form</CardTitle>
+            <CardTitle className="text-base">{isLeasingAsset ? 'Return notification' : 'Return form'}</CardTitle>
             <CardDescription>
               {isStaffLaptopReturn
-                ? `An email with the return PDF is sent automatically to the staff recipient.${emailSent ? ' Sent successfully.' : ' Use the buttons below if it did not send.'}`
-                : 'Return form PDF is available below.'}
+                ? isLeasingAsset
+                  ? `An email is sent automatically to the staff recipient. Leasing return does not include a PDF.${emailSent ? ' Sent successfully.' : ' Use the button below if it did not send.'}`
+                  : `An email with the return PDF is sent automatically to the staff recipient.${emailSent ? ' Sent successfully.' : ' Use the buttons below if it did not send.'}`
+                : isLeasingAsset
+                  ? 'Leasing return does not include a PDF.'
+                  : 'Return form PDF is available below.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -418,20 +445,22 @@ export function TechnicianReturnPage() {
                 {emailSent ? 'Resend return email' : 'Send return email'}
               </Button>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[8px] gap-2"
-              disabled={pdfLoading}
-              onClick={() => void handleDownloadReturnPdf()}
-            >
-              {pdfLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown className="h-4 w-4" />
-              )}
-              Download PDF
-            </Button>
+            {!isLeasingAsset && (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[8px] gap-2"
+                disabled={pdfLoading}
+                onClick={() => void handleDownloadReturnPdf()}
+              >
+                {pdfLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
+                Download PDF
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

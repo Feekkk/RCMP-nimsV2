@@ -3,7 +3,16 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { StaffRecipient } from '@shared/lib/deploy-return-schema';
+import { missingStaffDirectoryFields } from '@shared/lib/deploy-return-schema';
 import { searchStaffFn } from '@backend/server/requests/deploy-return.functions';
+
+function staffMissing(staff: StaffRecipient) {
+  return missingStaffDirectoryFields({
+    fullName: staff.fullName,
+    email: staff.email,
+    faculty: staff.department,
+  });
+}
 
 export function StaffRecipientSearch({
   value,
@@ -32,19 +41,25 @@ export function StaffRecipientSearch({
   }, [query]);
 
   if (value) {
+    const missing = staffMissing(value);
     return (
-      <div className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-muted/40 px-3 py-2 text-sm">
-        <div>
-          <p className="font-medium">{value.fullName}</p>
-          <p className="text-xs text-muted-foreground">
-            {value.employeeNo}
-            {value.email ? ` · ${value.email}` : ' · no email'}
-            {value.department ? ` · ${value.department}` : ''}
-          </p>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-muted/40 px-3 py-2 text-sm">
+          <div>
+            <p className="font-medium">{value.fullName || 'No full name'}</p>
+            <p className="text-xs text-muted-foreground">
+              {value.employeeNo}
+              {value.email ? ` · ${value.email}` : ' · no email'}
+              {value.department ? ` · ${value.department}` : ' · no faculty'}
+            </p>
+          </div>
+          <Button type="button" variant="ghost" size="sm" className="rounded-[6px]" onClick={() => onSelect(null)}>
+            Change
+          </Button>
         </div>
-        <Button type="button" variant="ghost" size="sm" className="rounded-[6px]" onClick={() => onSelect(null)}>
-          Change
-        </Button>
+        {missing.length > 0 && (
+          <p className="text-xs text-destructive">Missing staff information: {missing.join(', ')}.</p>
+        )}
       </div>
     );
   }
@@ -63,25 +78,30 @@ export function StaffRecipientSearch({
       {searching && <p className="text-xs text-muted-foreground">Searching…</p>}
       {results.length > 0 && (
         <ul className="max-h-40 overflow-y-auto rounded-[8px] border border-border">
-          {results.map((s) => (
-            <li key={s.employeeNo}>
-              <button
-                type="button"
-                className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-muted/60"
-                onClick={() => {
-                  onSelect(s);
-                  setQuery('');
-                  setResults([]);
-                }}
-              >
-                <span className="font-medium">{s.fullName}</span>
-                <span className="text-xs text-muted-foreground">
-                  {s.employeeNo}
-                  {s.department ? ` · ${s.department}` : ''}
-                </span>
-              </button>
-            </li>
-          ))}
+          {results.map((s) => {
+            const missing = staffMissing(s);
+            return (
+              <li key={s.employeeNo}>
+                <button
+                  type="button"
+                  className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-muted/60"
+                  onClick={() => {
+                    onSelect(s);
+                    setQuery('');
+                    setResults([]);
+                  }}
+                >
+                  <span className="font-medium">{s.fullName || s.employeeNo}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {s.employeeNo}
+                    {s.email ? ` · ${s.email}` : ''}
+                    {s.department ? ` · ${s.department}` : ''}
+                    {missing.length > 0 ? ` · missing ${missing.join(', ')}` : ''}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

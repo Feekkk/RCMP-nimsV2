@@ -32,6 +32,24 @@ export type StaffRecipient = {
   phone: string | null;
 };
 
+export type StaffDirectoryCheck = {
+  fullName: string | null | undefined;
+  email: string | null | undefined;
+  faculty: string | null | undefined;
+};
+
+export function missingStaffDirectoryFields(staff: StaffDirectoryCheck): string[] {
+  const missing: string[] = [];
+  if (!staff.fullName?.trim()) missing.push('full name');
+  if (!staff.email?.trim().includes('@')) missing.push('email');
+  if (!staff.faculty?.trim()) missing.push('faculty');
+  return missing;
+}
+
+export function staffDirectoryIncompleteMessage(missing: string[]): string {
+  return `Staff information is incomplete (${missing.join(', ')}). Update the staff directory before handover or return.`;
+}
+
 export type LaptopHandoverOpen = {
   type: 'staff';
   handoverId: number;
@@ -41,6 +59,7 @@ export type LaptopHandoverOpen = {
   employeeNo: string;
   recipientName: string;
   department: string | null;
+  email: string | null;
   handledBy: string | null;
 };
 

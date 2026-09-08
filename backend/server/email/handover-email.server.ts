@@ -7,6 +7,7 @@ import { markHandoverEmailStatus } from '@backend/server/email/handover-email-re
 import { buildHandoverPdfFromData } from '@backend/server/pdf/handover-pdf.server';
 import { getHandoverNotificationData } from '@backend/server/pdf/handover-pdf-repo.server';
 import { loadLogoBuffer } from '@backend/server/pdf/pdf-form-common.server';
+import { isLeasingCategory } from '@/hooks/assetid-generator';
 
 const HANDOVER_CC = 'it.rcmp@unikl.edu.my';
 const LOGO_CID = 'unikl-logo';
@@ -18,7 +19,7 @@ function detailRow(label: string, value: unknown): string {
   </tr>`;
 }
 
-export function buildHandoverEmailHtml(data: HandoverEmailData): string {
+export function buildHandoverEmailHtml(data: HandoverEmailData, attachPdf: boolean): string {
   const rows = [
     detailRow('Recipient', data.recipientName),
     detailRow('Staff ID', data.employeeNo),
@@ -54,8 +55,12 @@ export function buildHandoverEmailHtml(data: HandoverEmailData): string {
               Dear <strong>${escapeHtml(data.recipientName)}</strong>,
             </p>
             <p style="margin:0 0 20px;font-size:14px;line-height:1.55;color:#475569;">
-              A company notebook/desktop has been handed over to you through NIMS. Please review the summary below and complete the attached
-              <strong>3-page handover form</strong> (software compliance, equipment handover, and liability acknowledgment).
+              ${
+                attachPdf
+                  ? `A company notebook/desktop has been handed over to you through NIMS. Please review the summary below and complete the attached
+              <strong>3-page handover form</strong> (software compliance, equipment handover, and liability acknowledgment).`
+                  : `A leasing laptop/desktop has been handed over to you through NIMS. Please review the summary below. This notification is sent by email only; a handover PDF is not issued for leasing equipment.`
+              }
             </p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d4e8f7;border-radius:8px;overflow:hidden;">
               <tr>
@@ -70,7 +75,11 @@ export function buildHandoverEmailHtml(data: HandoverEmailData): string {
         <tr>
           <td style="padding:8px 24px 24px;">
             <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#64748b;">
-              The signed handover PDF is attached to this email. If you have questions, contact IT at
+              ${
+                attachPdf
+                  ? `The signed handover PDF is attached to this email. If you have questions, contact IT at `
+                  : `If you have questions, contact IT at `
+              }
               <a href="mailto:${HANDOVER_CC}" style="color:#0055a4;">${HANDOVER_CC}</a>.
             </p>
             <p style="margin:0;font-size:12px;color:#94a3b8;">
@@ -90,13 +99,15 @@ export function buildHandoverEmailHtml(data: HandoverEmailData): string {
 </html>`;
 }
 
-export function buildHandoverEmailText(data: HandoverEmailData): string {
+export function buildHandoverEmailText(data: HandoverEmailData, attachPdf: boolean): string {
   return [
     'UNIKL RCMP — Equipment Handover Notification',
     '',
     `Dear ${data.recipientName},`,
     '',
-    'A company notebook/desktop has been handed over to you. The 3-page handover form is attached.',
+    attachPdf
+      ? 'A company notebook/desktop has been handed over to you. The 3-page handover form is attached.'
+      : 'A leasing laptop/desktop has been handed over to you. This notification is email only (no PDF).',
     '',
     'Handover details',
     `  Recipient: ${data.recipientName}`,
@@ -138,7 +149,8 @@ export async function sendHandoverEmail(handoverId: number): Promise<SendHandove
     }
 
     const emailData: HandoverEmailData = { ...data, recipientEmail: email };
-    const pdfBytes = await buildHandoverPdfFromData(data);
+    const attachPdf = !isLeasingCategory(data.category);
+    const pdfBytes = attachPdf ? await buildHandoverPdfFromData(data) : null;
     const logo = loadLogoBuffer();
     const pdfFilename = `handover-${handoverId}-asset-${data.assetId}.pdf`;
 
@@ -147,8 +159,8 @@ export async function sendHandoverEmail(handoverId: number): Promise<SendHandove
       to: email,
       cc: HANDOVER_CC,
       subject: `UNIKL RCMP — Laptop/Desktop Handover (Asset ${data.assetId})`,
-      text: buildHandoverEmailText(emailData),
-      html: buildHandoverEmailHtml(emailData),
+      text: buildHandoverEmailText(emailData, attachPdf),
+      html: buildHandoverEmailHtml(emailData, attachPdf),
       attachments: [
         {
           filename: 'unikl-logo.png',
@@ -156,11 +168,15 @@ export async function sendHandoverEmail(handoverId: number): Promise<SendHandove
           contentType: 'image/png',
           cid: LOGO_CID,
         },
-        {
-          filename: pdfFilename,
-          content: pdfBytes,
-          contentType: 'application/pdf',
-        },
+        ...(pdfBytes
+          ? [
+              {
+                filename: pdfFilename,
+                content: pdfBytes,
+                contentType: 'application/pdf',
+              },
+            ]
+          : []),
       ],
     });
 

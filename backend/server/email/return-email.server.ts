@@ -8,6 +8,7 @@ import { loadLogoBuffer } from '@backend/server/pdf/pdf-form-common.server';
 import { markReturnEmailStatus } from '@backend/server/email/return-email-repo.server';
 import { buildReturnPdfFromData } from '@backend/server/pdf/return-pdf.server';
 import { getReturnNotificationData } from '@backend/server/pdf/return-pdf-repo.server';
+import { isLeasingCategory } from '@/hooks/assetid-generator';
 
 const LOGO_CID = 'unikl-logo';
 
@@ -18,7 +19,7 @@ function detailRow(label: string, value: unknown): string {
   </tr>`;
 }
 
-function buildReturnEmailHtml(data: ReturnEmailData): string {
+function buildReturnEmailHtml(data: ReturnEmailData, attachPdf: boolean): string {
   const rows = [
     detailRow('Recipient', data.recipientName),
     detailRow('Staff ID', data.employeeNo),
@@ -57,8 +58,12 @@ function buildReturnEmailHtml(data: ReturnEmailData): string {
               Dear <strong>${escapeHtml(data.recipientName)}</strong>,
             </p>
             <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#3d4f5f;">
-              Your company notebook/desktop return has been recorded in NIMS. Please review the summary below and keep the attached
-              <strong>return form</strong> for your records.
+              ${
+                attachPdf
+                  ? `Your company notebook/desktop return has been recorded in NIMS. Please review the summary below and keep the attached
+              <strong>return form</strong> for your records.`
+                  : `Your leasing laptop/desktop return has been recorded in NIMS. Please review the summary below. This notification is sent by email only; a return PDF is not issued for leasing equipment.`
+              }
             </p>
           </td>
         </tr>
@@ -79,7 +84,11 @@ function buildReturnEmailHtml(data: ReturnEmailData): string {
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-left:4px solid #0056a8;border-radius:0 6px 6px 0;">
               <tr>
                 <td style="padding:14px 16px;font-size:13px;line-height:1.55;color:#3d4f5f;">
-                  <strong style="color:#003d7a;">Attached:</strong> Return form PDF. If you have questions, contact IT at
+                  <strong style="color:#003d7a;">${attachPdf ? 'Attached:' : 'Note:'}</strong> ${
+                    attachPdf
+                      ? 'Return form PDF. If you have questions, contact IT at '
+                      : 'A return PDF is not issued for leasing equipment. If you have questions, contact IT at '
+                  }
                   <a href="mailto:${RETURN_IT_CC}" style="color:#0056a8;">${RETURN_IT_CC}</a>.
                 </td>
               </tr>
@@ -100,11 +109,13 @@ function buildReturnEmailHtml(data: ReturnEmailData): string {
 </html>`;
 }
 
-function buildPlainText(data: ReturnEmailData): string {
+function buildPlainText(data: ReturnEmailData, attachPdf: boolean): string {
   return [
     `Dear ${data.recipientName},`,
     '',
-    'Your company notebook/desktop return has been recorded. Summary:',
+    attachPdf
+      ? 'Your company notebook/desktop return has been recorded. Summary:'
+      : 'Your leasing laptop/desktop return has been recorded. Summary:',
     '',
     `Recipient: ${data.recipientName}`,
     `Staff ID: ${data.employeeNo}`,
@@ -121,7 +132,7 @@ function buildPlainText(data: ReturnEmailData): string {
     `Remarks: ${data.returnRemarks}`,
     `Processed by: ${data.handoverByName} (${data.handoverByDesignation})`,
     '',
-    'The return form is attached as a PDF.',
+    attachPdf ? 'The return form is attached as a PDF.' : 'This notification is email only (no PDF).',
     `Questions: ${RETURN_IT_CC}`,
   ].join('\n');
 }
@@ -156,7 +167,8 @@ export async function sendReturnEmail(returnId: number): Promise<SendReturnEmail
     }
 
     const emailData: ReturnEmailData = { ...data, recipientEmail: email };
-    const pdfBuffer = await buildReturnPdfFromData(data);
+    const attachPdf = !isLeasingCategory(data.category);
+    const pdfBuffer = attachPdf ? await buildReturnPdfFromData(data) : null;
     const filename = `return-${returnId}-asset-${data.assetId}.pdf`;
     const subject = `UNIKL RCMP — Notebook/Desktop Return (Asset ${data.assetId})`;
 
@@ -164,15 +176,19 @@ export async function sendReturnEmail(returnId: number): Promise<SendReturnEmail
       to: email,
       cc: RETURN_IT_CC,
       subject,
-      text: buildPlainText(emailData),
-      html: buildReturnEmailHtml(emailData),
+      text: buildPlainText(emailData, attachPdf),
+      html: buildReturnEmailHtml(emailData, attachPdf),
       attachments: [
         loadLogoAttachment(),
-        {
-          filename,
-          content: Buffer.from(pdfBuffer),
-          contentType: 'application/pdf',
-        },
+        ...(pdfBuffer
+          ? [
+              {
+                filename,
+                content: Buffer.from(pdfBuffer),
+                contentType: 'application/pdf',
+              },
+            ]
+          : []),
       ],
     });
 

@@ -70,6 +70,7 @@ export async function getReturnNotificationData(
     returnDate: formatDateOnly(row.return_date),
     recipientName: row.recipient_name?.trim() || '—',
     recipientEmail: row.recipient_email?.trim() || null,
+    category: row.category?.trim() || null,
     employeeNo: row.employee_no?.trim() || '—',
     designation: row.department?.trim() || '—',
     department: row.department?.trim() || '—',
