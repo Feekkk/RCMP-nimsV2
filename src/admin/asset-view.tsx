@@ -15,6 +15,7 @@ export function AdminAssetViewPage({ kind, assetId }: { kind: AssetKind; assetId
         kind={kind}
         assetId={assetId}
         readOnly
+        canEditDetails
         backTo={ADMIN_ASSET_LIST_PATH[kind]}
         backLabel="Back to overview"
       />

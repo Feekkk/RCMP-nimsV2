@@ -390,6 +390,7 @@ type AssetViewContentProps = {
   kind: AssetKind;
   assetId: AssetId;
   readOnly?: boolean;
+  canEditDetails?: boolean;
   backTo: string;
   backLabel?: string;
 };
@@ -398,9 +399,11 @@ export function AssetViewContent({
   kind,
   assetId,
   readOnly = false,
+  canEditDetails,
   backTo,
   backLabel = 'Back to list',
 }: AssetViewContentProps) {
+  const allowEdit = canEditDetails ?? !readOnly;
   const [data, setData] = useState<AssetDetailResponse | null>(null);
   const [deployment, setDeployment] = useState<OpenReturnContext | null>(null);
   const [warranty, setWarranty] = useState<WarrantyContext['warranty']>(null);
@@ -500,32 +503,30 @@ export function AssetViewContent({
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-3">
+              {allowEdit && !editing ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-[8px]"
+                  onClick={() => {
+                    setSection('details');
+                    setEditing(true);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit details
+                </Button>
+              ) : null}
               {readOnly ? (
                 <AssetStatusBadge statusId={asset.statusId} />
               ) : (
-                <>
-                  {!editing ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="rounded-[8px]"
-                      onClick={() => {
-                        setSection('details');
-                        setEditing(true);
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit details
-                    </Button>
-                  ) : null}
-                  <AssetStatusActions
-                    kind={kind}
-                    assetId={asset.assetId}
-                    statusId={asset.statusId}
-                    onStatusChange={handleStatusChange}
-                  />
-                </>
+                <AssetStatusActions
+                  kind={kind}
+                  assetId={asset.assetId}
+                  statusId={asset.statusId}
+                  onStatusChange={handleStatusChange}
+                />
               )}
             </div>
           </div>
@@ -547,7 +548,7 @@ export function AssetViewContent({
             </TabsList>
 
             <TabsContent value="details" className="mt-0">
-              {editing && !readOnly ? (
+              {editing && allowEdit ? (
                 <AssetDetailsForm
                   asset={asset}
                   deployment={deployment}

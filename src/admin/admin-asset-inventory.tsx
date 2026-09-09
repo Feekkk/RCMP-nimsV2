@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ElementType, type ReactNode } from 'react';
 import { ArrowLeft, Building2, Laptop as LaptopIcon, Layers, Loader2, Monitor, Package, Search, Truck, Users } from 'lucide-react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { AdminShell } from '@/admin/admin-shell';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -35,6 +35,7 @@ import {
   LAPTOP_ASSIGNMENT_BUCKETS,
   matchesAssignmentBucket,
   type AssetId,
+  type AssetKind,
   type AvAsset,
   type LaptopAsset,
   type LaptopAssignmentBucket,
@@ -115,12 +116,58 @@ function filterDepartmentsByAssetIds(
 
 type PlaceAsset = AvAsset | NetworkAsset;
 
+function AdminAssetIdLink({
+  kind,
+  assetId,
+}: {
+  kind: AssetKind;
+  assetId: AssetId;
+}) {
+  return (
+    <Link
+      to="/admin/asset/$kind/$assetId"
+      params={{ kind, assetId: String(assetId) }}
+      className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground underline-offset-2 hover:bg-muted/80 hover:underline"
+      onClick={(event) => event.stopPropagation()}
+    >
+      #{assetId}
+    </Link>
+  );
+}
+
+function AdminAssetTableRow({
+  kind,
+  assetId,
+  children,
+}: {
+  kind: AssetKind;
+  assetId: AssetId;
+  children: ReactNode;
+}) {
+  const navigate = useNavigate();
+  return (
+    <TableRow
+      className="cursor-pointer"
+      onClick={() =>
+        void navigate({
+          to: '/admin/asset/$kind/$assetId',
+          params: { kind, assetId: String(assetId) },
+        })
+      }
+    >
+      {children}
+    </TableRow>
+  );
+}
+
 function PlaceStatusAssetsDialog({
+  kind,
   label,
   statusId,
   items,
   onClose,
 }: {
+  kind: 'av' | 'network';
   label: string;
   statusId: number | null;
   items: PlaceAsset[];
@@ -160,11 +207,9 @@ function PlaceStatusAssetsDialog({
                 </TableHeader>
                 <TableBody>
                   {statusItems.map((item) => (
-                    <TableRow key={item.assetId}>
+                    <AdminAssetTableRow key={item.assetId} kind={kind} assetId={item.assetId}>
                       <TableCell className="align-top">
-                        <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
-                          #{item.assetId}
-                        </span>
+                        <AdminAssetIdLink kind={kind} assetId={item.assetId} />
                       </TableCell>
                       <TableCell className="align-top">
                         <code className="text-xs text-muted-foreground">{item.serialNum ?? '—'}</code>
@@ -181,7 +226,7 @@ function PlaceStatusAssetsDialog({
                       <TableCell className="align-top text-xs text-muted-foreground">
                         {item.remarks?.trim() || '—'}
                       </TableCell>
-                    </TableRow>
+                    </AdminAssetTableRow>
                   ))}
                 </TableBody>
               </Table>
@@ -194,12 +239,14 @@ function PlaceStatusAssetsDialog({
 }
 
 function AssetBucketSummaryCard({
+  kind,
   icon: Icon,
   label,
   items,
   statusIds,
   tone,
 }: {
+  kind: 'av' | 'network';
   icon: ElementType;
   label: string;
   items: PlaceAsset[];
@@ -243,6 +290,7 @@ function AssetBucketSummaryCard({
         </ul>
       </InsightStatCard>
       <PlaceStatusAssetsDialog
+        kind={kind}
         label={label}
         statusId={selectedStatusId}
         items={bucketItems}
@@ -253,10 +301,12 @@ function AssetBucketSummaryCard({
 }
 
 function PlaceBuildingAssetsDialog({
+  kind,
   building,
   items,
   onClose,
 }: {
+  kind: 'av' | 'network';
   building: string | null;
   items: PlaceAsset[];
   onClose: () => void;
@@ -296,11 +346,9 @@ function PlaceBuildingAssetsDialog({
                 </TableHeader>
                 <TableBody>
                   {buildingItems.map((item) => (
-                    <TableRow key={item.assetId}>
+                    <AdminAssetTableRow key={item.assetId} kind={kind} assetId={item.assetId}>
                       <TableCell className="align-top">
-                        <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
-                          #{item.assetId}
-                        </span>
+                        <AdminAssetIdLink kind={kind} assetId={item.assetId} />
                       </TableCell>
                       <TableCell className="align-top">
                         <code className="text-xs text-muted-foreground">{item.serialNum ?? '—'}</code>
@@ -317,7 +365,7 @@ function PlaceBuildingAssetsDialog({
                       <TableCell className="align-top text-xs text-muted-foreground">
                         {item.remarks?.trim() || '—'}
                       </TableCell>
-                    </TableRow>
+                    </AdminAssetTableRow>
                   ))}
                 </TableBody>
               </Table>
@@ -329,7 +377,13 @@ function PlaceBuildingAssetsDialog({
   );
 }
 
-function AssetDeployBuildingSummaryCard({ items }: { items: PlaceAsset[] }) {
+function AssetDeployBuildingSummaryCard({
+  kind,
+  items,
+}: {
+  kind: 'av' | 'network';
+  items: PlaceAsset[];
+}) {
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null);
 
   const deployItems = useMemo(
@@ -377,6 +431,7 @@ function AssetDeployBuildingSummaryCard({ items }: { items: PlaceAsset[] }) {
         </ul>
       </InsightStatCard>
       <PlaceBuildingAssetsDialog
+        kind={kind}
         building={selectedBuilding}
         items={deployItems}
         onClose={() => setSelectedBuilding(null)}
@@ -385,17 +440,24 @@ function AssetDeployBuildingSummaryCard({ items }: { items: PlaceAsset[] }) {
   );
 }
 
-function AssetStockDeploySummary({ items }: { items: PlaceAsset[] }) {
+function AssetStockDeploySummary({
+  kind,
+  items,
+}: {
+  kind: 'av' | 'network';
+  items: PlaceAsset[];
+}) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <AssetBucketSummaryCard
+        kind={kind}
         icon={Package}
         label="Store"
         items={items}
         statusIds={DASHBOARD_ASSET_STORE_STATUS_IDS}
         tone="emerald"
       />
-      <AssetDeployBuildingSummaryCard items={items} />
+      <AssetDeployBuildingSummaryCard kind={kind} items={items} />
     </div>
   );
 }
@@ -601,7 +663,7 @@ function matchesStaffSearch(row: StaffHandoverRow, query: string) {
   );
 }
 
-function StaffHandoverAssetBadges({ assetIds }: { assetIds: number[] }) {
+function StaffHandoverAssetBadges({ assetIds }: { assetIds: AssetId[] }) {
   if (assetIds.length === 0) {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
@@ -609,12 +671,7 @@ function StaffHandoverAssetBadges({ assetIds }: { assetIds: number[] }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {assetIds.map((assetId) => (
-        <span
-          key={assetId}
-          className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground"
-        >
-          #{assetId}
-        </span>
+        <AdminAssetIdLink key={assetId} kind="laptop" assetId={assetId} />
       ))}
     </div>
   );
@@ -702,11 +759,9 @@ function StatusAssetsTable({ items }: { items: LaptopAsset[] }) {
       </TableHeader>
       <TableBody>
         {items.map((item) => (
-          <TableRow key={item.assetId}>
+          <AdminAssetTableRow key={item.assetId} kind="laptop" assetId={item.assetId}>
             <TableCell className="align-top">
-              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
-                #{item.assetId}
-              </span>
+              <AdminAssetIdLink kind="laptop" assetId={item.assetId} />
             </TableCell>
             <TableCell className="align-top">
               <code className="text-xs text-muted-foreground">{item.serialNum ?? '—'}</code>
@@ -723,7 +778,7 @@ function StatusAssetsTable({ items }: { items: LaptopAsset[] }) {
             <TableCell className="align-top text-xs text-muted-foreground">
               {item.remarks?.trim() || '—'}
             </TableCell>
-          </TableRow>
+          </AdminAssetTableRow>
         ))}
       </TableBody>
     </Table>
@@ -748,11 +803,9 @@ function ReturnAssetsTable({ items }: { items: LaptopAsset[] }) {
       </TableHeader>
       <TableBody>
         {items.map((item) => (
-          <TableRow key={item.assetId}>
+          <AdminAssetTableRow key={item.assetId} kind="laptop" assetId={item.assetId}>
             <TableCell className="align-top">
-              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
-                #{item.assetId}
-              </span>
+              <AdminAssetIdLink kind="laptop" assetId={item.assetId} />
             </TableCell>
             <TableCell className="align-top text-sm font-medium text-foreground">
               {item.brand ?? '—'}
@@ -766,7 +819,7 @@ function ReturnAssetsTable({ items }: { items: LaptopAsset[] }) {
             <TableCell className="align-top text-xs text-muted-foreground">
               {item.remarks?.trim() || '—'}
             </TableCell>
-          </TableRow>
+          </AdminAssetTableRow>
         ))}
       </TableBody>
     </Table>
@@ -793,11 +846,9 @@ function FacilityAssetsTable({ items }: { items: LaptopAsset[] }) {
       </TableHeader>
       <TableBody>
         {items.map((item) => (
-          <TableRow key={item.assetId}>
+          <AdminAssetTableRow key={item.assetId} kind="laptop" assetId={item.assetId}>
             <TableCell className="align-top">
-              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-foreground">
-                #{item.assetId}
-              </span>
+              <AdminAssetIdLink kind="laptop" assetId={item.assetId} />
             </TableCell>
             <TableCell className="align-top">
               <code className="text-xs text-muted-foreground">{item.serialNum ?? '—'}</code>
@@ -817,7 +868,7 @@ function FacilityAssetsTable({ items }: { items: LaptopAsset[] }) {
             <TableCell className="align-top text-xs text-muted-foreground">
               {item.placeHandoverRemarks?.trim() || '—'}
             </TableCell>
-          </TableRow>
+          </AdminAssetTableRow>
         ))}
       </TableBody>
     </Table>
@@ -1337,7 +1388,7 @@ function AvNetworkInsightsSections({
                       {ACTIVITY_CATEGORY_LABEL[entry.category]}
                     </span>
                     {entry.assetId != null ? (
-                      <span className="font-mono">#{entry.assetId}</span>
+                      <AdminAssetIdLink kind={kind} assetId={entry.assetId} />
                     ) : null}
                   </div>
                 </li>
@@ -1476,14 +1527,14 @@ export function AdminPlaceAssetOverviewPage({
                   {ASSET_KIND_LABEL[kind]}
                 </h1>
                 <p className="text-xs text-muted-foreground sm:text-sm">
-                  Inventory overview · read-only
+                  Inventory overview
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        <AssetStockDeploySummary items={items as PlaceAsset[]} />
+        <AssetStockDeploySummary kind={kind} items={items as PlaceAsset[]} />
       </div>
 
       {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
@@ -1524,7 +1575,7 @@ export function AdminAssetInventoryPage({
                   {ASSET_KIND_LABEL[kind]}
                 </h1>
                 <p className="text-xs text-muted-foreground sm:text-sm">
-                  Inventory overview · read-only
+                  Inventory overview
                 </p>
               </div>
             </div>
