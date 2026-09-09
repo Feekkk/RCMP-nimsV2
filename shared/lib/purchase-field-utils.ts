@@ -1,4 +1,4 @@
-import { IMPORT_DATE_FORMAT_HINT, parseDdMmYyToIso } from '@shared/lib/date-format';
+import { coerceToIsoDate, IMPORT_DATE_FORMAT_HINT, parseDdMmYyToIso } from '@shared/lib/date-format';
 import type { PurchaseFields } from '@shared/lib/inventory-schema';
 
 export { DATE_FORMAT_DDMMYY, IMPORT_DATE_FORMAT_HINT, PURCHASE_DATE_COLUMNS } from '@shared/lib/date-format';
@@ -81,9 +81,7 @@ export function emptyPurchaseFormState() {
 export type PurchaseFormState = ReturnType<typeof emptyPurchaseFormState>;
 
 function formDateToIso(raw: string): string | null {
-  const val = raw.trim();
-  if (!val) return null;
-  return parseDdMmYyToIso(val);
+  return coerceToIsoDate(raw);
 }
 
 export function purchaseFormToInput(state: PurchaseFormState): PurchaseFields {

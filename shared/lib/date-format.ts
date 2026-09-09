@@ -61,17 +61,37 @@ function parseDigitDate(digits: string): string | null {
   return null;
 }
 
-/** Parse DD-MM-YY, DD/MM/YY, DD.MM.YY, DDMMyyyy, or DDMMYY to ISO YYYY-MM-DD. */
+function isoDatePrefix(raw: string): string | null {
+  const prefix = raw.trim().slice(0, 10);
+  if (!ISO_DATE_RE.test(prefix)) return null;
+  const rest = raw.trim().slice(10);
+  if (rest && rest[0] !== 'T' && rest[0] !== ' ') return null;
+  return prefix;
+}
+
+/** Parse ISO, ISO datetime, DD-MM-YY, DD/MM/YY, DD.MM.YY, DDMMyyyy, or DDMMYY to ISO YYYY-MM-DD. */
 export function parseDdMmYyToIso(raw: string): string | null {
   const val = raw.trim();
   if (!val) return null;
 
-  if (ISO_DATE_RE.test(val)) return val;
+  const iso = isoDatePrefix(val);
+  if (iso) return iso;
 
   const separated = parseSeparatedDate(val);
   if (separated) return separated;
 
   return parseDigitDate(normalizeDdMmYyInput(val));
+}
+
+export function coerceToIsoDate(raw: unknown): string | null {
+  if (raw == null) return null;
+  if (raw instanceof Date) {
+    if (Number.isNaN(raw.getTime())) return null;
+    return localDateToIso(raw);
+  }
+  const val = String(raw).trim();
+  if (!val) return null;
+  return parseDdMmYyToIso(val);
 }
 
 /** Format ISO YYYY-MM-DD (or Date) to DDMMYY for display / CSV. */
@@ -132,12 +152,6 @@ export function sqlDateToIso(val: Date | string | null | undefined): string {
   }
   const raw = String(val).trim();
   if (!raw) return '';
-  if (ISO_DATE_RE.test(raw)) return raw;
-  if (ISO_DATE_RE.test(raw.slice(0, 10)) && (raw[10] === 'T' || raw[10] === ' ')) {
-    const parsed = new Date(raw);
-    if (!Number.isNaN(parsed.getTime())) return localDateToIso(parsed);
-    return raw.slice(0, 10);
-  }
   return parseDdMmYyToIso(raw) ?? '';
 }
 
@@ -200,30 +214,57 @@ export function formatAssetAge(
   createdAt: string | null | undefined,
 ): string | null {
   let start: Date | undefined;
-  let basisLabel: string | undefined;
 
   if (poDate?.trim()) {
     const iso = normalizeToIsoDate(poDate);
     const parsed = iso ? isoToLocalDate(iso) : undefined;
-    if (parsed) {
-      start = parsed;
-      basisLabel = 'since PO date';
-    }
+    if (parsed) start = parsed;
   }
 
   if (!start && createdAt) {
     const registered = new Date(createdAt);
     if (!Number.isNaN(registered.getTime())) {
       start = new Date(registered.getFullYear(), registered.getMonth(), registered.getDate());
-      basisLabel = 'registered in system';
     }
   }
 
-  if (!start || !basisLabel) return null;
+  if (!start) return null;
 
   const today = new Date();
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return `${formatDurationSince(start, end)} (${basisLabel})`;
+  return formatDurationSince(start, end);
+}
+
+export function formatWarrantyRemaining(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+  today: Date = new Date(),
+): string | null {
+  const endIso = endDate?.trim() ? normalizeToIsoDate(endDate) : null;
+  const end = endIso ? isoToLocalDate(endIso) : undefined;
+  if (!end) return null;
+
+  const startIso = startDate?.trim() ? normalizeToIsoDate(startDate) : null;
+  const start = startIso ? isoToLocalDate(startIso) : undefined;
+  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysUntilEnd = Math.round((end.getTime() - todayLocal.getTime()) / msPerDay);
+
+  if (start && todayLocal < start) {
+    const daysUntilStart = Math.round((start.getTime() - todayLocal.getTime()) / msPerDay);
+    if (daysUntilStart <= 0) return 'Warranty starts today';
+    if (daysUntilStart === 1) return 'Warranty starts tomorrow';
+    return `Warranty starts in ${daysUntilStart} days`;
+  }
+
+  if (daysUntilEnd < 0) {
+    const ago = Math.abs(daysUntilEnd);
+    if (ago === 1) return 'Warranty ended yesterday';
+    return `Warranty ended ${ago} days ago`;
+  }
+  if (daysUntilEnd === 0) return 'Warranty ends today';
+  if (daysUntilEnd === 1) return '1 day left on warranty';
+  return `${daysUntilEnd} days left on warranty`;
 }
 
 /** Lifespan from PO date, or from asset ID year (PPYYSSS → 20YY-01-01) when PO is missing. */

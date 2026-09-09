@@ -7,7 +7,7 @@ import type {
   WarrantyInput,
   WarrantyRecord,
 } from '@shared/lib/warranty-repair-schema';
-import { localDateToIso, sqlDateToIso as toIsoDate } from '@shared/lib/date-format';
+import { coerceToIsoDate, localDateToIso, sqlDateToIso as toIsoDate } from '@shared/lib/date-format';
 import { getDbPool } from '@backend/server/core/db';
 
 type WarrantyRow = RowDataPacket & {
@@ -51,12 +51,21 @@ export async function insertWarranty(
   input: WarrantyInput,
   conn?: import('mysql2/promise').PoolConnection,
 ) {
+  const startDate = coerceToIsoDate(input.startDate);
+  const endDate = coerceToIsoDate(input.endDate);
+  if (!startDate || !endDate) {
+    throw new Error('Warranty dates are not valid. Pick a start date and an end date from the calendar.');
+  }
+  if (endDate < startDate) {
+    throw new Error('Warranty end date must be on or after the start date.');
+  }
+
   const pool = conn ?? getDbPool();
   const executor = conn ? conn.execute.bind(conn) : pool.execute.bind(pool);
   await executor(
     `INSERT INTO warranty (asset_id, asset_type, warranty_start_date, warranty_end_date, warranty_remarks)
      VALUES (?, ?, ?, ?, ?)`,
-    [assetId, kind, input.startDate, input.endDate, input.remarks ?? null],
+    [String(assetId), kind, startDate, endDate, input.remarks ?? null],
   );
 }
 

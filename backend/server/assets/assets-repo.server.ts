@@ -36,7 +36,7 @@ import {
   PREDISPOSAL_ELIGIBLE_STATUS_IDS,
   STATUS_ID,
 } from '@shared/lib/asset-status-actions';
-import { formatIsoToDdMmYy, parseDdMmYyToIso, sqlDateToIso } from '@shared/lib/date-format';
+import { coerceToIsoDate, formatIsoToDdMmYy, sqlDateToIso } from '@shared/lib/date-format';
 import { purchaseSqlParams } from '@shared/lib/purchase-field-utils';
 import { assetIdNewestYearFirstSql, canonicalizeLaptopCategory } from '@/hooks/assetid-generator';
 import { allocateAssetIdsFromDb } from '@backend/server/assets/asset-id.server';
@@ -447,6 +447,7 @@ const NETWORK_INSERT = `INSERT INTO network (
 function laptopParams(input: CreateLaptopInput) {
   const category = canonicalizeLaptopCategory(input.category);
   if (!category) throw new Error('Category is required.');
+  const purchase = normalizePurchaseForUpdate(input);
   return [
     input.assetId,
     input.accCode ?? null,
@@ -461,13 +462,14 @@ function laptopParams(input: CreateLaptopInput) {
     input.os ?? null,
     input.storage ?? null,
     input.gpu ?? null,
-    ...purchaseSqlParams(input),
+    ...purchaseSqlParams(purchase),
     input.statusId,
     input.remarks ?? null,
   ];
 }
 
 function avParams(input: CreateAvInput) {
+  const purchase = normalizePurchaseForUpdate(input);
   return [
     input.assetId,
     input.accCode ?? null,
@@ -477,13 +479,14 @@ function avParams(input: CreateAvInput) {
     input.model ?? null,
     input.supplier ?? null,
     input.serialNum ?? null,
-    ...purchaseSqlParams(input),
+    ...purchaseSqlParams(purchase),
     input.statusId,
     input.remarks ?? null,
   ];
 }
 
 function networkParams(input: CreateNetworkInput) {
+  const purchase = normalizePurchaseForUpdate(input);
   return [
     input.assetId,
     input.accCode ?? null,
@@ -494,7 +497,7 @@ function networkParams(input: CreateNetworkInput) {
     input.supplier ?? null,
     input.macAddress ?? null,
     input.ipAddress ?? null,
-    ...purchaseSqlParams(input),
+    ...purchaseSqlParams(purchase),
     input.statusId,
     input.remarks ?? null,
   ];
@@ -755,7 +758,7 @@ function normalizeAccCode(value: string | null | undefined): string | null {
 
 function normalizeOptionalDate(raw: string | null | undefined): string | null {
   if (raw == null || !String(raw).trim()) return null;
-  const iso = parseDdMmYyToIso(String(raw));
+  const iso = coerceToIsoDate(raw);
   if (!iso) {
     throw new Error('A purchase date is not valid. Pick a date from the calendar.');
   }

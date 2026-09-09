@@ -1,3 +1,7 @@
+import type { BulkImportRowError } from '@/hooks/bulkImport';
+import { coerceToIsoDate } from '@shared/lib/date-format';
+import { parseOptionalDate } from '@shared/lib/purchase-field-utils';
+
 export const WARRANTY_FIELD_COLUMNS = [
   'warranty_start_date',
   'warranty_end_date',
@@ -9,8 +13,6 @@ export type WarrantyInput = {
   endDate: string;
   remarks?: string | null;
 };
-import type { BulkImportRowError } from '@/hooks/bulkImport';
-import { parseOptionalDate } from '@shared/lib/purchase-field-utils';
 
 export type WarrantyFormState = {
   startDate: string;
@@ -23,10 +25,11 @@ export function emptyWarrantyFormState(): WarrantyFormState {
 }
 
 export function warrantyFormToInput(state: WarrantyFormState): WarrantyInput | null {
-  const start = state.startDate.trim();
-  const end = state.endDate.trim();
+  const start = coerceToIsoDate(state.startDate);
+  const end = coerceToIsoDate(state.endDate);
   if (!start && !end && !state.remarks.trim()) return null;
   if (!start || !end) return null;
+  if (end < start) return null;
   return {
     startDate: start,
     endDate: end,

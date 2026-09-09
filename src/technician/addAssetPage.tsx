@@ -17,6 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { INVENTORY_STATUSES, ACC_CODE_OPTIONS } from '@shared/lib/inventory-schema';
 import { STATUS_ID } from '@shared/lib/asset-status-actions';
+import { coerceToIsoDate } from '@shared/lib/date-format';
 import {
   emptyPurchaseFormState,
   purchaseFormToInput,
@@ -265,13 +266,14 @@ function AssetForm({
         setSelectedKey(entry.key);
         return;
       }
+      const warranty = warrantyFormToInput(entry.warranty);
       const hasWarrantyPartial =
-        Boolean(entry.warranty.startDate.trim()) ||
-        Boolean(entry.warranty.endDate.trim()) ||
+        Boolean(coerceToIsoDate(entry.warranty.startDate)) ||
+        Boolean(coerceToIsoDate(entry.warranty.endDate)) ||
         Boolean(entry.warranty.remarks.trim());
-      if (hasWarrantyPartial && !warrantyFormToInput(entry.warranty)) {
+      if (hasWarrantyPartial && !warranty) {
         toast.error(
-          `Warranty on asset ${i + 1} needs both a start date and an end date, or leave warranty blank.`,
+          `Warranty on asset ${i + 1} needs a start date on or before the end date, or leave warranty blank.`,
         );
         setSelectedKey(entry.key);
         return;

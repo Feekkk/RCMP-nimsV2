@@ -1,6 +1,18 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeft, ChevronDown, ExternalLink, History, MapPin, Package, Pencil, Truck, User } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronDown,
+  Clock,
+  ExternalLink,
+  History,
+  MapPin,
+  Package,
+  Pencil,
+  Shield,
+  Truck,
+  User,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,7 +29,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AssetDetail, AssetDetailResponse, AssetId, AssetKind, AssetTrailEvent } from '@shared/lib/inventory-schema';
 import { ASSET_KIND_LABEL, ASSET_LIST_PATH, formatAccCodeDisplay } from '@shared/lib/inventory-schema';
 import type { OpenReturnContext } from '@shared/lib/deploy-return-schema';
-import { formatAssetAge, formatDateLabel, formatPurchaseDateLabel, parseDdMmYyToIso } from '@shared/lib/date-format';
+import {
+  formatAssetAge,
+  formatDateLabel,
+  formatPurchaseDateLabel,
+  formatWarrantyRemaining,
+  isoToLocalDate,
+  normalizeToIsoDate,
+  parseDdMmYyToIso,
+} from '@shared/lib/date-format';
+import type { WarrantyContext } from '@shared/lib/warranty-repair-schema';
+import { getWarrantyContextFn } from '@backend/server/requests/warranty-repair.functions';
 import { formatPurchaseCost } from '@shared/lib/purchase-field-utils';
 import { cn } from '@/lib/utils';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
@@ -130,9 +152,70 @@ function formatTrailWhen(at: string): string {
   });
 }
 
-function assetHeaderSubtitle(asset: AssetDetail): string {
-  const parts = [asset.category?.trim(), asset.model?.trim(), asset.brand?.trim()].filter(Boolean);
+function uniqueHeaderParts(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const parts: string[] = [];
+  for (const value of values) {
+    const text = value?.trim();
+    if (!text) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    parts.push(text);
+  }
+  return parts;
+}
+
+function assetHeaderName(asset: AssetDetail): string {
+  const parts = uniqueHeaderParts([asset.brand, asset.model]);
   return parts.length > 0 ? parts.join(' · ') : '—';
+}
+
+function warrantyTone(
+  startDate: string,
+  endDate: string,
+): 'ok' | 'soon' | 'ended' | 'upcoming' {
+  const end = isoToLocalDate(normalizeToIsoDate(endDate) ?? '');
+  const start = isoToLocalDate(normalizeToIsoDate(startDate) ?? '');
+  if (!end) return 'ok';
+  const today = new Date();
+  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (start && todayLocal < start) return 'upcoming';
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysLeft = Math.round((end.getTime() - todayLocal.getTime()) / msPerDay);
+  if (daysLeft < 0) return 'ended';
+  if (daysLeft <= 30) return 'soon';
+  return 'ok';
+}
+
+function HeaderFact({
+  icon: Icon,
+  children,
+  tone = 'neutral',
+}: {
+  icon: typeof Clock;
+  children: ReactNode;
+  tone?: 'neutral' | 'ok' | 'soon' | 'ended' | 'upcoming';
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-[8px] border px-2 py-1 text-xs font-medium',
+        tone === 'ok' &&
+          'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200',
+        tone === 'soon' &&
+          'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
+        tone === 'ended' &&
+          'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
+        tone === 'upcoming' &&
+          'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200',
+        tone === 'neutral' && 'border-border bg-muted/60 text-foreground',
+      )}
+    >
+      <Icon className="h-3 w-3 shrink-0 opacity-80" />
+      {children}
+    </span>
+  );
 }
 
 function AssetSpecs({ asset }: { asset: AssetDetail }) {
@@ -320,6 +403,7 @@ export function AssetViewContent({
 }: AssetViewContentProps) {
   const [data, setData] = useState<AssetDetailResponse | null>(null);
   const [deployment, setDeployment] = useState<OpenReturnContext | null>(null);
+  const [warranty, setWarranty] = useState<WarrantyContext['warranty']>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [section, setSection] = useState<'details' | 'activity'>('details');
@@ -327,16 +411,19 @@ export function AssetViewContent({
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     try {
-      const [result, openDeployment] = await Promise.all([
+      const [result, openDeployment, warrantyCtx] = await Promise.all([
         getAssetDetailFn({ data: { kind, assetId } }),
         getOpenReturnContextFn({ data: { kind, assetId } }),
+        getWarrantyContextFn({ data: { kind, assetId } }).catch(() => null),
       ]);
       setData(result);
       setDeployment(openDeployment);
+      setWarranty(warrantyCtx?.warranty ?? null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load asset');
       setData(null);
       setDeployment(null);
+      setWarranty(null);
     } finally {
       setLoading(false);
     }
@@ -349,6 +436,9 @@ export function AssetViewContent({
 
   const asset = data?.asset;
   const assetAge = asset ? formatAssetAge(asset.poDate, asset.createdAt) : null;
+  const warrantyLeft = warranty
+    ? formatWarrantyRemaining(warranty.startDate, warranty.endDate)
+    : null;
 
   const handleStatusChange = async (_assetId: AssetId, statusId: number) => {
     const { updateAssetStatusFn } = await import('@backend/server/assets/assets.functions');
@@ -378,15 +468,36 @@ export function AssetViewContent({
       ) : (
         <>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {ASSET_KIND_LABEL[kind]}
-              </p>
-              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {ASSET_KIND_LABEL[kind]}
+                </p>
+                {asset.category?.trim() ? (
+                  <Badge
+                    variant="outline"
+                    className="rounded-[6px] px-1.5 py-0 text-[10px] font-medium text-muted-foreground"
+                  >
+                    {asset.category.trim()}
+                  </Badge>
+                ) : null}
+              </div>
+              <h1 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">
                 Asset <code className="text-lg">#{asset.assetId}</code>
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">{assetHeaderSubtitle(asset)}</p>
-              {assetAge ? <p className="mt-1 text-sm text-muted-foreground">{assetAge}</p> : null}
+              <p className="mt-1 text-sm font-medium text-foreground">{assetHeaderName(asset)}</p>
+              {assetAge || warrantyLeft ? (
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {assetAge ? (
+                    <HeaderFact icon={Clock}>{assetAge}</HeaderFact>
+                  ) : null}
+                  {warrantyLeft && warranty ? (
+                    <HeaderFact icon={Shield} tone={warrantyTone(warranty.startDate, warranty.endDate)}>
+                      {warrantyLeft}
+                    </HeaderFact>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {readOnly ? (
