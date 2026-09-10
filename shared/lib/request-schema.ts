@@ -247,7 +247,7 @@ export type RequestLogAssignment = {
   requestItemId: number | null;
   assetType: string | null;
   kind: RequestAssignableKind;
-  assetId: number;
+  assetId: number | null;
   model: string | null;
   brand: string | null;
   assignedAt: string | null;
@@ -255,6 +255,10 @@ export type RequestLogAssignment = {
   returnedAt: string | null;
   returnCondition: string | null;
   assetStatusId: number;
+  slotMark: RequestSlotMark | null;
+  unavailableAt: string | null;
+  bookedBy: string | null;
+  returnedBy: string | null;
 };
 
 export type RequestLogEntry = {

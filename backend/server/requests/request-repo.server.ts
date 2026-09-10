@@ -1336,45 +1336,71 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
       (RowDataPacket & {
         assignment_id: number;
         request_item_id: number | null;
-        asset_id: number;
+        asset_id: number | null;
         assigned_at: Date | string | null;
         checkout_at: Date | string | null;
         returned_at: Date | string | null;
         return_condition: string | null;
+        unavailable_at: Date | string | null;
+        remarks: string | null;
         model: string | null;
         brand: string | null;
-        kind: string;
-        asset_status_id: number;
+        pool_kind: string | null;
+        asset_status_id: number | null;
+        booked_oid: string | null;
+        booked_by: string;
+        returned_oid: string | null;
+        returned_by_name: string;
       })[]
     >(
       `SELECT ra.assignment_id, ra.request_item_id, ra.asset_id, ra.assigned_at,
               ra.checkout_at, ra.returned_at, ra.return_condition,
+              ra.unavailable_at, ra.remarks,
               COALESCE(l.model, av.model) AS model,
               COALESCE(l.brand, av.brand) AS brand,
-              IF(l.asset_id IS NOT NULL, 'laptop', 'av') AS kind,
-              COALESCE(l.status_id, av.status_id) AS asset_status_id
+              IF(l.asset_id IS NOT NULL, 'laptop', IF(av.asset_id IS NOT NULL, 'av', NULL)) AS pool_kind,
+              COALESCE(l.status_id, av.status_id) AS asset_status_id,
+              ub.oid AS booked_oid, ur.oid AS returned_oid
        FROM request_assignment ra
        LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
        LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
+       LEFT JOIN users ub ON ub.id = ra.assigned_by
+       LEFT JOIN users ur ON ur.id = ra.returned_by
        WHERE ra.request_id = ?
        ORDER BY ra.assignment_id ASC`,
       [h.request_id],
     );
+    await attachDisplayNames(assignments, 'booked_oid', 'booked_by');
+    await attachDisplayNames(assignments, 'returned_oid', 'returned_by_name');
 
-    const assignmentRows: RequestLogAssignment[] = assignments.map((a) => ({
-      assignmentId: a.assignment_id,
-      requestItemId: a.request_item_id,
-      assetType: a.request_item_id != null ? itemById.get(a.request_item_id) ?? null : null,
-      kind: a.kind === 'laptop' ? 'laptop' : 'av',
-      assetId: a.asset_id,
-      model: a.model,
-      brand: a.brand,
-      assignedAt: formatTs(a.assigned_at),
-      checkoutAt: formatTs(a.checkout_at),
-      returnedAt: formatTs(a.returned_at),
-      returnCondition: a.return_condition,
-      assetStatusId: a.asset_status_id,
-    }));
+    const assignmentRows: RequestLogAssignment[] = assignments.map((a) => {
+      const slotMark = parseSlotMark(a.unavailable_at, a.asset_id, a.remarks);
+      const assetType = a.request_item_id != null ? itemById.get(a.request_item_id) ?? null : null;
+      const kind: RequestAssignableKind =
+        a.pool_kind === 'laptop'
+          ? 'laptop'
+          : a.pool_kind === 'av'
+            ? 'av'
+            : requestItemKindFromAssetType(assetType ?? 'av');
+      return {
+        assignmentId: a.assignment_id,
+        requestItemId: a.request_item_id,
+        assetType,
+        kind,
+        assetId: a.asset_id,
+        model: a.model,
+        brand: a.brand,
+        assignedAt: formatTs(a.assigned_at),
+        checkoutAt: formatTs(a.checkout_at),
+        returnedAt: formatTs(a.returned_at),
+        returnCondition: a.return_condition,
+        assetStatusId: slotMark ? 0 : (a.asset_status_id ?? 0),
+        slotMark,
+        unavailableAt: formatTs(a.unavailable_at),
+        bookedBy: a.booked_by?.trim() || null,
+        returnedBy: a.returned_by_name?.trim() || null,
+      };
+    });
 
     const [returnedRows] = await pool.query<
       (RowDataPacket & { request_item_id: number; cnt: number })[]

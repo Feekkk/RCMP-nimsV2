@@ -73,6 +73,25 @@ export function getUserRequestAssetCatalogEntry(
   return USER_REQUEST_ASSET_CATALOG.find((e) => e.assetType === assetType);
 }
 
+function normalizeAssetCategory(value: string | null | undefined): string {
+  return (value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+/** Match request-form type to inventory category, ignoring case and spacing. */
+export function assetCategoryMatchesRequestType(
+  assetCategory: string | null | undefined,
+  requestAssetType: string,
+): boolean {
+  const want = normalizeAssetCategory(requestAssetType);
+  const have = normalizeAssetCategory(assetCategory);
+  if (!want || !have) return false;
+  return have === want || have.includes(want);
+}
+
 /** Maps a requested category label to pool kind (laptop vs av). */
 export function requestItemKindFromAssetType(assetType: string): RequestAssignableKind {
   const t = assetType.trim().toLowerCase();

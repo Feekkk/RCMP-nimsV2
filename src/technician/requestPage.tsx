@@ -63,7 +63,11 @@ import type {
   RequestPoolAsset,
   RequestSlotMark,
 } from '@shared/lib/request-schema';
-import { kindGroupLabel, requestItemKindFromAssetType } from '@shared/lib/request-asset-types';
+import {
+  assetCategoryMatchesRequestType,
+  kindGroupLabel,
+  requestItemKindFromAssetType,
+} from '@shared/lib/request-asset-types';
 import { formatDateLabel, isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -145,7 +149,10 @@ function poolAssetSearchText(a: {
   brand: string | null;
   model: string | null;
 }): string {
-  return [a.assetId, a.assetIdOld, a.category, a.brand, a.model].filter(Boolean).join(' ');
+  const parts = [a.assetId, a.assetIdOld, a.category, a.brand, a.model]
+    .filter(Boolean)
+    .join(' ');
+  return `${parts} ${parts.toLowerCase()}`;
 }
 
 function PoolAssetSelectDetails({
@@ -190,7 +197,6 @@ type KindGroup = {
   items: RequestItemRow[];
   quantity: number;
   returnedCount: number;
-  requestedSummary: string;
 };
 
 function kindGroupsForRequest(req: PendingRequest): KindGroup[] {
@@ -205,7 +211,6 @@ function kindGroupsForRequest(req: PendingRequest): KindGroup[] {
     items,
     quantity: items.reduce((n, i) => n + i.quantity, 0),
     returnedCount: items.reduce((n, i) => n + i.returnedCount, 0),
-    requestedSummary: items.map((i) => `${i.assetType} ×${i.quantity}`).join(', '),
   });
 
   const groups: KindGroup[] = [];
@@ -228,30 +233,50 @@ function checkedOutCountForGroup(req: PendingRequest, group: KindGroup): number 
 }
 
 type ItemLine =
-  | { lineKind: 'assignment'; assignment: RequestAssignmentRow }
-  | { lineKind: 'empty' };
+  | { lineKind: 'assignment'; assignment: RequestAssignmentRow; requestedItem: RequestItemRow | null }
+  | { lineKind: 'empty'; requestedItem: RequestItemRow };
 
 function linesForKindGroup(req: PendingRequest, group: KindGroup): ItemLine[] {
   const all = assignmentsForKind(req, group);
-  const emptyCount = Math.max(0, group.quantity - all.length - group.returnedCount);
-  return [
-    ...all.map((assignment) => ({ lineKind: 'assignment' as const, assignment })),
-    ...Array.from({ length: emptyCount }, () => ({ lineKind: 'empty' as const })),
-  ];
-}
+  const claimed = new Set<number>();
+  const lines: ItemLine[] = [];
 
-function assignmentsForItem(req: PendingRequest, item: RequestItemRow): RequestAssignmentRow[] {
-  const kind = requestItemKindFromAssetType(item.assetType);
-  return req.assignments.filter((a) => {
-    if (a.requestItemId === item.requestItemId) return true;
-    if (a.requestItemId != null) return false;
-    return a.kind === kind;
-  });
+  for (const item of group.items) {
+    const linked = all.filter(
+      (a) => a.requestItemId === item.requestItemId && !claimed.has(a.assignmentId),
+    );
+    for (const assignment of linked) {
+      claimed.add(assignment.assignmentId);
+      lines.push({ lineKind: 'assignment', assignment, requestedItem: item });
+    }
+
+    const remainingNeed = Math.max(0, item.quantity - linked.length - item.returnedCount);
+    const unlinked = all.filter((a) => a.requestItemId == null && !claimed.has(a.assignmentId));
+    let filled = 0;
+    for (const assignment of unlinked) {
+      if (filled >= remainingNeed) break;
+      claimed.add(assignment.assignmentId);
+      lines.push({ lineKind: 'assignment', assignment, requestedItem: item });
+      filled += 1;
+    }
+
+    const emptyCount = remainingNeed - filled;
+    for (let i = 0; i < emptyCount; i += 1) {
+      lines.push({ lineKind: 'empty', requestedItem: item });
+    }
+  }
+
+  for (const assignment of all) {
+    if (claimed.has(assignment.assignmentId)) continue;
+    lines.push({ lineKind: 'assignment', assignment, requestedItem: null });
+  }
+
+  return lines;
 }
 
 function findItemForBooking(req: PendingRequest, group: KindGroup): RequestItemRow | null {
   for (const item of group.items) {
-    const linked = assignmentsForItem(req, item);
+    const linked = req.assignments.filter((a) => a.requestItemId === item.requestItemId);
     if (linked.length + item.returnedCount < item.quantity) return item;
   }
   return null;
@@ -400,8 +425,12 @@ export function TechnicianRequestPage() {
     }
   }, [viewFilter, searched, queues]);
 
-  const resolveBookingItem = (req: PendingRequest, group: KindGroup) => {
-    const item = findItemForBooking(req, group);
+  const resolveBookingItem = (
+    req: PendingRequest,
+    group: KindGroup,
+    preferredItem?: RequestItemRow | null,
+  ) => {
+    const item = preferredItem ?? findItemForBooking(req, group);
     if (!item) {
       toast.error('All slots are filled for this category');
       return null;
@@ -414,9 +443,14 @@ export function TechnicianRequestPage() {
     return { item, staffId: session.staffId };
   };
 
-  const handleBookOnSelect = async (req: PendingRequest, group: KindGroup, pick: string) => {
+  const handleBookOnSelect = async (
+    req: PendingRequest,
+    group: KindGroup,
+    pick: string,
+    requestedItem?: RequestItemRow | null,
+  ) => {
     if (!pick || pick === '_none') return;
-    const resolved = resolveBookingItem(req, group);
+    const resolved = resolveBookingItem(req, group, requestedItem);
     if (!resolved) return;
 
     const [kind, idStr] = pick.split(':');
@@ -424,7 +458,7 @@ export function TechnicianRequestPage() {
     if ((kind !== 'laptop' && kind !== 'av') || Number.isNaN(assetId)) return;
     if (kind !== group.kind) return;
 
-    const key = `book-${req.requestId}-${group.kind}`;
+    const key = `book-${req.requestId}-${resolved.item.requestItemId}`;
     setActionKey(key);
     try {
       const booked = await bookPoolAssetToRequestFn({
@@ -450,11 +484,15 @@ export function TechnicianRequestPage() {
     }
   };
 
-  const handleMarkUnavailable = async (req: PendingRequest, group: KindGroup) => {
-    const resolved = resolveBookingItem(req, group);
+  const handleMarkUnavailable = async (
+    req: PendingRequest,
+    group: KindGroup,
+    requestedItem?: RequestItemRow | null,
+  ) => {
+    const resolved = resolveBookingItem(req, group, requestedItem);
     if (!resolved) return;
 
-    const key = `unavail-${req.requestId}-${group.kind}`;
+    const key = `unavail-${req.requestId}-${resolved.item.requestItemId}`;
     setActionKey(key);
     try {
       await markRequestSlotUnavailableFn({
@@ -465,7 +503,7 @@ export function TechnicianRequestPage() {
           remarks: null,
         },
       });
-      toast.success(`${group.label} slot marked unavailable`);
+      toast.success(`${resolved.item.assetType} slot marked unavailable`);
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not mark unavailable');
@@ -474,11 +512,15 @@ export function TechnicianRequestPage() {
     }
   };
 
-  const handleMarkNotTaken = async (req: PendingRequest, group: KindGroup) => {
-    const resolved = resolveBookingItem(req, group);
+  const handleMarkNotTaken = async (
+    req: PendingRequest,
+    group: KindGroup,
+    requestedItem?: RequestItemRow | null,
+  ) => {
+    const resolved = resolveBookingItem(req, group, requestedItem);
     if (!resolved) return;
 
-    const key = `nottaken-${req.requestId}-${group.kind}`;
+    const key = `nottaken-${req.requestId}-${resolved.item.requestItemId}`;
     setActionKey(key);
     try {
       await markRequestSlotNotTakenFn({
@@ -488,7 +530,7 @@ export function TechnicianRequestPage() {
           markedBy: resolved.staffId,
         },
       });
-      toast.success(`${group.label} slot marked not taken`);
+      toast.success(`${resolved.item.assetType} slot marked not taken`);
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not mark not taken');
@@ -648,6 +690,12 @@ export function TechnicianRequestPage() {
   const optionsForKind = (kind: RequestAssignableKind) =>
     pool.filter((a) => a.kind === kind);
 
+  const optionsForSlot = (kind: RequestAssignableKind, requestedType?: string | null) => {
+    const ofKind = optionsForKind(kind);
+    if (!requestedType || kind === 'laptop') return ofKind;
+    return ofKind.filter((a) => assetCategoryMatchesRequestType(a.category, requestedType));
+  };
+
   const openReturnForm = (req: PendingRequest) => {
     setReturnRequest(req);
     setReturnCondition('Good');
@@ -802,19 +850,25 @@ export function TechnicianRequestPage() {
                 {kindGroupsForRequest(req).flatMap((group) => {
                   const lines = linesForKindGroup(req, group);
                   const checkedOut = checkedOutCountForGroup(req, group);
-                  const options = optionsForKind(group.kind);
-                  const bookKey = `book-${req.requestId}-${group.kind}`;
-                  const unavailKey = `unavail-${req.requestId}-${group.kind}`;
-                  const notTakenKey = `nottaken-${req.requestId}-${group.kind}`;
 
                   if (lines.length === 0) return [];
 
                   return lines.map((line, lineIdx) => {
+                    const a = line.lineKind === 'assignment' ? line.assignment : null;
+                    const requestedItem =
+                      line.requestedItem ??
+                      (a?.requestItemId != null
+                        ? (req.items.find((item) => item.requestItemId === a.requestItemId) ?? null)
+                        : null);
+                    const options = optionsForSlot(group.kind, requestedItem?.assetType);
+                    const slotId = requestedItem?.requestItemId ?? group.kind;
+                    const bookKey = `book-${req.requestId}-${slotId}`;
+                    const unavailKey = `unavail-${req.requestId}-${slotId}`;
+                    const notTakenKey = `nottaken-${req.requestId}-${slotId}`;
                     const rowKey =
                       line.lineKind === 'assignment'
                         ? `a-${line.assignment.assignmentId}`
-                        : `e-${group.kind}-${lineIdx}`;
-                    const a = line.lineKind === 'assignment' ? line.assignment : null;
+                        : `e-${slotId}-${lineIdx}`;
                     const isCheckedOut = a?.checkoutAt != null;
                     const isBookedAwaitingCheckout =
                       a != null &&
@@ -831,9 +885,6 @@ export function TechnicianRequestPage() {
                               >
                                 <p className="text-sm font-medium">{group.label}</p>
                                 <p className="text-xs text-muted-foreground">× {group.quantity}</p>
-                                <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                                  {group.requestedSummary}
-                                </p>
                                 <Badge
                                   variant={checkedOut >= group.quantity ? 'default' : 'outline'}
                                   className="mt-1.5 rounded-[6px] text-[10px]"
@@ -856,6 +907,11 @@ export function TechnicianRequestPage() {
                                   )}
                                 >
                                   {slotMarkLabel(a.slotMark)}
+                                  {requestedItem ? (
+                                    <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                                      {requestedItem.assetType}
+                                    </span>
+                                  ) : null}
                                 </span>
                               ) : !isCheckedOut && a.assetStatusId === REQUEST_STATUS_BOOKED ? (
                                 <Select
@@ -924,7 +980,9 @@ export function TechnicianRequestPage() {
                             <TableCell>
                               {a.slotMark ? (
                                 <Badge variant="outline" className="rounded-[6px] text-[10px]">
-                                  {slotMarkLabel(a.slotMark)}
+                                  {requestedItem
+                                    ? `${slotMarkLabel(a.slotMark)} · ${requestedItem.assetType}`
+                                    : slotMarkLabel(a.slotMark)}
                                 </Badge>
                               ) : (
                                 <>
@@ -993,19 +1051,27 @@ export function TechnicianRequestPage() {
                             <TableCell>
                               <Select
                                 disabled={actionKey === bookKey}
-                                onValueChange={(v) => void handleBookOnSelect(req, group, v)}
+                                onValueChange={(v) =>
+                                  void handleBookOnSelect(req, group, v, requestedItem)
+                                }
                               >
                                 <SelectTrigger className="h-auto min-h-8 max-w-md rounded-[6px] py-1.5 text-xs [&>span]:line-clamp-none">
                                   <SelectValue
                                     placeholder={
-                                      actionKey === bookKey ? 'Booking…' : 'Select asset…'
+                                      actionKey === bookKey
+                                        ? 'Booking…'
+                                        : requestedItem
+                                          ? `Select ${requestedItem.assetType}…`
+                                          : 'Select asset…'
                                     }
                                   />
                                 </SelectTrigger>
                                 <SelectContent className="min-w-[min(100vw-2rem,22rem)]">
                                   {options.length === 0 ? (
                                     <SelectItem value="_none" disabled>
-                                      No assets in pool
+                                      {requestedItem
+                                        ? `No ${requestedItem.assetType} in pool`
+                                        : 'No assets in pool'}
                                     </SelectItem>
                                   ) : (
                                     options.map((poolAsset) => (
@@ -1029,7 +1095,9 @@ export function TechnicianRequestPage() {
                               </Select>
                             </TableCell>
                             <TableCell>
-                              <span className="text-xs text-muted-foreground">Unassigned</span>
+                              <span className="text-xs text-muted-foreground">
+                                {requestedItem ? `Unassigned · ${requestedItem.assetType}` : 'Unassigned'}
+                              </span>
                             </TableCell>
                             <TableCell>
                               <TooltipProvider delayDuration={300}>
@@ -1043,7 +1111,9 @@ export function TechnicianRequestPage() {
                                         className="h-8 w-8 shrink-0 rounded-[8px]"
                                         disabled={actionKey != null}
                                         aria-label="Unavailable"
-                                        onClick={() => void handleMarkUnavailable(req, group)}
+                                        onClick={() =>
+                                          void handleMarkUnavailable(req, group, requestedItem)
+                                        }
                                       >
                                         {actionKey === unavailKey ? (
                                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -1063,7 +1133,9 @@ export function TechnicianRequestPage() {
                                         className="h-8 w-8 shrink-0 rounded-[8px]"
                                         disabled={actionKey != null}
                                         aria-label="Not taken"
-                                        onClick={() => void handleMarkNotTaken(req, group)}
+                                        onClick={() =>
+                                          void handleMarkNotTaken(req, group, requestedItem)
+                                        }
                                       >
                                         {actionKey === notTakenKey ? (
                                           <Loader2 className="h-4 w-4 animate-spin" />

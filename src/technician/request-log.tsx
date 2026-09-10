@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Laptop, Search, Tv } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -24,149 +23,53 @@ import { usePagination } from '@/hooks/use-pagination';
 import { formatDateLabel, isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
 import type { RequestLogAssignment, RequestLogEntry } from '@shared/lib/request-schema';
 import { cn } from '@/lib/utils';
-import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { listRequestLogFn } from '@backend/server/requests/request.functions';
 
-type LogEvent = {
-  at: string;
-  sortKey: number;
-  label: string;
-  detail: string;
-};
+function hasBookedAsset(a: RequestLogAssignment): boolean {
+  return a.assetId != null && Number(a.assetId) > 0;
+}
+
+function slotItemLabel(a: RequestLogAssignment): string {
+  return a.assetType?.trim() || (a.kind === 'laptop' ? 'Laptop' : 'AV');
+}
 
 function assetLabel(a: RequestLogAssignment): string {
+  if (!hasBookedAsset(a)) return slotItemLabel(a);
   const kind = a.kind === 'laptop' ? 'Laptop' : 'AV';
   return [kind, `#${a.assetId}`, a.model, a.brand].filter(Boolean).join(' · ');
 }
 
-function buildLogEvents(entry: RequestLogEntry): LogEvent[] {
-  const events: LogEvent[] = [];
-
+function requestMonthKey(entry: RequestLogEntry): string {
   if (entry.createdAt) {
-    events.push({
-      at: entry.createdAt,
-      sortKey: new Date(entry.createdAt).getTime(),
-      label: 'Submitted',
-      detail: `Request created by ${entry.requesterName}`,
-    });
-  }
-
-  if (entry.rejectedAt) {
-    events.push({
-      at: entry.rejectedAt,
-      sortKey: new Date(entry.rejectedAt).getTime(),
-      label: 'Rejected',
-      detail: entry.rejectionReason?.trim() || 'Request rejected',
-    });
-  }
-
-  for (const a of entry.assignments) {
-    if (a.assignedAt) {
-      events.push({
-        at: a.assignedAt,
-        sortKey: new Date(a.assignedAt).getTime(),
-        label: 'Booked',
-        detail: assetLabel(a),
-      });
-    }
-    if (a.checkoutAt) {
-      events.push({
-        at: a.checkoutAt,
-        sortKey: new Date(a.checkoutAt).getTime(),
-        label: 'Checked out',
-        detail: assetLabel(a),
-      });
-    }
-    if (a.returnedAt) {
-      const cond = a.returnCondition ? ` · ${a.returnCondition}` : '';
-      events.push({
-        at: a.returnedAt,
-        sortKey: new Date(a.returnedAt).getTime(),
-        label: 'Returned',
-        detail: `${assetLabel(a)}${cond}`,
-      });
+    const d = new Date(entry.createdAt);
+    if (!Number.isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
   }
+  return entry.borrowDate.slice(0, 7);
+}
 
-  return events.sort((x, y) => y.sortKey - x.sortKey);
+function monthHeading(key: string): string {
+  const [year, month] = key.split('-').map(Number);
+  if (!year || !month) return key;
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 function requestMatchesDateFilter(entry: RequestLogEntry, fromIso: string, toIso: string): boolean {
   if (!fromIso && !toIso) return true;
-  if (fromIso && entry.returnDate < fromIso) return false;
-  if (toIso && entry.borrowDate > toIso) return false;
+  const submitted = entry.createdAt
+    ? localDateToIso(new Date(entry.createdAt))
+    : entry.borrowDate;
+  if (fromIso && submitted < fromIso) return false;
+  if (toIso && submitted > toIso) return false;
   return true;
-}
-
-function logStatusLabel(entry: RequestLogEntry): { text: string; className: string } {
-  if (entry.rejectedAt) {
-    return {
-      text: 'Rejected',
-      className: 'border-transparent bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200',
-    };
-  }
-  const totalQty = entry.items.reduce((n, i) => n + i.quantity, 0);
-  const totalReturned = entry.items.reduce((n, i) => n + i.returnedCount, 0);
-  if (totalQty > 0 && totalReturned >= totalQty) {
-    return {
-      text: 'Completed',
-      className:
-        'border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
-    };
-  }
-  const open = entry.assignments.filter((a) => !a.returnedAt);
-  if (open.some((a) => a.checkoutAt)) {
-    return {
-      text: 'In use',
-      className: 'border-transparent bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
-    };
-  }
-  if (open.length > 0) {
-    return {
-      text: 'Preparing',
-      className:
-        'border-transparent bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200',
-    };
-  }
-  return {
-    text: 'Submitted',
-    className: 'border-transparent bg-muted text-muted-foreground',
-  };
-}
-
-function eventBadgeClass(label: string): string {
-  switch (label) {
-    case 'Rejected':
-      return 'border-transparent bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200';
-    case 'Returned':
-      return 'border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200';
-    case 'Checked out':
-      return 'border-transparent bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200';
-    case 'Booked':
-      return 'border-transparent bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200';
-    default:
-      return 'border-transparent bg-muted text-muted-foreground';
-  }
-}
-
-function dayHeading(iso: string): string {
-  const date = isoToLocalDate(iso);
-  if (!date) return iso;
-  const todayIso = localDateToIso(new Date());
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (iso === todayIso) return 'Today';
-  if (iso === localDateToIso(yesterday)) return 'Yesterday';
-  return date.toLocaleDateString(undefined, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function formatDateTime(at: string): string {
@@ -181,14 +84,15 @@ function formatDateTime(at: string): string {
   });
 }
 
-function groupByBorrowDate(entries: RequestLogEntry[]): [string, RequestLogEntry[]][] {
+function groupByMonth(entries: RequestLogEntry[]): [string, RequestLogEntry[]][] {
   const map = new Map<string, RequestLogEntry[]>();
   for (const entry of entries) {
-    const list = map.get(entry.borrowDate);
+    const key = requestMonthKey(entry);
+    const list = map.get(key);
     if (list) list.push(entry);
-    else map.set(entry.borrowDate, [entry]);
+    else map.set(key, [entry]);
   }
-  return [...map.entries()];
+  return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
 }
 
 export function TechnicianRequestLogPage() {
@@ -246,8 +150,8 @@ export function TechnicianRequestLogPage() {
           .includes(q);
       })
       .sort((a, b) => {
-        const byDate = b.borrowDate.localeCompare(a.borrowDate);
-        if (byDate !== 0) return byDate;
+        const byMonth = requestMonthKey(b).localeCompare(requestMonthKey(a));
+        if (byMonth !== 0) return byMonth;
         return b.requestId - a.requestId;
       });
   }, [entries, search, dateFrom, dateTo, dateRangeInvalid]);
@@ -258,7 +162,7 @@ export function TechnicianRequestLogPage() {
   });
 
   const grouped = useMemo(
-    () => groupByBorrowDate(pagination.paginatedItems),
+    () => groupByMonth(pagination.paginatedItems),
     [pagination.paginatedItems],
   );
 
@@ -273,7 +177,7 @@ export function TechnicianRequestLogPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Request log</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Requests grouped by borrow date. Open a row for booking, checkout, and return details.
+            People who submitted borrow requests, grouped by month.
           </p>
         </div>
         <RequestToolbarActions />
@@ -283,7 +187,7 @@ export function TechnicianRequestLogPage() {
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <CardTitle className="text-base">All requests</CardTitle>
+              <CardTitle className="text-base">Requesters</CardTitle>
               <CardDescription>
                 {filtered.length} request{filtered.length === 1 ? '' : 's'}
                 {filtered.length !== entries.length && ` of ${entries.length}`}
@@ -293,7 +197,7 @@ export function TechnicianRequestLogPage() {
             <div className="relative w-full sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search log…"
+                placeholder="Search by name…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-9 rounded-[8px] pl-9"
@@ -362,63 +266,51 @@ export function TechnicianRequestLogPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-9 text-xs">Request</TableHead>
-                    <TableHead className="h-9 text-xs">Status</TableHead>
-                    <TableHead className="hidden h-9 text-xs sm:table-cell">Period</TableHead>
-                    <TableHead className="hidden h-9 text-xs md:table-cell">Program</TableHead>
-                    <TableHead className="hidden h-9 text-right text-xs lg:table-cell">
-                      Events
-                    </TableHead>
+                    <TableHead className="h-9 text-xs">Requester</TableHead>
+                    <TableHead className="hidden h-9 text-xs sm:table-cell">Submitted</TableHead>
+                    <TableHead className="hidden h-9 text-xs md:table-cell">Borrow period</TableHead>
+                    <TableHead className="hidden h-9 text-xs lg:table-cell">Program</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {grouped.map(([day, dayEntries]) => (
-                    <Fragment key={day}>
+                  {grouped.map(([month, monthEntries]) => (
+                    <Fragment key={month}>
                       <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableCell colSpan={5} className="py-2 text-xs font-medium text-muted-foreground">
-                          {dayHeading(day)}
+                        <TableCell colSpan={4} className="py-2 text-xs font-medium text-muted-foreground">
+                          {monthHeading(month)}
                           <span className="ml-2 tabular-nums">
-                            ({dayEntries.length} request{dayEntries.length === 1 ? '' : 's'})
+                            ({monthEntries.length} request{monthEntries.length === 1 ? '' : 's'})
                           </span>
                         </TableCell>
                       </TableRow>
-                      {dayEntries.map((entry) => {
-                        const status = logStatusLabel(entry);
-                        const events = buildLogEvents(entry);
-                        return (
-                          <TableRow
-                            key={entry.requestId}
-                            className="cursor-pointer hover:bg-muted/30"
-                            onClick={() => setSelectedId(entry.requestId)}
-                          >
-                            <TableCell className="py-3">
-                              <p className="font-medium text-foreground">{entry.requesterName}</p>
-                              <p className="text-xs tabular-nums text-muted-foreground">
-                                #{entry.requestId}
-                                <span className="sm:hidden">
-                                  {' · '}
-                                  {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}
-                                </span>
-                              </p>
-                            </TableCell>
-                            <TableCell className="py-3">
-                              <Badge variant="secondary" className={cn('rounded-[6px] text-[10px]', status.className)}>
-                                {status.text}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="hidden py-3 text-sm text-muted-foreground sm:table-cell">
-                              {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}
-                            </TableCell>
-                            <TableCell className="hidden py-3 md:table-cell">
-                              <p className="text-sm">{entry.programType}</p>
-                              <p className="text-xs text-muted-foreground">{entry.usageLocation}</p>
-                            </TableCell>
-                            <TableCell className="hidden py-3 text-right text-xs tabular-nums text-muted-foreground lg:table-cell">
-                              {events.length}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {monthEntries.map((entry) => (
+                        <TableRow
+                          key={entry.requestId}
+                          className="cursor-pointer hover:bg-muted/30"
+                          onClick={() => setSelectedId(entry.requestId)}
+                        >
+                          <TableCell className="py-3">
+                            <p className="font-medium text-foreground">{entry.requesterName}</p>
+                            <p className="text-xs text-muted-foreground sm:hidden">
+                              {entry.createdAt
+                                ? formatDateLabel(localDateToIso(new Date(entry.createdAt)))
+                                : formatDateLabel(entry.borrowDate)}
+                            </p>
+                          </TableCell>
+                          <TableCell className="hidden py-3 text-sm text-muted-foreground sm:table-cell">
+                            {entry.createdAt
+                              ? formatDateLabel(localDateToIso(new Date(entry.createdAt)))
+                              : formatDateLabel(entry.borrowDate)}
+                          </TableCell>
+                          <TableCell className="hidden py-3 text-sm text-muted-foreground md:table-cell">
+                            {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}
+                          </TableCell>
+                          <TableCell className="hidden py-3 lg:table-cell">
+                            <p className="text-sm">{entry.programType}</p>
+                            <p className="text-xs text-muted-foreground">{entry.usageLocation}</p>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </Fragment>
                   ))}
                 </TableBody>
@@ -449,24 +341,13 @@ export function TechnicianRequestLogPage() {
 }
 
 function RequestLogDetail({ entry }: { entry: RequestLogEntry }) {
-  const status = logStatusLabel(entry);
-  const events = buildLogEvents(entry);
-
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="flex flex-wrap items-center gap-2">
-          <span>{entry.requesterName}</span>
-          <Badge variant="outline" className="rounded-[6px] text-[10px] tabular-nums">
-            #{entry.requestId}
-          </Badge>
-          <Badge variant="secondary" className={cn('rounded-[6px] text-[10px]', status.className)}>
-            {status.text}
-          </Badge>
-        </DialogTitle>
+        <DialogTitle>{entry.requesterName}</DialogTitle>
         <DialogDescription>
-          {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)} · {entry.programType}{' '}
-          · {entry.usageLocation}
+          #{entry.requestId} · {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}{' '}
+          · {entry.programType} · {entry.usageLocation}
         </DialogDescription>
       </DialogHeader>
 
@@ -476,54 +357,10 @@ function RequestLogDetail({ entry }: { entry: RequestLogEntry }) {
         </p>
       )}
 
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Categories requested
-        </p>
-        <ul className="space-y-1">
-          {entry.items.map((i) => (
-            <li
-              key={i.requestItemId}
-              className="flex justify-between rounded-[8px] border border-border/80 px-3 py-1.5 text-sm"
-            >
-              <span>{i.assetType}</span>
-              <span className="text-muted-foreground">
-                × {i.quantity}
-                {i.returnedCount > 0 && ` · ${i.returnedCount} returned`}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Event log
-        </p>
-        {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No assignment events yet.</p>
-        ) : (
-          <ol className="space-y-3 border-l border-border pl-4">
-            {events.map((ev, idx) => (
-              <li key={`${ev.label}-${ev.at}-${idx}`} className="relative">
-                <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-muted-foreground/50" />
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary" className={cn('rounded-[6px] text-[10px]', eventBadgeClass(ev.label))}>
-                    {ev.label}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">{formatDateTime(ev.at)}</span>
-                </div>
-                <p className="mt-1 text-sm">{ev.detail}</p>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
       {entry.assignments.length > 0 && (
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Assignments
+            Assets
           </p>
           <div className="overflow-x-auto rounded-[10px] border border-border">
             <Table>
@@ -531,7 +368,6 @@ function RequestLogDetail({ entry }: { entry: RequestLogEntry }) {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Asset</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Booked</TableHead>
                   <TableHead>Checkout</TableHead>
                   <TableHead>Returned</TableHead>
@@ -541,21 +377,31 @@ function RequestLogDetail({ entry }: { entry: RequestLogEntry }) {
                 {entry.assignments.map((a) => (
                   <TableRow key={a.assignmentId}>
                     <TableCell>
-                      <span className="inline-flex items-center gap-1.5 text-sm">
-                        {a.kind === 'laptop' ? (
-                          <Laptop className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : (
-                          <Tv className="h-3.5 w-3.5 text-muted-foreground" />
-                        )}
-                        {assetLabel(a)}
-                      </span>
+                      {a.slotMark ? (
+                        <span
+                          className={cn(
+                            'text-sm font-medium',
+                            a.slotMark === 'not_taken'
+                              ? 'text-muted-foreground'
+                              : 'text-amber-800 dark:text-amber-200',
+                          )}
+                        >
+                          {a.slotMark === 'not_taken' ? 'Not taken' : 'Unavailable'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-sm">
+                          {a.kind === 'laptop' ? (
+                            <Laptop className="h-3.5 w-3.5 text-muted-foreground" />
+                          ) : (
+                            <Tv className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                          {assetLabel(a)}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">{a.assetType ?? '—'}</TableCell>
-                    <TableCell>
-                      <AssetStatusBadge statusId={a.assetStatusId} />
-                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {a.assignedAt ? formatDateTime(a.assignedAt) : '—'}
+                      {a.slotMark || !a.assignedAt ? '—' : formatDateTime(a.assignedAt)}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {a.checkoutAt ? formatDateTime(a.checkoutAt) : '—'}
