@@ -29,8 +29,10 @@ import {
 	normalizeCategory,
 } from '@/hooks/assetid-generator';
 import { usePagination } from '@/hooks/use-pagination';
-import type { LaptopAssignmentBucket } from '@shared/lib/inventory-schema';
+import { STATUS_ID } from '@shared/lib/asset-status-actions';
+import type { LaptopAsset, LaptopAssignmentBucket } from '@shared/lib/inventory-schema';
 import { matchesAssignmentBucket } from '@shared/lib/inventory-schema';
+import { AssetLifespanCell } from '@/components/asset-lifespan-cell';
 import {
 	LaptopAssetStockSummary,
 	type LaptopFormFactor,
@@ -55,6 +57,40 @@ function matchesLaptopCategory(category: string | null, view: LaptopCategoryView
 	if (view === 'all') return true;
 	if (view === LAPTOP_CATEGORY_OTHERS) return isOtherLaptopCategory(category);
 	return normalizeCategory(category ?? '') === normalizeCategory(view);
+}
+
+function handoverRecipient(asset: LaptopAsset): { name: string; kind: 'Staff' | 'Handler' } | null {
+	const staff = asset.recipientName?.trim();
+	if (staff) return { name: staff, kind: 'Staff' };
+	const handler = asset.placeHandler?.trim();
+	if (handler) return { name: handler, kind: 'Handler' };
+	return null;
+}
+
+function HandoverToCell({ asset }: { asset: LaptopAsset }) {
+	const recipient = handoverRecipient(asset);
+	if (!recipient) {
+		return <span className="text-muted-foreground">—</span>;
+	}
+	return (
+		<div className="min-w-0">
+			<p className="truncate text-sm font-medium text-foreground">{recipient.name}</p>
+			<p className="text-[11px] text-muted-foreground">{recipient.kind}</p>
+		</div>
+	);
+}
+
+function formatRegisteredAt(value: string | null): string {
+	if (!value) return '—';
+	const d = new Date(value);
+	if (Number.isNaN(d.getTime())) return '—';
+	return d.toLocaleString(undefined, {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+	});
 }
 
 function matchesFormFactor(
@@ -137,7 +173,9 @@ export function TechnicianLaptopPage() {
 				? byOtherCategory
 				: byOtherCategory.filter((item) => matchesAssignmentBucket(item, divisionFilter));
 		const byCategory = byDivision.filter((item) => matchesLaptopCategory(item.category, categoryView));
-		const bySearch = filterBySearch(byCategory, search, (c) => c.category ?? '');
+		const bySearch = filterBySearch(byCategory, search, (c) =>
+			[c.category ?? '', c.recipientName ?? '', c.placeHandler ?? '', c.registeredBy ?? '', c.proposedBy ?? ''].join(' '),
+		);
 		return filterByStatus(bySearch, statusFilter);
 	}, [items, search, statusFilter, categoryView, formFactorFilter, divisionFilter, otherCategoryFilter]);
 
@@ -145,6 +183,19 @@ export function TechnicianLaptopPage() {
 		resetKey: `${search}|${statusFilter ?? ''}|${categoryView}|${formFactorFilter}|${divisionFilter ?? ''}|${otherCategoryFilter ?? ''}`,
 	});
 
+	const showHandoverColumn =
+		statusFilter === STATUS_ID.DEPLOY || divisionFilter != null || otherCategoryFilter != null;
+	const showLifespanColumn = statusFilter === STATUS_ID.RETURN;
+	const showRegistrationColumns = statusFilter === STATUS_ID.NEW;
+	const showProposalColumns = statusFilter === STATUS_ID.PRE_DISPOSED;
+	const showActionColumn = !showProposalColumns;
+	const tableColSpan =
+		6 +
+		(showHandoverColumn ? 1 : 0) +
+		(showLifespanColumn ? 1 : 0) +
+		(showRegistrationColumns ? 2 : 0) +
+		(showProposalColumns ? 2 : 0) +
+		(showActionColumn ? 1 : 0);
 	const nextCategoryView = nextLaptopCategoryView(categoryView);
 
 	return (
@@ -227,20 +278,40 @@ export function TechnicianLaptopPage() {
 									<TableHead className="min-w-[180px] font-semibold">Model</TableHead>
 									<TableHead className="whitespace-nowrap font-semibold">Brand</TableHead>
 									<TableHead className="whitespace-nowrap font-semibold">Serial</TableHead>
+									{showHandoverColumn ? (
+										<TableHead className="min-w-[160px] font-semibold">Handover to</TableHead>
+									) : null}
+									{showLifespanColumn ? (
+										<TableHead className="min-w-[180px] font-semibold">Lifespan</TableHead>
+									) : null}
+									{showRegistrationColumns ? (
+										<>
+											<TableHead className="min-w-[160px] font-semibold">Registered at</TableHead>
+											<TableHead className="min-w-[160px] font-semibold">Registered by</TableHead>
+										</>
+									) : null}
+									{showProposalColumns ? (
+										<>
+											<TableHead className="min-w-[160px] font-semibold">Proposed by</TableHead>
+											<TableHead className="min-w-[160px] font-semibold">Proposed at</TableHead>
+										</>
+									) : null}
 									<TableHead className="whitespace-nowrap font-semibold">Status</TableHead>
-									<TableHead className="min-w-[140px] font-semibold">Action</TableHead>
+									{showActionColumn ? (
+										<TableHead className="min-w-[140px] font-semibold">Action</TableHead>
+									) : null}
 								</TableRow>
 							</TableHeader>
 							<TableBody>
 								{isLoading ? (
 									<TableRow>
-										<TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+										<TableCell colSpan={tableColSpan} className="py-12 text-center text-sm text-muted-foreground">
 											Loading…
 										</TableCell>
 									</TableRow>
 								) : filtered.length === 0 ? (
 									<TableRow>
-										<TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+										<TableCell colSpan={tableColSpan} className="py-12 text-center text-sm text-muted-foreground">
 											No assets match your search, status, division, form factor, or category filter.
 										</TableCell>
 									</TableRow>
@@ -287,18 +358,54 @@ export function TechnicianLaptopPage() {
 											<TableCell className="font-medium text-foreground">{c.model}</TableCell>
 											<TableCell className="text-muted-foreground">{c.brand ?? '—'}</TableCell>
 											<TableCell className="text-muted-foreground">{c.serialNum ?? '—'}</TableCell>
+											{showHandoverColumn ? (
+												<TableCell>
+													<HandoverToCell asset={c} />
+												</TableCell>
+											) : null}
+											{showLifespanColumn ? (
+												<TableCell>
+													<AssetLifespanCell
+														poDate={c.poDate}
+														doDate={c.doDate}
+														assetId={c.assetId}
+													/>
+												</TableCell>
+											) : null}
+											{showRegistrationColumns ? (
+												<>
+													<TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+														{formatRegisteredAt(c.registeredAt)}
+													</TableCell>
+													<TableCell className="text-sm font-medium text-foreground">
+														{c.registeredBy?.trim() || '—'}
+													</TableCell>
+												</>
+											) : null}
+											{showProposalColumns ? (
+												<>
+													<TableCell className="max-w-[12rem] truncate text-sm font-medium text-foreground">
+														{c.proposedBy?.trim() || '—'}
+													</TableCell>
+													<TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+														{formatRegisteredAt(c.proposedAt)}
+													</TableCell>
+												</>
+											) : null}
 											<TableCell>
 												<AssetStatusBadge statusId={c.statusId} />
 											</TableCell>
-											<TableCell onClick={(e) => e.stopPropagation()}>
-												<AssetStatusActions
-													kind="laptop"
-													assetId={c.assetId}
-													statusId={c.statusId}
-													onStatusChange={updateStatus}
-													disabled={isLoading}
-												/>
-											</TableCell>
+											{showActionColumn ? (
+												<TableCell onClick={(e) => e.stopPropagation()}>
+													<AssetStatusActions
+														kind="laptop"
+														assetId={c.assetId}
+														statusId={c.statusId}
+														onStatusChange={updateStatus}
+														disabled={isLoading}
+													/>
+												</TableCell>
+											) : null}
 										</TableRow>
 									))
 								)}

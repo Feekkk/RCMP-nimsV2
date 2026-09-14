@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 export type LaptopFormFactor = 'laptop' | 'desktop' | 'leasing' | 'other';
 export type LaptopFormFactorFilter = 'all' | LaptopFormFactor;
 
-const STOCK_SUMMARY_STATUS_IDS = [1, 2, 3, 5] as const;
+const STOCK_SUMMARY_STATUS_IDS = [1, 2, 3, 4] as const;
 
 type StatusCount = {
   statusId: number;

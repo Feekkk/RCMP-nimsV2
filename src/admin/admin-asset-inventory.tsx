@@ -24,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { InsightStatCard, type InsightCardTone } from '@/components/insight-stat-card';
+import { AssetLifespanCell } from '@/components/asset-lifespan-cell';
 import { useAssets } from '@/hooks/assets';
 import { isLeasingCategory, isOwnedDesktopCategory, isOwnedNotebookCategory } from '@/hooks/assetid-generator';
 import {
@@ -49,7 +50,6 @@ import type {
 import { getLaptopDepartmentHandoversFn } from '@backend/server/admin/admin-laptop-insights.functions';
 import { listActivityLogFn } from '@backend/server/operations/activity-log.functions';
 import { STATUS_ID } from '@shared/lib/asset-status-actions';
-import { formatAssetLifespan } from '@shared/lib/date-format';
 import { CAMPUS_BUILDINGS, canonicalizeCampusBuilding } from '@shared/lib/deploy-return-schema';
 import { cn } from '@/lib/utils';
 
@@ -797,7 +797,7 @@ function ReturnAssetsTable({ items }: { items: LaptopAsset[] }) {
           <TableHead className="whitespace-nowrap font-semibold">Asset ID</TableHead>
           <TableHead className="min-w-[100px] font-semibold">Brand</TableHead>
           <TableHead className="min-w-[100px] font-semibold">Model</TableHead>
-          <TableHead className="min-w-[140px] font-semibold">Asset Lifespan</TableHead>
+          <TableHead className="min-w-[180px] font-semibold">Asset Lifespan</TableHead>
           <TableHead className="min-w-[140px] font-semibold">Remarks</TableHead>
         </TableRow>
       </TableHeader>
@@ -813,8 +813,8 @@ function ReturnAssetsTable({ items }: { items: LaptopAsset[] }) {
             <TableCell className="align-top text-sm text-muted-foreground">
               {item.model ?? '—'}
             </TableCell>
-            <TableCell className="align-top text-sm text-muted-foreground">
-              {formatAssetLifespan(item.poDate, item.assetId)}
+            <TableCell className="align-top">
+              <AssetLifespanCell poDate={item.poDate} doDate={item.doDate} assetId={item.assetId} />
             </TableCell>
             <TableCell className="align-top text-xs text-muted-foreground">
               {item.remarks?.trim() || '—'}

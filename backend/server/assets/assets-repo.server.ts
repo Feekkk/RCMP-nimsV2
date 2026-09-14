@@ -48,7 +48,7 @@ import {
   sqlUtf8AssetId,
   withAssetPredisposalTransaction,
 } from '@backend/server/assets/disposal-repo.server';
-import { attachDisplayNames, getDisplayNameByOid } from '@backend/server/core/azure-directory.server';
+import { attachDisplayNames, getDisplayNameByOid, getDisplayNamesByOids } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 import { insertWarranty } from '@backend/server/requests/warranty-repair-repo.server';
 
@@ -253,11 +253,18 @@ type LaptopRow = RowDataPacket &
     status_id: number;
     remarks: string | null;
     recipient_division?: string | null;
+    recipient_name?: string | null;
     place_handler?: string | null;
     place_building?: string | null;
     place_level?: string | null;
     place_zone?: string | null;
     place_handover_remarks?: string | null;
+    created_at?: Date | string | null;
+    registered_by_name?: string | null;
+    proposed_at?: Date | string | null;
+    proposed_oid?: string | null;
+    proposed_email?: string | null;
+    proposed_name?: string | null;
   };
 
 type AvRow = RowDataPacket &
@@ -327,11 +334,16 @@ function mapLaptop(row: LaptopRow): LaptopAsset {
     statusId: row.status_id,
     remarks: row.remarks,
     recipientDivision: row.recipient_division ?? null,
+    recipientName: row.recipient_name?.trim() || null,
     placeHandler: row.place_handler?.trim() || null,
     placeBuilding: row.place_building?.trim() || null,
     placeLevel: row.place_level?.trim() || null,
     placeZone: row.place_zone?.trim() || null,
     placeHandoverRemarks: row.place_handover_remarks?.trim() || null,
+    registeredAt: trailAt(row.created_at) || null,
+    registeredBy: row.registered_by_name?.trim() || null,
+    proposedAt: trailAt(row.proposed_at) || null,
+    proposedBy: row.proposed_name?.trim() || row.proposed_email?.trim() || null,
     ...mapPurchase(row),
   };
 }
@@ -425,12 +437,32 @@ function attachOpenPlace<T extends AvAsset | NetworkAsset>(
   });
 }
 
+let laptopRegisteredByReady: Promise<void> | null = null;
+
+async function ensureLaptopRegisteredByColumn() {
+  if (!laptopRegisteredByReady) {
+    laptopRegisteredByReady = (async () => {
+      const pool = getDbPool();
+      try {
+        await pool.query('ALTER TABLE laptop ADD COLUMN registered_by_name VARCHAR(255) NULL');
+      } catch (e) {
+        const code = typeof e === 'object' && e && 'code' in e ? String((e as { code: unknown }).code) : '';
+        const msg = e instanceof Error ? e.message : '';
+        if (code !== 'ER_DUP_FIELDNAME' && !msg.toLowerCase().includes('duplicate column')) {
+          throw e;
+        }
+      }
+    })();
+  }
+  await laptopRegisteredByReady;
+}
+
 const LAPTOP_INSERT = `INSERT INTO laptop (
   asset_id, acc_code, serial_num, brand, model, supplier, category, part_number,
   processor, memory, os, storage, gpu,
   PO_DATE, PO_NUM, DO_DATE, DO_NUM, INVOICE_DATE, INVOICE_NUM, PURCHASE_COST,
-  status_id, remarks
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  status_id, remarks, registered_by_name
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 const AV_INSERT = `INSERT INTO av (
   asset_id, acc_code, asset_id_old, category, brand, model, supplier, serial_num,
@@ -444,7 +476,7 @@ const NETWORK_INSERT = `INSERT INTO network (
   status_id, remarks
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-function laptopParams(input: CreateLaptopInput) {
+function laptopParams(input: CreateLaptopInput, registeredByName: string | null = null) {
   const category = canonicalizeLaptopCategory(input.category);
   if (!category) throw new Error('Category is required.');
   const purchase = normalizePurchaseForUpdate(input);
@@ -465,6 +497,7 @@ function laptopParams(input: CreateLaptopInput) {
     ...purchaseSqlParams(purchase),
     input.statusId,
     input.remarks ?? null,
+    registeredByName?.trim() || null,
   ];
 }
 
@@ -506,12 +539,13 @@ function networkParams(input: CreateNetworkInput) {
 export async function listAssets(kind: AssetKind) {
   const pool = getDbPool();
   if (kind === 'laptop') {
+    await ensureLaptopRegisteredByColumn();
     const [rows] = await pool.query<LaptopRow[]>(
-      `SELECT l.*, ho.recipient_division, hp.place_handler, hp.place_building, hp.place_level, hp.place_zone,
-              hp.place_handover_remarks
+      `SELECT l.*, ho.recipient_division, ho.recipient_name, hp.place_handler, hp.place_building, hp.place_level, hp.place_zone,
+              hp.place_handover_remarks, pd.proposed_at, pd.proposed_oid, pd.proposed_email
        FROM laptop l
        LEFT JOIN (
-         SELECT h.asset_id, s.division AS recipient_division
+         SELECT h.asset_id, s.division AS recipient_division, s.full_name AS recipient_name
          FROM handover h
          INNER JOIN handover_staff hs ON hs.handover_id = h.handover_id
          INNER JOIN staff s ON s.employee_no = hs.employee_no
@@ -544,8 +578,33 @@ export async function listAssets(kind: AssetKind) {
          WHERE hs.handover_staff_id IS NULL AND hr.return_id IS NULL
            AND h.handler IS NOT NULL AND TRIM(h.handler) <> ''
        ) hp ON hp.asset_id = l.asset_id
+       LEFT JOIN (
+         SELECT p.asset_id, p.marked_at AS proposed_at, u.oid AS proposed_oid, u.email AS proposed_email
+         FROM pre_disposal p
+         LEFT JOIN users u ON u.id = p.marked_by
+         INNER JOIN (
+           SELECT asset_id, MAX(pre_disposal_id) AS pre_disposal_id
+           FROM pre_disposal
+           WHERE asset_type = 'laptop' AND status = 'pending'
+           GROUP BY asset_id
+         ) latest ON latest.pre_disposal_id = p.pre_disposal_id
+       ) pd ON ${sqlUtf8AssetId('pd.asset_id')} = ${sqlUtf8AssetId('l.asset_id')}
        ORDER BY ${assetIdNewestYearFirstSql('l.asset_id')}`,
     );
+    const fallbackByOid = new Map<string, string>();
+    for (const row of rows) {
+      const oid = row.proposed_oid?.trim();
+      const email = row.proposed_email?.trim();
+      if (oid && email) fallbackByOid.set(oid, email);
+    }
+    const names = await getDisplayNamesByOids(
+      rows.map((row) => row.proposed_oid),
+      fallbackByOid,
+    );
+    for (const row of rows) {
+      const oid = row.proposed_oid?.trim();
+      row.proposed_name = oid ? names.get(oid) ?? null : null;
+    }
     return rows.map(mapLaptop);
   }
   if (kind === 'av') {
@@ -575,10 +634,11 @@ async function maybeInsertWarranty(
   }
 }
 
-export async function createLaptop(input: CreateLaptopInput) {
+export async function createLaptop(input: CreateLaptopInput, registeredByName: string | null = null) {
+  await ensureLaptopRegisteredByColumn();
   const pool = getDbPool();
   const { warranty, ...laptop } = input;
-  await pool.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId: input.assetId }));
+  await pool.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId: input.assetId }, registeredByName));
   await maybeInsertWarranty('laptop', input.assetId, warranty);
   const [rows] = await pool.query<LaptopRow[]>('SELECT * FROM laptop WHERE asset_id = ?', [input.assetId]);
   if (!rows[0]) {
@@ -611,7 +671,8 @@ export async function createNetwork(input: CreateNetworkInput) {
   return mapNetwork(rows[0]);
 }
 
-export async function bulkCreateLaptops(rows: BulkLaptopImportRow[]) {
+export async function bulkCreateLaptops(rows: BulkLaptopImportRow[], registeredByName: string | null = null) {
+  await ensureLaptopRegisteredByColumn();
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
@@ -623,7 +684,7 @@ export async function bulkCreateLaptops(rows: BulkLaptopImportRow[]) {
           'An asset ID could not be assigned after generation. Try saving again, or contact support if this keeps happening.',
         );
       }
-      await conn.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId }));
+      await conn.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId }, registeredByName));
       await maybeInsertWarranty('laptop', assetId, warranty, conn);
       if (handover) {
         await insertLaptopHandover(conn, assetId, handover);
@@ -695,8 +756,11 @@ export async function bulkCreateNetwork(rows: BulkNetworkImportRow[]) {
   }
 }
 
-export async function bulkCreateLaptopsWithGeneratedIds(rows: BulkLaptopImportRow[]) {
-  return bulkCreateLaptops(await fillLaptopAssetIds(rows));
+export async function bulkCreateLaptopsWithGeneratedIds(
+  rows: BulkLaptopImportRow[],
+  registeredByName: string | null = null,
+) {
+  return bulkCreateLaptops(await fillLaptopAssetIds(rows), registeredByName);
 }
 
 export async function bulkCreateAvWithGeneratedIds(rows: BulkAvImportRow[]) {

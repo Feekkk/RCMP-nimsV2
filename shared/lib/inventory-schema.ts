@@ -121,11 +121,16 @@ export type LaptopAsset = {
   statusId: number;
   remarks: string | null;
   recipientDivision: string | null;
+  recipientName: string | null;
   placeHandler: string | null;
   placeBuilding: string | null;
   placeLevel: string | null;
   placeZone: string | null;
   placeHandoverRemarks: string | null;
+  registeredAt: string | null;
+  registeredBy: string | null;
+  proposedAt: string | null;
+  proposedBy: string | null;
 } & PurchaseFields;
 
 export const LAPTOP_ASSIGNMENT_BUCKETS = ['Services', 'Academic', 'Facility'] as const;

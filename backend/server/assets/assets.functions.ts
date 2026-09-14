@@ -33,8 +33,10 @@ export const createLaptopFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((input: CreateLaptopInput) => input)
   .handler(async ({ data: input }) => {
+    const { getSessionUser } = await import('@backend/server/auth/session.server');
+    const session = await getSessionUser();
     const { createLaptop } = await import('@backend/server/assets/assets-repo.server');
-    return createLaptop(input);
+    return createLaptop(input, session?.fullName?.trim() || session?.email || null);
   });
 
 export const createAvFn = createServerFn({ method: 'POST' })
@@ -57,8 +59,10 @@ export const bulkCreateLaptopsFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((rows: CreateLaptopInput[]) => rows)
   .handler(async ({ data: rows }) => {
+    const { getSessionUser } = await import('@backend/server/auth/session.server');
+    const session = await getSessionUser();
     const { bulkCreateLaptops } = await import('@backend/server/assets/assets-repo.server');
-    return bulkCreateLaptops(rows);
+    return bulkCreateLaptops(rows, session?.fullName?.trim() || session?.email || null);
   });
 
 export const bulkCreateAvFn = createServerFn({ method: 'POST' })
@@ -89,8 +93,10 @@ export const bulkCreateLaptopsImportFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((rows: BulkLaptopImportRow[]) => rows)
   .handler(async ({ data: rows }) => {
+    const { getSessionUser } = await import('@backend/server/auth/session.server');
+    const session = await getSessionUser();
     const { bulkCreateLaptopsWithGeneratedIds } = await import('@backend/server/assets/assets-repo.server');
-    return bulkCreateLaptopsWithGeneratedIds(rows);
+    return bulkCreateLaptopsWithGeneratedIds(rows, session?.fullName?.trim() || session?.email || null);
   });
 
 export const bulkCreateAvImportFn = createServerFn({ method: 'POST' })

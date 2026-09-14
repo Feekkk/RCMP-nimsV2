@@ -267,28 +267,47 @@ export function formatWarrantyRemaining(
   return `${daysUntilEnd} days left on warranty`;
 }
 
+function assetLifespanStart(
+  poDate: string | null | undefined,
+  assetId: string | number,
+): Date | undefined {
+  if (poDate?.trim()) {
+    const iso = normalizeToIsoDate(poDate);
+    const parsed = iso ? isoToLocalDate(iso) : undefined;
+    if (parsed) return parsed;
+  }
+
+  if (/^\d+$/.test(String(assetId))) {
+    const { year } = parseAssetId(Number(assetId));
+    return new Date(2000 + year, 0, 1);
+  }
+
+  return undefined;
+}
+
 /** Lifespan from PO date, or from asset ID year (PPYYSSS → 20YY-01-01) when PO is missing. */
 export function formatAssetLifespan(
   poDate: string | null | undefined,
   assetId: string | number,
 ): string {
-  let start: Date | undefined;
-
-  if (poDate?.trim()) {
-    const iso = normalizeToIsoDate(poDate);
-    const parsed = iso ? isoToLocalDate(iso) : undefined;
-    if (parsed) start = parsed;
-  }
-
-  if (!start && /^\d+$/.test(String(assetId))) {
-    const { year } = parseAssetId(Number(assetId));
-    start = new Date(2000 + year, 0, 1);
-  }
-
+  const start = assetLifespanStart(poDate, assetId);
   if (!start) return '—';
 
   const today = new Date();
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const duration = formatDurationSince(start, end);
   return duration.endsWith(' old') ? duration.slice(0, -4) : duration;
+}
+
+export function isAssetLifespanOverYears(
+  poDate: string | null | undefined,
+  assetId: string | number,
+  years: number,
+): boolean {
+  const start = assetLifespanStart(poDate, assetId);
+  if (!start) return false;
+  const cutoff = new Date(start.getFullYear() + years, start.getMonth(), start.getDate());
+  const today = new Date();
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return end.getTime() >= cutoff.getTime();
 }
