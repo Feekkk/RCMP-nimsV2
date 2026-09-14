@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Laptop, Loader2, Plus, Search, Users } from 'lucide-react';
+import { Laptop, Loader2, Plus, Search, UserCheck, UserX, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,7 +37,11 @@ import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { FormField } from '@/technician/deploy-return-fields';
 import { TechnicianShell } from '@/technician/technician-shell';
+import { InsightStatCard } from '@/components/insight-stat-card';
+import { cn } from '@/lib/utils';
 import { createStaffFn, listStaffDirectoryFn, listStaffHandoverAssetsFn, updateStaffFn } from '@backend/server/operations/staff.functions';
+
+type CompletenessFilter = 'all' | 'complete' | 'incomplete';
 
 type StaffFormState = {
   employeeNo: string;
@@ -71,6 +75,16 @@ function staffToForm(row: StaffDirectoryRow): StaffFormState {
   };
 }
 
+function isCompleteStaff(row: StaffDirectoryRow): boolean {
+  return (
+    Boolean(row.employeeNo.trim()) &&
+    Boolean(row.fullName.trim()) &&
+    STAFF_DIVISIONS.includes((row.division ?? '') as StaffDivision) &&
+    Boolean(row.department?.trim()) &&
+    Boolean(row.email?.includes('@'))
+  );
+}
+
 function matchesSearch(row: StaffDirectoryRow, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
@@ -93,6 +107,7 @@ export function TechnicianHandoverStaffPage() {
   const [rows, setRows] = useState<StaffDirectoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [completenessFilter, setCompletenessFilter] = useState<CompletenessFilter>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StaffDirectoryRow | null>(null);
   const [form, setForm] = useState<StaffFormState>(EMPTY_STAFF_FORM);
@@ -115,12 +130,24 @@ export function TechnicianHandoverStaffPage() {
     void load();
   }, [load]);
 
-  const filtered = useMemo(
-    () => rows.filter((row) => matchesSearch(row, search)),
-    [rows, search],
-  );
+  const completeCount = useMemo(() => rows.filter(isCompleteStaff).length, [rows]);
+  const incompleteCount = rows.length - completeCount;
 
-  const pagination = usePagination(filtered, { resetKey: search });
+  const filtered = useMemo(() => {
+    const byCompleteness =
+      completenessFilter === 'complete'
+        ? rows.filter(isCompleteStaff)
+        : completenessFilter === 'incomplete'
+          ? rows.filter((row) => !isCompleteStaff(row))
+          : rows;
+    return byCompleteness.filter((row) => matchesSearch(row, search));
+  }, [rows, search, completenessFilter]);
+
+  const pagination = usePagination(filtered, { resetKey: `${search}|${completenessFilter}` });
+
+  const toggleCompletenessFilter = (next: CompletenessFilter) => {
+    setCompletenessFilter((current) => (current === next ? 'all' : next));
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -225,6 +252,31 @@ export function TechnicianHandoverStaffPage() {
         </p>
       </div>
 
+      <div className="mb-5 flex gap-3 overflow-x-auto pb-2 sm:mb-6">
+        <button
+          type="button"
+          title="Filter table by complete staff"
+          onClick={() => toggleCompletenessFilter('complete')}
+          className={cn(
+            'min-w-[16.5rem] flex-1 rounded-[28px] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            completenessFilter === 'complete' && 'ring-2 ring-primary/40',
+          )}
+        >
+          <InsightStatCard icon={UserCheck} label="Complete staff" value={completeCount} tone="lime" />
+        </button>
+        <button
+          type="button"
+          title="Filter table by incomplete staff"
+          onClick={() => toggleCompletenessFilter('incomplete')}
+          className={cn(
+            'min-w-[16.5rem] flex-1 rounded-[28px] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            completenessFilter === 'incomplete' && 'ring-2 ring-primary/40',
+          )}
+        >
+          <InsightStatCard icon={UserX} label="Incomplete staff" value={incompleteCount} tone="amber" />
+        </button>
+      </div>
+
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -266,7 +318,9 @@ export function TechnicianHandoverStaffPage() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                      {rows.length === 0 ? 'No staff records in the directory.' : 'No staff match your search.'}
+                      {rows.length === 0
+                        ? 'No staff records in the directory.'
+                        : 'No staff match your search or completeness filter.'}
                     </TableCell>
                   </TableRow>
                 ) : (
