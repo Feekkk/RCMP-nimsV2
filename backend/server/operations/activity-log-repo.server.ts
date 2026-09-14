@@ -465,6 +465,60 @@ async function loadMaintenanceEvents(events: ActivityLogEntry[]) {
   }
 }
 
+async function loadPreventiveMaintenanceEvents(events: ActivityLogEntry[]) {
+  const pool = getDbPool();
+
+  const [rows] = await pool.query<
+    (RowDataPacket & {
+      pm_log_asset_id: number;
+      asset_type: string;
+      asset_id: number;
+      asset_label: string | null;
+      condition: 'good' | 'faulty';
+      remarks: string | null;
+      resolved_at: Date | string | null;
+      building: string;
+      level: string;
+      zone: string;
+      pm_date: Date | string;
+      created_at: Date | string;
+      staff_oid: string | null;
+      staff_name: string;
+    })[]
+  >(
+    `SELECT a.pm_log_asset_id, a.asset_type, a.asset_id, a.asset_label, a.\`condition\`,
+            a.remarks, a.resolved_at, l.building, l.level, l.zone, l.pm_date, l.created_at,
+            u.oid AS staff_oid
+     FROM pm_log_asset a
+     INNER JOIN pm_log l ON l.pm_log_id = a.pm_log_id
+     INNER JOIN users u ON u.id = l.performed_by
+     ORDER BY a.pm_log_asset_id DESC
+     LIMIT 300`,
+  );
+  await attachDisplayNames(rows, 'staff_oid', 'staff_name');
+
+  for (const row of rows) {
+    const faulty = row.condition === 'faulty';
+    const place = `${row.building} · ${row.level} · ${row.zone}`;
+    const asset = row.asset_label?.trim() || `Asset #${row.asset_id}`;
+    push(events, {
+      id: `pm-${row.pm_log_asset_id}`,
+      category: 'maintenance',
+      title: faulty
+        ? row.resolved_at
+          ? 'Maintenance issue resolved'
+          : 'Maintenance issue found'
+        : 'Maintenance passed',
+      detail: [asset, place, row.remarks].filter(Boolean).join(' · '),
+      actor: row.staff_name,
+      assetKind: parseKind(row.asset_type),
+      assetId: row.asset_id,
+      requestId: null,
+      at: trailAt(row.pm_date) || trailAt(row.created_at),
+    });
+  }
+}
+
 async function loadInventoryEvents(events: ActivityLogEntry[]) {
   const pool = getDbPool();
 
@@ -505,6 +559,7 @@ export async function listActivityLog(): Promise<ActivityLogEntry[]> {
     loadDeployEvents(events, 'av', 'deployment'),
     loadDeployEvents(events, 'network', 'deployment'),
     loadMaintenanceEvents(events),
+    loadPreventiveMaintenanceEvents(events),
     loadInventoryEvents(events),
   ]);
 

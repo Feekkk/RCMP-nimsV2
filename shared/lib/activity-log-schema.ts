@@ -6,6 +6,7 @@ export const ACTIVITY_LOG_CATEGORIES = [
   'deployment',
   'return',
   'repair',
+  'maintenance',
   'warranty',
   'inventory',
 ] as const;
@@ -18,6 +19,7 @@ export const ACTIVITY_CATEGORY_LABEL: Record<ActivityLogCategory, string> = {
   deployment: 'Deployment',
   return: 'Return',
   repair: 'Repair',
+  maintenance: 'Preventive maintenance',
   warranty: 'Warranty',
   inventory: 'Inventory',
 };

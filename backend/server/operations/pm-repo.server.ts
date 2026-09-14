@@ -1,24 +1,20 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import type {
-  AddPmChecklistItemInput,
-  CreatePmChecklistInput,
   CreatePmLogInput,
   CreatePmLogResult,
-  PmChecklistDetail,
-  PmChecklistItem,
-  PmChecklistSummary,
-  PmItemResult,
+  PmAssetCondition,
+  PmFollowUp,
   PmLocationTree,
+  PmLogAsset,
   PmLogListFilters,
   PmLogListRow,
   PmLogStatus,
   PmPlaceAsset,
   PmStats,
-  UpdatePmChecklistInput,
-  UpdatePmChecklistItemInput,
+  UpdatePmLogAssetsInput,
 } from '@shared/lib/pm-schema';
-import { derivePmLogStatus } from '@shared/lib/pm-schema';
+import { derivePmLogStatus, pmAssetKey } from '@shared/lib/pm-schema';
 import { sqlDateToIso as toIsoDate } from '@shared/lib/date-format';
 import { getDbPool } from '@backend/server/core/db';
 
@@ -35,261 +31,13 @@ function placeKey(building: string, level: string) {
   return `${building}\0${level}`;
 }
 
-type ChecklistRow = RowDataPacket & {
-  checklist_id: number;
-  asset_type: AssetKind;
-  asset_category: string;
-  checklist_name: string;
-  item_count: number;
-};
-
-type ItemRow = RowDataPacket & {
-  item_id: number;
-  checklist_id: number;
-  item_description: string;
-};
-
-function mapChecklistSummary(row: ChecklistRow): PmChecklistSummary {
-  return {
-    checklistId: row.checklist_id,
-    assetType: row.asset_type,
-    assetCategory: row.asset_category,
-    checklistName: row.checklist_name,
-    itemCount: Number(row.item_count) || 0,
-  };
-}
-
-export async function listPmChecklists(): Promise<PmChecklistSummary[]> {
-  const pool = getDbPool();
-  const [rows] = await pool.query<ChecklistRow[]>(
-    `SELECT c.checklist_id, c.asset_type, c.asset_category, c.checklist_name,
-            COUNT(i.item_id) AS item_count
-     FROM pm_checklist c
-     LEFT JOIN pm_checklist_item i ON i.checklist_id = c.checklist_id
-     GROUP BY c.checklist_id, c.asset_type, c.asset_category, c.checklist_name
-     ORDER BY c.asset_type, c.asset_category`,
-  );
-  return rows.map(mapChecklistSummary);
-}
-
-export async function listPmAssetCategories(assetType: AssetKind): Promise<string[]> {
-  const pool = getDbPool();
-  const table =
-    assetType === 'laptop' ? 'laptop' : assetType === 'av' ? 'av' : 'network';
-  const [rows] = await pool.query<(RowDataPacket & { category: string })[]>(
-    `SELECT DISTINCT category
-     FROM \`${table}\`
-     WHERE category IS NOT NULL AND TRIM(category) <> ''
-     ORDER BY category`,
-  );
-  return rows.map((r) => r.category.trim());
-}
-
-export async function getPmChecklistDetail(checklistId: number): Promise<PmChecklistDetail | null> {
-  const pool = getDbPool();
-  const [headers] = await pool.query<ChecklistRow[]>(
-    `SELECT c.checklist_id, c.asset_type, c.asset_category, c.checklist_name,
-            COUNT(i.item_id) AS item_count
-     FROM pm_checklist c
-     LEFT JOIN pm_checklist_item i ON i.checklist_id = c.checklist_id
-     WHERE c.checklist_id = ?
-     GROUP BY c.checklist_id, c.asset_type, c.asset_category, c.checklist_name
-     LIMIT 1`,
-    [checklistId],
-  );
-  const header = headers[0];
-  if (!header) return null;
-
-  const [items] = await pool.query<ItemRow[]>(
-    `SELECT item_id, checklist_id, item_description
-     FROM pm_checklist_item
-     WHERE checklist_id = ?
-     ORDER BY item_id`,
-    [checklistId],
-  );
-
-  return {
-    ...mapChecklistSummary(header),
-    items: items.map(
-      (row): PmChecklistItem => ({
-        itemId: row.item_id,
-        checklistId: row.checklist_id,
-        itemDescription: row.item_description,
-      }),
-    ),
-  };
-}
-
-export async function getPmChecklistForAsset(
-  assetType: AssetKind,
-  assetCategory: string,
-): Promise<PmChecklistDetail | null> {
-  const category = assetCategory.trim();
-  if (!category) return null;
-
-  const pool = getDbPool();
-  const [headers] = await pool.query<(RowDataPacket & { checklist_id: number })[]>(
-    `SELECT checklist_id
-     FROM pm_checklist
-     WHERE asset_type = ? AND LOWER(asset_category) = LOWER(?)
-     LIMIT 1`,
-    [assetType, category],
-  );
-  const id = headers[0]?.checklist_id;
-  if (!id) return null;
-  return getPmChecklistDetail(id);
-}
-
-export async function createPmChecklist(input: CreatePmChecklistInput): Promise<PmChecklistDetail> {
-  const assetCategory = input.assetCategory.trim();
-  const checklistName = input.checklistName.trim();
-  if (!assetCategory) throw new Error('Asset category is required.');
-  if (!checklistName) throw new Error('Checklist name is required.');
-
-  const pool = getDbPool();
-  const conn = await pool.getConnection();
-  let checklistId = 0;
-  try {
-    await conn.beginTransaction();
-    const [result] = await conn.execute<ResultSetHeader>(
-      `INSERT INTO pm_checklist (asset_type, asset_category, checklist_name)
-       VALUES (?, ?, ?)`,
-      [input.assetType, assetCategory, checklistName],
-    );
-    checklistId = result.insertId;
-    const items = (input.items ?? []).map((s) => s.trim()).filter(Boolean);
-    for (const itemDescription of items) {
-      await conn.execute(
-        `INSERT INTO pm_checklist_item (checklist_id, item_description) VALUES (?, ?)`,
-        [checklistId, itemDescription],
-      );
-    }
-    await conn.commit();
-  } catch (e) {
-    await conn.rollback();
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes('uq_pm_checklist_type_category') || msg.includes('Duplicate')) {
-      throw new Error('A checklist for this asset type and category already exists.');
-    }
-    throw e;
-  } finally {
-    conn.release();
-  }
-
-  const created = await getPmChecklistDetail(checklistId);
-  if (!created) throw new Error('Checklist could not be created.');
-  return created;
-}
-
-export async function updatePmChecklist(input: UpdatePmChecklistInput): Promise<void> {
-  const assetCategory = input.assetCategory.trim();
-  const checklistName = input.checklistName.trim();
-  if (!assetCategory) throw new Error('Asset category is required.');
-  if (!checklistName) throw new Error('Checklist name is required.');
-
-  const pool = getDbPool();
-  try {
-    const [result] = await pool.execute<ResultSetHeader>(
-      `UPDATE pm_checklist
-       SET asset_category = ?, checklist_name = ?
-       WHERE checklist_id = ?`,
-      [assetCategory, checklistName, input.checklistId],
-    );
-    if (result.affectedRows === 0) throw new Error('Checklist not found.');
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes('uq_pm_checklist_type_category') || msg.includes('Duplicate')) {
-      throw new Error('A checklist for this asset type and category already exists.');
-    }
-    throw e;
-  }
-}
-
-export async function deletePmChecklist(checklistId: number): Promise<void> {
-  const pool = getDbPool();
-  const [used] = await pool.query<RowDataPacket[]>(
-    `SELECT pm_log_id FROM pm_log WHERE checklist_id = ? LIMIT 1`,
-    [checklistId],
-  );
-  if (used.length > 0) {
-    throw new Error('This checklist is used in maintenance logs and cannot be deleted.');
-  }
-  const [result] = await pool.execute<ResultSetHeader>(
-    `DELETE FROM pm_checklist WHERE checklist_id = ?`,
-    [checklistId],
-  );
-  if (result.affectedRows === 0) throw new Error('Checklist not found.');
-}
-
-export async function addPmChecklistItem(input: AddPmChecklistItemInput): Promise<PmChecklistItem> {
-  const itemDescription = input.itemDescription.trim();
-  if (!itemDescription) throw new Error('Checklist item is required.');
-
-  const pool = getDbPool();
-  const [dup] = await pool.query<RowDataPacket[]>(
-    `SELECT item_id FROM pm_checklist_item
-     WHERE checklist_id = ? AND LOWER(item_description) = LOWER(?)
-     LIMIT 1`,
-    [input.checklistId, itemDescription],
-  );
-  if (dup.length > 0) throw new Error('That item already exists in this checklist.');
-
-  const [result] = await pool.execute<ResultSetHeader>(
-    `INSERT INTO pm_checklist_item (checklist_id, item_description) VALUES (?, ?)`,
-    [input.checklistId, itemDescription],
-  );
-  return {
-    itemId: result.insertId,
-    checklistId: input.checklistId,
-    itemDescription,
-  };
-}
-
-export async function updatePmChecklistItem(input: UpdatePmChecklistItemInput): Promise<void> {
-  const itemDescription = input.itemDescription.trim();
-  if (!itemDescription) throw new Error('Checklist item is required.');
-
-  const pool = getDbPool();
-  const [rows] = await pool.query<(RowDataPacket & { checklist_id: number })[]>(
-    `SELECT checklist_id FROM pm_checklist_item WHERE item_id = ? LIMIT 1`,
-    [input.itemId],
-  );
-  const checklistId = rows[0]?.checklist_id;
-  if (!checklistId) throw new Error('Checklist item not found.');
-
-  const [dup] = await pool.query<RowDataPacket[]>(
-    `SELECT item_id FROM pm_checklist_item
-     WHERE checklist_id = ? AND item_id <> ? AND LOWER(item_description) = LOWER(?)
-     LIMIT 1`,
-    [checklistId, input.itemId, itemDescription],
-  );
-  if (dup.length > 0) throw new Error('That item already exists in this checklist.');
-
-  await pool.execute(`UPDATE pm_checklist_item SET item_description = ? WHERE item_id = ?`, [
-    itemDescription,
-    input.itemId,
-  ]);
-}
-
-export async function deletePmChecklistItem(itemId: number): Promise<void> {
-  const pool = getDbPool();
-  const [used] = await pool.query<RowDataPacket[]>(
-    `SELECT pm_log_item_id FROM pm_log_item WHERE item_id = ? LIMIT 1`,
-    [itemId],
-  );
-  if (used.length > 0) {
-    throw new Error('This item is used in maintenance logs and cannot be deleted.');
-  }
-  const [result] = await pool.execute<ResultSetHeader>(
-    `DELETE FROM pm_checklist_item WHERE item_id = ?`,
-    [itemId],
-  );
-  if (result.affectedRows === 0) throw new Error('Checklist item not found.');
+function assetLabelOf(brand: string | null, model: string | null, assetId: AssetId): string {
+  return [brand, model].filter(Boolean).join(' ') || `Asset #${assetId}`;
 }
 
 type PlaceRow = RowDataPacket & {
   asset_type: AssetKind;
-  asset_id: number;
+  asset_id: AssetId;
   category: string | null;
   brand: string | null;
   model: string | null;
@@ -392,8 +140,31 @@ export async function getPmLocationTree(): Promise<PmLocationTree> {
   };
 }
 
-export function pmZoneLookupKey(building: string, level: string) {
-  return `${building}||${level}`;
+type OpenFaultRow = RowDataPacket & {
+  asset_type: AssetKind;
+  asset_id: AssetId;
+  remarks: string | null;
+  pm_date: Date | string;
+};
+
+async function openFaultsByAsset(): Promise<Map<string, { date: string; remarks: string | null }>> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<OpenFaultRow[]>(
+    `SELECT a.asset_type, a.asset_id, a.remarks, l.pm_date
+     FROM pm_log_asset a
+     INNER JOIN pm_log l ON l.pm_log_id = a.pm_log_id
+     WHERE a.follow_up_required = 1 AND a.resolved_at IS NULL
+     ORDER BY l.pm_date ASC, a.pm_log_asset_id ASC`,
+  );
+
+  const map = new Map<string, { date: string; remarks: string | null }>();
+  for (const row of rows) {
+    map.set(pmAssetKey(row.asset_type, row.asset_id), {
+      date: toIsoDate(row.pm_date),
+      remarks: row.remarks,
+    });
+  }
+  return map;
 }
 
 export async function listPmAssetsAtPlace(input: {
@@ -406,46 +177,38 @@ export async function listPmAssetsAtPlace(input: {
   const zone = input.zone.trim();
   if (!building || !level || !zone) return [];
 
-  const rows = (await listOpenPlaceAssets()).filter(
-    (r) =>
-      r.building.trim() === building &&
-      r.level.trim() === level &&
-      r.zone.trim() === zone,
-  );
+  const [rows, openFaults] = await Promise.all([listOpenPlaceAssets(), openFaultsByAsset()]);
 
-  const pool = getDbPool();
-  const [checklists] = await pool.query<
-    (RowDataPacket & { checklist_id: number; asset_type: AssetKind; asset_category: string })[]
-  >(`SELECT checklist_id, asset_type, asset_category FROM pm_checklist`);
-
-  const checklistMap = new Map<string, number>();
-  for (const c of checklists) {
-    checklistMap.set(`${c.asset_type}:${c.asset_category.toLowerCase()}`, c.checklist_id);
-  }
-
-  return rows.map((r) => {
-    const category = r.category?.trim() || null;
-    const checklistId =
-      category != null
-        ? (checklistMap.get(`${r.asset_type}:${category.toLowerCase()}`) ?? null)
-        : null;
-    return {
-      kind: r.asset_type,
-      assetId: r.asset_id,
-      category,
-      brand: r.brand,
-      model: r.model,
-      serialNum: r.serial_num,
-      building: r.building,
-      level: r.level,
-      zone: r.zone,
-      checklistId,
-    };
-  });
+  return rows
+    .filter(
+      (r) =>
+        r.building.trim() === building && r.level.trim() === level && r.zone.trim() === zone,
+    )
+    .map((r) => {
+      const fault = openFaults.get(pmAssetKey(r.asset_type, r.asset_id));
+      return {
+        kind: r.asset_type,
+        assetId: r.asset_id,
+        category: r.category?.trim() || null,
+        brand: r.brand,
+        model: r.model,
+        serialNum: r.serial_num,
+        building: r.building,
+        level: r.level,
+        zone: r.zone,
+        pendingFollowUp: fault != null,
+        lastFaultDate: fault?.date ?? null,
+        lastFaultRemarks: fault?.remarks ?? null,
+      };
+    });
 }
 
 export async function createPmLog(input: CreatePmLogInput): Promise<CreatePmLogResult> {
-  if (!input.items.length) throw new Error('Complete at least one checklist item.');
+  const building = input.building.trim();
+  const level = input.level.trim();
+  const zone = input.zone.trim();
+  if (!building || !level || !zone) throw new Error('Building, level and room are required.');
+
   const pmDate = input.pmDate.trim().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(pmDate)) throw new Error('Maintenance date is required.');
 
@@ -454,52 +217,172 @@ export async function createPmLog(input: CreatePmLogInput): Promise<CreatePmLogR
     throw new Error('Your technician session could not be verified. Sign out and sign in again.');
   }
 
-  const results = input.items.map((i) => i.result);
-  if (results.some((r) => r !== 'pass' && r !== 'fail' && r !== 'na')) {
-    throw new Error('Invalid checklist result.');
-  }
-  const status = derivePmLogStatus(results);
+  const expected = await listPmAssetsAtPlace({ building, level, zone });
+  if (expected.length === 0) throw new Error('No assets are currently placed in this room.');
 
-  const detail = await getPmChecklistDetail(input.checklistId);
-  if (!detail) throw new Error('Checklist not found.');
-  if (detail.assetType !== input.assetType) {
-    throw new Error('Checklist does not match this asset type.');
+  const expectedByKey = new Map(expected.map((a) => [pmAssetKey(a.kind, a.assetId), a]));
+  const provided = new Map<string, { condition: PmAssetCondition; remarks: string | null }>();
+
+  for (const item of input.assets) {
+    if (item.condition !== 'good' && item.condition !== 'faulty') {
+      throw new Error('Invalid asset condition.');
+    }
+    const key = pmAssetKey(item.assetType, item.assetId);
+    if (!expectedByKey.has(key)) {
+      throw new Error('One of the submitted assets is no longer placed in this room.');
+    }
+    const remarks = item.remarks?.trim() || null;
+    if (item.condition === 'faulty' && !remarks) {
+      throw new Error('Add remarks for every asset that is not in good condition.');
+    }
+    provided.set(key, { condition: item.condition, remarks });
   }
 
-  const requiredIds = new Set(detail.items.map((i) => i.itemId));
-  const providedIds = new Set(input.items.map((i) => i.itemId));
-  if (requiredIds.size !== providedIds.size || [...requiredIds].some((id) => !providedIds.has(id))) {
-    throw new Error('Every checklist item must be marked before saving.');
+  if (provided.size !== expectedByKey.size) {
+    throw new Error('Confirm every asset in this room before saving.');
   }
+
+  const status = derivePmLogStatus([...provided.values()].map((v) => v.condition));
+  const faultyCount = [...provided.values()].filter((v) => v.condition === 'faulty').length;
 
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
     const [logResult] = await conn.execute<ResultSetHeader>(
-      `INSERT INTO pm_log
-        (asset_id, asset_type, checklist_id, performed_by, pm_date, status, remarks)
+      `INSERT INTO pm_log (building, level, zone, performed_by, pm_date, status, remarks)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        input.assetId,
-        input.assetType,
-        input.checklistId,
-        performedBy,
-        pmDate,
-        status,
-        input.remarks?.trim() || null,
-      ],
+      [building, level, zone, performedBy, pmDate, status, input.remarks?.trim() || null],
     );
     const pmLogId = logResult.insertId;
-    for (const item of input.items) {
+    let clearedCount = 0;
+
+    for (const [key, value] of provided) {
+      const asset = expectedByKey.get(key)!;
       await conn.execute(
-        `INSERT INTO pm_log_item (pm_log_id, item_id, result, remarks)
-         VALUES (?, ?, ?, ?)`,
-        [pmLogId, item.itemId, item.result, item.remarks?.trim() || null],
+        `INSERT INTO pm_log_asset
+          (pm_log_id, asset_type, asset_id, asset_category, asset_label, serial_num,
+           \`condition\`, remarks, follow_up_required)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          pmLogId,
+          asset.kind,
+          asset.assetId,
+          asset.category,
+          assetLabelOf(asset.brand, asset.model, asset.assetId),
+          asset.serialNum,
+          value.condition,
+          value.remarks,
+          value.condition === 'faulty' ? 1 : 0,
+        ],
+      );
+
+      if (value.condition === 'good') {
+        const [cleared] = await conn.execute<ResultSetHeader>(
+          `UPDATE pm_log_asset
+           SET resolved_at = CURRENT_TIMESTAMP, resolved_pm_log_id = ?
+           WHERE asset_type = ? AND asset_id = ? AND follow_up_required = 1 AND resolved_at IS NULL`,
+          [pmLogId, asset.kind, asset.assetId],
+        );
+        clearedCount += cleared.affectedRows;
+      }
+    }
+
+    await conn.commit();
+    return { pmLogId, status, assetsTotal: provided.size, faultyCount, clearedCount };
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+export async function updatePmLogAssets(input: UpdatePmLogAssetsInput): Promise<CreatePmLogResult> {
+  const pmLogId = Number(input.pmLogId);
+  if (!Number.isFinite(pmLogId) || pmLogId <= 0) throw new Error('Maintenance visit is required.');
+  if (!Array.isArray(input.assets) || input.assets.length === 0) {
+    throw new Error('Confirm every asset in this visit before saving.');
+  }
+
+  const pool = getDbPool();
+  const [existing] = await pool.query<LogAssetRow[]>(
+    `SELECT pm_log_asset_id, pm_log_id, asset_type, asset_id, asset_category, asset_label,
+            serial_num, \`condition\`, remarks, follow_up_required, resolved_at
+     FROM pm_log_asset
+     WHERE pm_log_id = ?
+     ORDER BY pm_log_asset_id ASC`,
+    [pmLogId],
+  );
+  if (existing.length === 0) throw new Error('This maintenance visit could not be found.');
+
+  const byId = new Map(existing.map((row) => [row.pm_log_asset_id, row]));
+  const provided = new Map<number, { condition: PmAssetCondition; remarks: string | null }>();
+
+  for (const item of input.assets) {
+    if (item.condition !== 'good' && item.condition !== 'faulty') {
+      throw new Error('Invalid asset condition.');
+    }
+    const id = Number(item.pmLogAssetId);
+    if (!byId.has(id)) throw new Error('One of the assets is not part of this visit.');
+    const remarks = item.remarks?.trim() || null;
+    if (item.condition === 'faulty' && !remarks) {
+      throw new Error('Add remarks for every asset that is not in good condition.');
+    }
+    provided.set(id, { condition: item.condition, remarks });
+  }
+
+  if (provided.size !== byId.size) {
+    throw new Error('Confirm every asset in this visit before saving.');
+  }
+
+  const conditions = [...provided.values()].map((v) => v.condition);
+  const status = derivePmLogStatus(conditions);
+  const faultyCount = conditions.filter((c) => c === 'faulty').length;
+  let clearedCount = 0;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    for (const [id, value] of provided) {
+      const prev = byId.get(id)!;
+      const wasFaulty = prev.condition === 'faulty' && Number(prev.follow_up_required) === 1 && prev.resolved_at == null;
+      const nowGood = value.condition === 'good';
+      const resolveNow = wasFaulty && nowGood;
+      if (resolveNow) clearedCount += 1;
+
+      await conn.execute(
+        `UPDATE pm_log_asset
+         SET \`condition\` = ?, remarks = ?, follow_up_required = ?,
+             resolved_at = CASE
+               WHEN ? = 1 THEN CURRENT_TIMESTAMP
+               WHEN ? = 'faulty' THEN NULL
+               ELSE resolved_at
+             END,
+             resolved_pm_log_id = CASE
+               WHEN ? = 1 THEN ?
+               WHEN ? = 'faulty' THEN NULL
+               ELSE resolved_pm_log_id
+             END
+         WHERE pm_log_asset_id = ? AND pm_log_id = ?`,
+        [
+          value.condition,
+          value.condition === 'faulty' ? value.remarks : prev.remarks,
+          nowGood ? 0 : 1,
+          resolveNow ? 1 : 0,
+          value.condition,
+          resolveNow ? 1 : 0,
+          pmLogId,
+          value.condition,
+          id,
+          pmLogId,
+        ],
       );
     }
+
+    await conn.execute(`UPDATE pm_log SET status = ? WHERE pm_log_id = ?`, [status, pmLogId]);
     await conn.commit();
-    return { pmLogId, status };
+    return { pmLogId, status, assetsTotal: provided.size, faultyCount, clearedCount };
   } catch (e) {
     await conn.rollback();
     throw e;
@@ -511,76 +394,44 @@ export async function createPmLog(input: CreatePmLogInput): Promise<CreatePmLogR
 type LogRow = RowDataPacket & {
   pm_log_id: number;
   pm_date: Date | string;
-  asset_id: number;
-  asset_type: AssetKind;
-  checklist_id: number;
-  checklist_name: string;
+  building: string;
+  level: string;
+  zone: string;
   status: PmLogStatus;
   remarks: string | null;
   performed_by: number;
   performed_email: string | null;
-  item_count: number;
-  fail_count: number;
-  checked_count: number;
-  laptop_category: string | null;
-  laptop_brand: string | null;
-  laptop_model: string | null;
-  laptop_serial: string | null;
-  av_category: string | null;
-  av_brand: string | null;
-  av_model: string | null;
-  av_serial: string | null;
-  network_category: string | null;
-  network_brand: string | null;
-  network_model: string | null;
-  network_serial: string | null;
+  assets_total: number;
+  good_count: number;
+  faulty_count: number;
 };
 
-function mapLogRow(row: LogRow): PmLogListRow {
-  const category =
-    row.asset_type === 'laptop'
-      ? row.laptop_category
-      : row.asset_type === 'av'
-        ? row.av_category
-        : row.network_category;
-  const brand =
-    row.asset_type === 'laptop'
-      ? row.laptop_brand
-      : row.asset_type === 'av'
-        ? row.av_brand
-        : row.network_brand;
-  const model =
-    row.asset_type === 'laptop'
-      ? row.laptop_model
-      : row.asset_type === 'av'
-        ? row.av_model
-        : row.network_model;
-  const serialNum =
-    row.asset_type === 'laptop'
-      ? row.laptop_serial
-      : row.asset_type === 'av'
-        ? row.av_serial
-        : row.network_serial;
-  const assetLabel = [brand, model].filter(Boolean).join(' ') || `Asset #${row.asset_id}`;
-  const email = row.performed_email?.trim() || null;
+type LogAssetRow = RowDataPacket & {
+  pm_log_asset_id: number;
+  pm_log_id: number;
+  asset_type: AssetKind;
+  asset_id: AssetId;
+  asset_category: string | null;
+  asset_label: string | null;
+  serial_num: string | null;
+  condition: PmAssetCondition;
+  remarks: string | null;
+  follow_up_required: number;
+  resolved_at: Date | string | null;
+};
 
+function mapLogAsset(row: LogAssetRow): PmLogAsset {
   return {
-    pmLogId: row.pm_log_id,
-    pmDate: toIsoDate(row.pm_date),
-    assetId: row.asset_id,
+    pmLogAssetId: row.pm_log_asset_id,
     assetType: row.asset_type,
-    assetCategory: category,
-    assetLabel,
-    serialNum,
-    checklistId: row.checklist_id,
-    checklistName: row.checklist_name,
-    status: row.status,
+    assetId: row.asset_id,
+    assetCategory: row.asset_category,
+    assetLabel: row.asset_label?.trim() || `Asset #${row.asset_id}`,
+    serialNum: row.serial_num,
+    condition: row.condition,
     remarks: row.remarks,
-    performedBy: email ?? `User #${row.performed_by}`,
-    performedByEmail: email,
-    itemsChecked: Number(row.checked_count) || 0,
-    itemsTotal: Number(row.item_count) || 0,
-    failCount: Number(row.fail_count) || 0,
+    followUpRequired: Number(row.follow_up_required) === 1,
+    resolvedAt: row.resolved_at == null ? null : String(row.resolved_at),
   };
 }
 
@@ -601,58 +452,76 @@ export async function listPmLogs(filters: PmLogListFilters = {}): Promise<PmLogL
     where.push('l.status = ?');
     params.push(filters.status);
   }
-  if (filters.assetType && filters.assetType !== 'all') {
-    where.push('l.asset_type = ?');
-    params.push(filters.assetType);
+  if (filters.building && filters.building !== 'all') {
+    where.push('l.building = ?');
+    params.push(filters.building);
   }
 
   const [rows] = await pool.query<LogRow[]>(
-    `SELECT l.pm_log_id, l.pm_date, l.asset_id, l.asset_type, l.checklist_id, l.status, l.remarks,
-            l.performed_by, c.checklist_name, u.email AS performed_email,
-            COUNT(li.pm_log_item_id) AS item_count,
-            SUM(CASE WHEN li.result = 'fail' THEN 1 ELSE 0 END) AS fail_count,
-            SUM(CASE WHEN li.result IN ('pass','fail','na') THEN 1 ELSE 0 END) AS checked_count,
-            lap.category AS laptop_category, lap.brand AS laptop_brand, lap.model AS laptop_model,
-            lap.serial_num AS laptop_serial,
-            av.category AS av_category, av.brand AS av_brand, av.model AS av_model,
-            av.serial_num AS av_serial,
-            net.category AS network_category, net.brand AS network_brand, net.model AS network_model,
-            net.serial_num AS network_serial
+    `SELECT l.pm_log_id, l.pm_date, l.building, l.level, l.zone, l.status, l.remarks,
+            l.performed_by, u.email AS performed_email,
+            COUNT(a.pm_log_asset_id) AS assets_total,
+            SUM(CASE WHEN a.\`condition\` = 'good' THEN 1 ELSE 0 END) AS good_count,
+            SUM(CASE WHEN a.\`condition\` = 'faulty' THEN 1 ELSE 0 END) AS faulty_count
      FROM pm_log l
-     INNER JOIN pm_checklist c ON c.checklist_id = l.checklist_id
      INNER JOIN users u ON u.id = l.performed_by
-     LEFT JOIN pm_log_item li ON li.pm_log_id = l.pm_log_id
-     LEFT JOIN laptop lap ON l.asset_type = 'laptop' AND lap.asset_id = l.asset_id
-     LEFT JOIN av ON l.asset_type = 'av' AND av.asset_id = l.asset_id
-     LEFT JOIN network net ON l.asset_type = 'network' AND net.asset_id = l.asset_id
+     LEFT JOIN pm_log_asset a ON a.pm_log_id = l.pm_log_id
      WHERE ${where.join(' AND ')}
-     GROUP BY l.pm_log_id, l.pm_date, l.asset_id, l.asset_type, l.checklist_id, l.status, l.remarks,
-              l.performed_by, c.checklist_name, u.email,
-              lap.category, lap.brand, lap.model, lap.serial_num,
-              av.category, av.brand, av.model, av.serial_num,
-              net.category, net.brand, net.model, net.serial_num
+     GROUP BY l.pm_log_id, l.pm_date, l.building, l.level, l.zone, l.status, l.remarks,
+              l.performed_by, u.email
      ORDER BY l.pm_date DESC, l.pm_log_id DESC`,
     params,
   );
 
-  let mapped = rows.map(mapLogRow);
+  if (rows.length === 0) return [];
 
-  if (filters.assetCategory && filters.assetCategory !== 'all') {
-    const cat = filters.assetCategory.toLowerCase();
-    mapped = mapped.filter((r) => (r.assetCategory ?? '').toLowerCase() === cat);
+  const logIds = rows.map((r) => r.pm_log_id);
+  const [assetRows] = await pool.query<LogAssetRow[]>(
+    `SELECT pm_log_asset_id, pm_log_id, asset_type, asset_id, asset_category, asset_label,
+            serial_num, \`condition\`, remarks, follow_up_required, resolved_at
+     FROM pm_log_asset
+     WHERE pm_log_id IN (?)
+     ORDER BY \`condition\` DESC, pm_log_asset_id ASC`,
+    [logIds],
+  );
+
+  const assetsByLog = new Map<number, PmLogAsset[]>();
+  for (const row of assetRows) {
+    const list = assetsByLog.get(row.pm_log_id) ?? [];
+    list.push(mapLogAsset(row));
+    assetsByLog.set(row.pm_log_id, list);
   }
+
+  let mapped = rows.map((row): PmLogListRow => {
+    const email = row.performed_email?.trim() || null;
+    return {
+      pmLogId: row.pm_log_id,
+      pmDate: toIsoDate(row.pm_date),
+      building: row.building,
+      level: row.level,
+      zone: row.zone,
+      status: row.status,
+      remarks: row.remarks,
+      performedBy: email ?? `User #${row.performed_by}`,
+      performedByEmail: email,
+      assetsTotal: Number(row.assets_total) || 0,
+      goodCount: Number(row.good_count) || 0,
+      faultyCount: Number(row.faulty_count) || 0,
+      assets: assetsByLog.get(row.pm_log_id) ?? [],
+    };
+  });
 
   const q = filters.search?.trim().toLowerCase();
   if (q) {
     mapped = mapped.filter((r) =>
       [
-        r.assetLabel,
-        r.serialNum,
-        r.assetCategory,
-        r.checklistName,
+        r.building,
+        r.level,
+        r.zone,
         r.performedBy,
         r.performedByEmail,
-        String(r.assetId),
+        r.remarks,
+        ...r.assets.flatMap((a) => [a.assetLabel, a.serialNum, a.assetCategory, a.remarks]),
       ]
         .filter(Boolean)
         .join(' ')
@@ -664,31 +533,87 @@ export async function listPmLogs(filters: PmLogListFilters = {}): Promise<PmLogL
   return mapped;
 }
 
+export async function listPmLogBuildings(): Promise<string[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<(RowDataPacket & { building: string })[]>(
+    `SELECT DISTINCT building FROM pm_log ORDER BY building`,
+  );
+  return rows.map((r) => r.building);
+}
+
+type FollowUpRow = RowDataPacket & {
+  pm_log_asset_id: number;
+  pm_log_id: number;
+  asset_type: AssetKind;
+  asset_id: AssetId;
+  asset_category: string | null;
+  asset_label: string | null;
+  serial_num: string | null;
+  remarks: string | null;
+  pm_date: Date | string;
+  building: string;
+  level: string;
+  zone: string;
+  performed_by: number;
+  performed_email: string | null;
+};
+
+export async function listPmFollowUps(): Promise<PmFollowUp[]> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<FollowUpRow[]>(
+    `SELECT a.pm_log_asset_id, a.pm_log_id, a.asset_type, a.asset_id, a.asset_category,
+            a.asset_label, a.serial_num, a.remarks,
+            l.pm_date, l.building, l.level, l.zone, l.performed_by, u.email AS performed_email
+     FROM pm_log_asset a
+     INNER JOIN pm_log l ON l.pm_log_id = a.pm_log_id
+     INNER JOIN users u ON u.id = l.performed_by
+     WHERE a.follow_up_required = 1 AND a.resolved_at IS NULL
+     ORDER BY l.pm_date DESC, a.pm_log_asset_id DESC`,
+  );
+
+  return rows.map((row) => ({
+    pmLogAssetId: row.pm_log_asset_id,
+    pmLogId: row.pm_log_id,
+    pmDate: toIsoDate(row.pm_date),
+    assetType: row.asset_type,
+    assetId: row.asset_id,
+    assetCategory: row.asset_category,
+    assetLabel: row.asset_label?.trim() || `Asset #${row.asset_id}`,
+    serialNum: row.serial_num,
+    building: row.building,
+    level: row.level,
+    zone: row.zone,
+    remarks: row.remarks,
+    reportedBy: row.performed_email?.trim() || `User #${row.performed_by}`,
+  }));
+}
+
 export async function getPmStats(): Promise<PmStats> {
   const { from, to } = monthBounds();
   const pool = getDbPool();
-  const [rows] = await pool.query<
-    (RowDataPacket & {
-      this_month: number;
-      passed: number;
-      issues: number;
-      assets_covered: number;
-    })[]
+
+  const [monthRows] = await pool.query<
+    (RowDataPacket & { visits: number; assets_checked: number; faulty: number })[]
   >(
-    `SELECT
-       COUNT(*) AS this_month,
-       SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) AS passed,
-       SUM(CASE WHEN status IN ('failed','partial') THEN 1 ELSE 0 END) AS issues,
-       COUNT(DISTINCT CONCAT(asset_type, ':', asset_id)) AS assets_covered
-     FROM pm_log
-     WHERE pm_date BETWEEN ? AND ?`,
+    `SELECT COUNT(DISTINCT l.pm_log_id) AS visits,
+            COUNT(DISTINCT CONCAT(a.asset_type, ':', a.asset_id)) AS assets_checked,
+            SUM(CASE WHEN a.\`condition\` = 'faulty' THEN 1 ELSE 0 END) AS faulty
+     FROM pm_log l
+     LEFT JOIN pm_log_asset a ON a.pm_log_id = l.pm_log_id
+     WHERE l.pm_date BETWEEN ? AND ?`,
     [from, to],
   );
-  const row = rows[0];
+
+  const [pendingRows] = await pool.query<(RowDataPacket & { pending: number })[]>(
+    `SELECT COUNT(DISTINCT CONCAT(asset_type, ':', asset_id)) AS pending
+     FROM pm_log_asset
+     WHERE follow_up_required = 1 AND resolved_at IS NULL`,
+  );
+
   return {
-    thisMonth: Number(row?.this_month) || 0,
-    passed: Number(row?.passed) || 0,
-    issues: Number(row?.issues) || 0,
-    assetsCovered: Number(row?.assets_covered) || 0,
+    visitsThisMonth: Number(monthRows[0]?.visits) || 0,
+    assetsChecked: Number(monthRows[0]?.assets_checked) || 0,
+    faultyThisMonth: Number(monthRows[0]?.faulty) || 0,
+    pendingFollowUp: Number(pendingRows[0]?.pending) || 0,
   };
 }

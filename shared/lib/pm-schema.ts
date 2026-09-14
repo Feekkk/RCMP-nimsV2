@@ -1,52 +1,16 @@
-import type { AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 
-export type PmLogStatus = 'passed' | 'failed' | 'partial';
-export type PmItemResult = 'pass' | 'fail' | 'na';
+export type PmLogStatus = 'passed' | 'partial' | 'failed';
+export type PmAssetCondition = 'good' | 'faulty';
 
-export type PmChecklistSummary = {
-  checklistId: number;
-  assetType: AssetKind;
-  assetCategory: string;
-  checklistName: string;
-  itemCount: number;
-};
-
-export type PmChecklistItem = {
-  itemId: number;
-  checklistId: number;
-  itemDescription: string;
-};
-
-export type PmChecklistDetail = PmChecklistSummary & {
-  items: PmChecklistItem[];
-};
-
-export type CreatePmChecklistInput = {
-  assetType: AssetKind;
-  assetCategory: string;
-  checklistName: string;
-  items?: string[];
-};
-
-export type UpdatePmChecklistInput = {
-  checklistId: number;
-  assetCategory: string;
-  checklistName: string;
-};
-
-export type AddPmChecklistItemInput = {
-  checklistId: number;
-  itemDescription: string;
-};
-
-export type UpdatePmChecklistItemInput = {
-  itemId: number;
-  itemDescription: string;
+export const PM_CONDITION_LABEL: Record<PmAssetCondition, string> = {
+  good: 'Good condition',
+  faulty: 'Needs action',
 };
 
 export type PmPlaceAsset = {
   kind: AssetKind;
-  assetId: number;
+  assetId: AssetId;
   category: string | null;
   brand: string | null;
   model: string | null;
@@ -54,7 +18,9 @@ export type PmPlaceAsset = {
   building: string;
   level: string;
   zone: string;
-  checklistId: number | null;
+  pendingFollowUp: boolean;
+  lastFaultDate: string | null;
+  lastFaultRemarks: string | null;
 };
 
 export type PmLocationTree = {
@@ -63,67 +29,113 @@ export type PmLocationTree = {
   zonesByBuildingLevel: Record<string, string[]>;
 };
 
-export type CreatePmLogItemInput = {
-  itemId: number;
-  result: PmItemResult;
+export type CreatePmLogAssetInput = {
+  assetType: AssetKind;
+  assetId: AssetId;
+  condition: PmAssetCondition;
   remarks?: string | null;
 };
 
 export type CreatePmLogInput = {
-  assetId: number;
-  assetType: AssetKind;
-  checklistId: number;
+  building: string;
+  level: string;
+  zone: string;
   performedBy: string;
   pmDate: string;
   remarks?: string | null;
-  items: CreatePmLogItemInput[];
+  assets: CreatePmLogAssetInput[];
 };
 
 export type CreatePmLogResult = {
   pmLogId: number;
   status: PmLogStatus;
+  assetsTotal: number;
+  faultyCount: number;
+  clearedCount: number;
 };
 
-export type PmLogListFilters = {
-  search?: string;
-  assetType?: AssetKind | 'all';
-  assetCategory?: string | 'all';
-  status?: PmLogStatus | 'all';
-  dateFrom?: string;
-  dateTo?: string;
+export type UpdatePmLogAssetInput = {
+  pmLogAssetId: number;
+  condition: PmAssetCondition;
+  remarks?: string | null;
+};
+
+export type UpdatePmLogAssetsInput = {
+  pmLogId: number;
+  assets: UpdatePmLogAssetInput[];
+};
+
+export type PmLogAsset = {
+  pmLogAssetId: number;
+  assetType: AssetKind;
+  assetId: AssetId;
+  assetCategory: string | null;
+  assetLabel: string;
+  serialNum: string | null;
+  condition: PmAssetCondition;
+  remarks: string | null;
+  followUpRequired: boolean;
+  resolvedAt: string | null;
 };
 
 export type PmLogListRow = {
   pmLogId: number;
   pmDate: string;
-  assetId: number;
-  assetType: AssetKind;
-  assetCategory: string | null;
-  assetLabel: string;
-  serialNum: string | null;
-  checklistId: number;
-  checklistName: string;
+  building: string;
+  level: string;
+  zone: string;
   status: PmLogStatus;
   remarks: string | null;
   performedBy: string;
   performedByEmail: string | null;
-  itemsChecked: number;
-  itemsTotal: number;
-  failCount: number;
+  assetsTotal: number;
+  goodCount: number;
+  faultyCount: number;
+  assets: PmLogAsset[];
+};
+
+export type PmLogListFilters = {
+  search?: string;
+  building?: string | 'all';
+  status?: PmLogStatus | 'all';
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export type PmFollowUp = {
+  pmLogAssetId: number;
+  pmLogId: number;
+  pmDate: string;
+  assetType: AssetKind;
+  assetId: AssetId;
+  assetCategory: string | null;
+  assetLabel: string;
+  serialNum: string | null;
+  building: string;
+  level: string;
+  zone: string;
+  remarks: string | null;
+  reportedBy: string;
 };
 
 export type PmStats = {
-  thisMonth: number;
-  passed: number;
-  issues: number;
-  assetsCovered: number;
+  visitsThisMonth: number;
+  assetsChecked: number;
+  faultyThisMonth: number;
+  pendingFollowUp: number;
 };
 
-export function derivePmLogStatus(results: PmItemResult[]): PmLogStatus {
-  const actionable = results.filter((r) => r !== 'na');
-  if (actionable.length === 0) return 'passed';
-  const fails = actionable.filter((r) => r === 'fail').length;
-  if (fails === 0) return 'passed';
-  if (fails === actionable.length) return 'failed';
-  return 'partial';
+export function derivePmLogStatus(conditions: PmAssetCondition[]): PmLogStatus {
+  if (conditions.length === 0) return 'passed';
+  const faulty = conditions.filter((c) => c === 'faulty').length;
+  if (faulty === 0) return 'passed';
+  return faulty === conditions.length ? 'failed' : 'partial';
+}
+
+export function pmAssetKey(assetType: AssetKind, assetId: AssetId): string {
+  return `${assetType}:${assetId}`;
+}
+
+export function pmZoneLookupKey(building: string, level: string): string {
+  return `${building}||${level}`;
 }
