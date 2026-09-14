@@ -3,7 +3,6 @@ import { useNavigate } from '@tanstack/react-router';
 import { Ban, ChevronDown, Package, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Collapsible,
   CollapsibleContent,
@@ -92,124 +91,119 @@ export function UserRequestHistoryPage() {
       <UserPageChrome onSignOut={handleSignOut} active="history" />
 
       <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Request history</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Track booking, checkout, return, and technician updates for your requests.
-          </p>
-        </div>
+        <div className="space-y-3">
+          {loading ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>
+          ) : requests.length === 0 ? (
+            <div className="liquid-card rounded-[22px] border border-dashed border-border/80 py-12 text-center">
+              <Package className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">No requests yet.</p>
+            </div>
+          ) : (
+            requests.map((req) => {
+              const isOpen = openId === req.requestId;
+              const summary = summarizeRequestItems(req.items);
 
-        <Card className="rounded-[16px] border-border shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">All requests</CardTitle>
-            <CardDescription>{requests.length} total</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {loading ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>
-            ) : requests.length === 0 ? (
-              <div className="rounded-[12px] border border-dashed border-border py-12 text-center">
-                <Package className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">No requests yet.</p>
-              </div>
-            ) : (
-              requests.map((req) => {
-                const isOpen = openId === req.requestId;
-                const summary = summarizeRequestItems(req.items);
-
-                return (
-                  <Collapsible
-                    key={req.requestId}
-                    open={isOpen}
-                    onOpenChange={(open) => setOpenId(open ? req.requestId : null)}
-                    className="rounded-[12px] border border-border"
-                  >
-                    <CollapsibleTrigger className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-secondary/40">
+              return (
+                <Collapsible
+                  key={req.requestId}
+                  open={isOpen}
+                  onOpenChange={(open) => setOpenId(open ? req.requestId : null)}
+                  className="liquid-card overflow-hidden rounded-[20px]"
+                >
+                  <CollapsibleTrigger className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/30">
+                    <div className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/40 text-muted-foreground shadow-inner shadow-black/5">
                       <ChevronDown
-                        className={cn(
-                          'mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform',
-                          isOpen && 'rotate-180',
-                        )}
+                        className={cn('h-3.5 w-3.5 shrink-0 transition-transform', isOpen && 'rotate-180')}
                       />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold">Request #{req.requestId}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[23px] font-bold leading-none tracking-[-0.05em] text-foreground">
+                          Request #{req.requestId}
+                        </span>
+                        <div className="ml-auto hidden sm:block">
                           <StatusBadge status={req.status} />
-                          {summary.unavailable > 0 && (
-                            <MiniCountBadge
-                              icon={Ban}
-                              label={`${summary.unavailable} unavailable`}
-                              className="border-amber-200 bg-amber-50 text-amber-800"
-                            />
-                          )}
-                          {summary.notTaken > 0 && (
-                            <MiniCountBadge
-                              icon={UserX}
-                              label={`${summary.notTaken} not collected`}
-                              className="border-rose-200 bg-rose-50 text-rose-800"
-                            />
-                          )}
                         </div>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {req.borrowDate} → {req.returnDate} · {req.programType}
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <StatusBadge status={req.status} className="sm:hidden" />
+                        {summary.unavailable > 0 && (
+                          <MiniCountBadge
+                            icon={Ban}
+                            label={`${summary.unavailable} unavailable`}
+                            className="border-amber-200/80 bg-amber-50/80 text-amber-800"
+                          />
+                        )}
+                        {summary.notTaken > 0 && (
+                          <MiniCountBadge
+                            icon={UserX}
+                            label={`${summary.notTaken} not collected`}
+                            className="border-rose-200/80 bg-rose-50/80 text-rose-800"
+                          />
+                        )}
+                      </div>
+
+                      <p className="mt-3 text-[15px] text-muted-foreground">
+                        {req.borrowDate} → {req.returnDate} · {req.programType}
+                      </p>
+                      {!isOpen && summary.pending > 0 && (
+                        <p className="mt-1 text-[12px] text-muted-foreground/80">
+                          {summary.pending} unit{summary.pending === 1 ? '' : 's'} awaiting technician
+                          action
                         </p>
-                        {!isOpen && summary.pending > 0 && (
-                          <p className="mt-1 text-[11px] text-muted-foreground">
-                            {summary.pending} unit{summary.pending === 1 ? '' : 's'} awaiting technician
-                            action
+                      )}
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="border-t border-border/80 bg-white/10 px-4 py-3 text-sm">
+                    <dl className="space-y-2">
+                      <Row label="Location" value={req.usageLocation} />
+                      {req.remarks && <Row label="Remarks" value={req.remarks} />}
+                      {req.status === 'rejected' && req.rejectionReason && (
+                        <Row label="Rejection reason" value={req.rejectionReason} />
+                      )}
+                      <Row
+                        label="Submitted"
+                        value={req.createdAt ? new Date(req.createdAt).toLocaleString() : '—'}
+                      />
+                    </dl>
+
+                    {(summary.unavailable > 0 || summary.notTaken > 0) && (
+                      <div className="mt-4 rounded-[14px] border border-border/80 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground">Technician updates</p>
+                        {summary.unavailable > 0 && (
+                          <p className="mt-1">
+                            <span className="font-medium text-amber-800">Unavailable</span> — no
+                            matching equipment could be assigned for {summary.unavailable} unit
+                            {summary.unavailable === 1 ? '' : 's'}.
+                          </p>
+                        )}
+                        {summary.notTaken > 0 && (
+                          <p className="mt-1">
+                            <span className="font-medium text-rose-800">Not collected</span> —{' '}
+                            {summary.notTaken} booked unit
+                            {summary.notTaken === 1 ? ' was' : 's were'} not picked up and
+                            released back to inventory.
                           </p>
                         )}
                       </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="border-t border-border px-4 py-3 text-sm">
-                      <dl className="space-y-2">
-                        <Row label="Location" value={req.usageLocation} />
-                        {req.remarks && <Row label="Remarks" value={req.remarks} />}
-                        {req.status === 'rejected' && req.rejectionReason && (
-                          <Row label="Rejection reason" value={req.rejectionReason} />
-                        )}
-                        <Row
-                          label="Submitted"
-                          value={req.createdAt ? new Date(req.createdAt).toLocaleString() : '—'}
-                        />
-                      </dl>
+                    )}
 
-                      {(summary.unavailable > 0 || summary.notTaken > 0) && (
-                        <div className="mt-4 rounded-[10px] border border-border/80 bg-muted/25 px-3 py-2.5 text-xs text-muted-foreground">
-                          <p className="font-medium text-foreground">Technician updates</p>
-                          {summary.unavailable > 0 && (
-                            <p className="mt-1">
-                              <span className="font-medium text-amber-800">Unavailable</span> — no
-                              matching equipment could be assigned for {summary.unavailable} unit
-                              {summary.unavailable === 1 ? '' : 's'}.
-                            </p>
-                          )}
-                          {summary.notTaken > 0 && (
-                            <p className="mt-1">
-                              <span className="font-medium text-rose-800">Not collected</span> —{' '}
-                              {summary.notTaken} booked unit
-                              {summary.notTaken === 1 ? ' was' : 's were'} not picked up and
-                              released back to inventory.
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Progress by category
-                      </p>
-                      <ul className="space-y-2">
-                        {req.items.map((item) => (
-                          <ItemProgressCard key={item.requestItemId} item={item} />
-                        ))}
-                      </ul>
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
+                    <p className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Progress by category
+                    </p>
+                    <ul className="space-y-2">
+                      {req.items.map((item) => (
+                        <ItemProgressCard key={item.requestItemId} item={item} />
+                      ))}
+                    </ul>
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })
+          )}
+        </div>
       </main>
       <Toaster />
     </div>
@@ -330,17 +324,32 @@ function MiniCountBadge({
   );
 }
 
-function StatusBadge({ status }: { status: UserRequestHistory['status'] }) {
+function StatusBadge({
+  status,
+  className,
+}: {
+  status: UserRequestHistory['status'];
+  className?: string;
+}) {
   switch (status) {
     case 'rejected':
       return (
-        <Badge variant="destructive" className="rounded-[6px] text-[10px]">
+        <Badge
+          variant="destructive"
+          className={cn('rounded-[8px] px-2.5 py-1 text-[10px] shadow-sm', className)}
+        >
           Rejected
         </Badge>
       );
     case 'completed':
       return (
-        <Badge variant="default" className="rounded-[6px] text-[10px]">
+        <Badge
+          variant="default"
+          className={cn(
+            'rounded-[8px] border border-emerald-200 bg-emerald-50 text-[10px] text-emerald-800 shadow-none px-2.5 py-1',
+            className,
+          )}
+        >
           Completed
         </Badge>
       );
@@ -348,7 +357,10 @@ function StatusBadge({ status }: { status: UserRequestHistory['status'] }) {
       return (
         <Badge
           variant="outline"
-          className="rounded-[6px] border-amber-200 bg-amber-50 text-[10px] text-amber-800"
+          className={cn(
+            'rounded-[8px] border-amber-200 bg-amber-50 text-[10px] text-amber-800 px-2.5 py-1',
+            className,
+          )}
         >
           Unavailable
         </Badge>
@@ -357,7 +369,10 @@ function StatusBadge({ status }: { status: UserRequestHistory['status'] }) {
       return (
         <Badge
           variant="outline"
-          className="rounded-[6px] border-sky-200 bg-sky-50 text-[10px] text-sky-800"
+          className={cn(
+            'rounded-[8px] border-sky-200 bg-sky-50 text-[10px] text-sky-800 px-2.5 py-1',
+            className,
+          )}
         >
           Checked out
         </Badge>
@@ -366,7 +381,10 @@ function StatusBadge({ status }: { status: UserRequestHistory['status'] }) {
       return (
         <Badge
           variant="outline"
-          className="rounded-[6px] border-violet-200 bg-violet-50 text-[10px] text-violet-800"
+          className={cn(
+            'rounded-[8px] border-violet-200 bg-violet-50 text-[10px] text-violet-800 px-2.5 py-1',
+            className,
+          )}
         >
           Being prepared
         </Badge>
@@ -375,7 +393,10 @@ function StatusBadge({ status }: { status: UserRequestHistory['status'] }) {
       return (
         <Badge
           variant="outline"
-          className="rounded-[6px] border-amber-200 bg-amber-50 text-[10px] text-amber-800"
+          className={cn(
+            'rounded-[8px] border-emerald-200 bg-emerald-50 text-[10px] text-emerald-800 px-2.5 py-1',
+            className,
+          )}
         >
           Submitted
         </Badge>
