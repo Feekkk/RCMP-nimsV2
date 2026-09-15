@@ -5,6 +5,7 @@ type OpenRouterModel = Parameters<typeof createOpenRouterText>[0];
 
 const DEFAULT_MODEL = 'poolside/laguna-xs-2.1:free' as OpenRouterModel;
 
+// / Returns the OpenRouter model to use
 export function getOpenRouterModel(): OpenRouterModel {
   loadServerEnv();
   const fromEnv = process.env.OPENROUTER_MODEL?.trim();

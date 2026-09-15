@@ -8,6 +8,7 @@ export type OverdueEmailScheduleConfig = {
   enabled: boolean;
 };
 
+// Returns the overdue email schedule configuration from environment variables, with defaults.
 export function getOverdueEmailScheduleConfig(): OverdueEmailScheduleConfig {
   const hour = Number(process.env.OVERDUE_EMAIL_HOUR ?? DEFAULT_OVERDUE_EMAIL_HOUR);
   const minute = Number(process.env.OVERDUE_EMAIL_MINUTE ?? 0);

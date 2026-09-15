@@ -1,7 +1,6 @@
 import { loadServerEnv } from '@backend/server/core/env.server';
 
 /** Server-only SMTP settings for notification mail (M365 or local Mailpit). Not stored in DB. */
-
 export type MicrosoftEmailConfig = {
   host: string;
   port: number;
@@ -17,6 +16,7 @@ const DEFAULT_PORT = 587;
 const MAILPIT_DEFAULT_HOST = '127.0.0.1';
 const MAILPIT_DEFAULT_PORT = 1025;
 
+/// Returns true if the SMTP settings indicate that Mailpit is being used.
 export function isMailpitMode(): boolean {
   if (process.env.SMTP_MAILPIT === 'true' || process.env.SMTP_MAILPIT === '1') return true;
   const host = process.env.SMTP_HOST?.trim().toLowerCase();
