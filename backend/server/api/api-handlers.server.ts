@@ -458,3 +458,89 @@ export async function handleAdminDashboard(request: Request): Promise<Response> 
     return handleApiError(error);
   }
 }
+
+type ServiceHealth = {
+  status: 'ok' | 'error';
+  latencyMs?: number;
+  message?: string;
+};
+
+const REST_ENDPOINTS: { path: string; methods: string[] }[] = [
+  { path: '/api/v1/health', methods: ['GET'] },
+  { path: '/api/v1/auth/microsoft/start', methods: ['POST'] },
+  { path: '/api/v1/auth/microsoft/token', methods: ['POST'] },
+  { path: '/api/v1/auth/refresh', methods: ['POST'] },
+  { path: '/api/v1/auth/me', methods: ['GET'] },
+  { path: '/api/v1/auth/logout', methods: ['POST'] },
+  { path: '/api/v1/auth/dev-login', methods: ['POST'] },
+  { path: '/api/v1/profile', methods: ['GET', 'PATCH'] },
+  { path: '/api/v1/dashboard', methods: ['GET'] },
+  { path: '/api/v1/admin/dashboard', methods: ['GET'] },
+  { path: '/api/v1/assets/', methods: ['GET'] },
+  { path: '/api/v1/assets/lookup', methods: ['GET'] },
+  { path: '/api/v1/assets/$kind/$assetId', methods: ['GET'] },
+  { path: '/api/v1/staff/', methods: ['GET'] },
+  { path: '/api/v1/requests/', methods: ['GET', 'POST'] },
+  { path: '/api/v1/requests/pending', methods: ['GET'] },
+  { path: '/api/v1/requests/pool', methods: ['GET'] },
+  { path: '/api/v1/requests/log', methods: ['GET'] },
+  { path: '/api/v1/requests/book', methods: ['POST'] },
+  { path: '/api/v1/requests/checkout', methods: ['POST'] },
+  { path: '/api/v1/requests/return', methods: ['POST'] },
+  { path: '/api/v1/requests/reject', methods: ['POST'] },
+  { path: '/api/v1/requests/pool/mark', methods: ['POST'] },
+  { path: '/api/v1/requests/pool/remove', methods: ['POST'] },
+  { path: '/api/v1/requests/slot-not-taken', methods: ['POST'] },
+  { path: '/api/v1/requests/slot-unavailable', methods: ['POST'] },
+  { path: '/api/v1/requests/cancel-not-taken', methods: ['POST'] },
+  { path: '/api/v1/requests/cancel-unavailable', methods: ['POST'] },
+  { path: '/api/cron/overdue-return-emails', methods: ['POST'] },
+];
+
+async function checkDatabase(): Promise<ServiceHealth> {
+  const started = Date.now();
+  try {
+    const { getDbPool } = await import('@backend/server/core/db');
+    await getDbPool().query('SELECT 1');
+    return { status: 'ok', latencyMs: Date.now() - started };
+  } catch (error) {
+    return {
+      status: 'error',
+      latencyMs: Date.now() - started,
+      message: error instanceof Error ? error.message : 'Database unreachable.',
+    };
+  }
+}
+
+export async function handleHealth(): Promise<Response> {
+  try {
+    const { loadServerEnv } = await import('@backend/server/core/env.server');
+    loadServerEnv();
+    const { getMicrosoftAuthConfig } = await import('@backend/lib/microsoft-auth-config');
+    const jwtConfigured = Boolean(process.env.API_JWT_SECRET?.trim() || process.env.SESSION_SECRET?.trim());
+    const microsoftConfigured = Boolean(getMicrosoftAuthConfig());
+    const database = await checkDatabase();
+    const jwt: ServiceHealth = jwtConfigured
+      ? { status: 'ok' }
+      : { status: 'error', message: 'API_JWT_SECRET or SESSION_SECRET is not set.' };
+    const microsoftAuth: ServiceHealth = microsoftConfigured
+      ? { status: 'ok' }
+      : { status: 'error', message: 'Microsoft Entra ID is not fully configured.' };
+    const services = { database, jwt, microsoftAuth };
+    const degraded = Object.values(services).some((service) => service.status === 'error');
+    return apiOk(
+      {
+        status: degraded ? 'degraded' : 'ok',
+        checkedAt: new Date().toISOString(),
+        services,
+        endpoints: REST_ENDPOINTS.map((endpoint) => ({
+          ...endpoint,
+          status: 'registered' as const,
+        })),
+      },
+      degraded ? 503 : 200,
+    );
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

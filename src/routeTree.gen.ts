@@ -52,6 +52,7 @@ import { Route as AdminDisposedRouteImport } from './routes/admin/disposed'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminAvRouteImport } from './routes/admin/av'
 import { Route as ApiV1ProfileRouteImport } from './routes/api/v1/profile'
+import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
 import { Route as ApiV1DashboardRouteImport } from './routes/api/v1/dashboard'
 import { Route as ApiCronOverdueReturnEmailsRouteImport } from './routes/api/cron/overdue-return-emails'
 import { Route as ApiV1StaffIndexRouteImport } from './routes/api/v1/staff.index'
@@ -302,6 +303,11 @@ const ApiV1ProfileRoute = ApiV1ProfileRouteImport.update({
   path: '/api/v1/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1HealthRoute = ApiV1HealthRouteImport.update({
+  id: '/api/v1/health',
+  path: '/api/v1/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1DashboardRoute = ApiV1DashboardRouteImport.update({
   id: '/api/v1/dashboard',
   path: '/api/v1/dashboard',
@@ -517,6 +523,7 @@ export interface FileRoutesByFullPath {
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
   '/api/v1/dashboard': typeof ApiV1DashboardRoute
+  '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
@@ -594,6 +601,7 @@ export interface FileRoutesByTo {
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
   '/api/v1/dashboard': typeof ApiV1DashboardRoute
+  '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
@@ -672,6 +680,7 @@ export interface FileRoutesById {
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
   '/api/v1/dashboard': typeof ApiV1DashboardRoute
+  '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
@@ -751,6 +760,7 @@ export interface FileRouteTypes {
     | '/user/request'
     | '/api/cron/overdue-return-emails'
     | '/api/v1/dashboard'
+    | '/api/v1/health'
     | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
@@ -828,6 +838,7 @@ export interface FileRouteTypes {
     | '/user/request'
     | '/api/cron/overdue-return-emails'
     | '/api/v1/dashboard'
+    | '/api/v1/health'
     | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
@@ -905,6 +916,7 @@ export interface FileRouteTypes {
     | '/user/request'
     | '/api/cron/overdue-return-emails'
     | '/api/v1/dashboard'
+    | '/api/v1/health'
     | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
@@ -983,6 +995,7 @@ export interface RootRouteChildren {
   UserRequestRoute: typeof UserRequestRoute
   ApiCronOverdueReturnEmailsRoute: typeof ApiCronOverdueReturnEmailsRoute
   ApiV1DashboardRoute: typeof ApiV1DashboardRoute
+  ApiV1HealthRoute: typeof ApiV1HealthRoute
   ApiV1ProfileRoute: typeof ApiV1ProfileRoute
   AdminAssetKindAssetIdRoute: typeof AdminAssetKindAssetIdRoute
   ApiAuthMicrosoftCallbackRoute: typeof ApiAuthMicrosoftCallbackRoute
@@ -1317,6 +1330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/health': {
+      id: '/api/v1/health'
+      path: '/api/v1/health'
+      fullPath: '/api/v1/health'
+      preLoaderRoute: typeof ApiV1HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/dashboard': {
       id: '/api/v1/dashboard'
       path: '/api/v1/dashboard'
@@ -1602,6 +1622,7 @@ const rootRouteChildren: RootRouteChildren = {
   UserRequestRoute: UserRequestRoute,
   ApiCronOverdueReturnEmailsRoute: ApiCronOverdueReturnEmailsRoute,
   ApiV1DashboardRoute: ApiV1DashboardRoute,
+  ApiV1HealthRoute: ApiV1HealthRoute,
   ApiV1ProfileRoute: ApiV1ProfileRoute,
   AdminAssetKindAssetIdRoute: AdminAssetKindAssetIdRoute,
   ApiAuthMicrosoftCallbackRoute: ApiAuthMicrosoftCallbackRoute,
