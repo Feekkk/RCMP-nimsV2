@@ -31,6 +31,33 @@ export type PreDisposedAsset = PredisposalEligibleAsset & {
   reason: PredisposalReason;
   predisposedAt: string | null;
   predisposedBy: string | null;
+  imageWholeAsset: string | null;
+  imageSerialNumber: string | null;
+};
+
+export function picturesComplete(asset: Pick<PreDisposedAsset, 'imageWholeAsset' | 'imageSerialNumber'>) {
+  return Boolean(asset.imageWholeAsset && asset.imageSerialNumber);
+}
+
+export type PredisposedPictureSlot = 'whole' | 'serial';
+
+export type UploadPredisposedPictureInput = {
+  mimeType: string;
+  dataBase64: string;
+  kind: AssetKind;
+  assetId: AssetId;
+  slot: PredisposedPictureSlot;
+};
+
+export type UploadPredisposedPictureResult = {
+  url: string;
+  path: string;
+};
+
+export type RemovePredisposedPicturesInput = {
+  kind: AssetKind;
+  assetId: AssetId;
+  slot?: PredisposedPictureSlot;
 };
 
 export type MarkPredisposedAssetInput = {

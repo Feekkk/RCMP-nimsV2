@@ -10,8 +10,10 @@ import type {
 import type {
   MarkAssetsPredisposedInput,
   RemoveAssetsFromPredisposalInput,
+  RemovePredisposedPicturesInput,
   SubmitDisposalBatchInput,
   UploadDisposalImageInput,
+  UploadPredisposedPictureInput,
 } from '@shared/lib/disposal-schema';
 import type { NextAssetIdRequest } from '@backend/server/assets/asset-id.server';
 import type {
@@ -239,4 +241,27 @@ export const uploadDisposalImageFn = createServerFn({ method: 'POST' })
   .handler(async ({ data: input }) => {
     const { saveDisposalImage } = await import('@backend/server/assets/disposal-image.server');
     return saveDisposalImage(input);
+  });
+
+export const uploadPredisposedPictureFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
+  .inputValidator((input: UploadPredisposedPictureInput) => input)
+  .handler(async ({ data: input }) => {
+    const { savePredisposedPicture } = await import('@backend/server/assets/predisposed-picture.server');
+    return savePredisposedPicture(input);
+  });
+
+export const removePredisposedPicturesFn = createServerFn({ method: 'POST' })
+  .middleware([staffMiddleware])
+  .inputValidator((input: RemovePredisposedPicturesInput) => input)
+  .handler(async ({ data: input }) => {
+    const {
+      removePredisposedPictureSlot,
+      removePredisposedPictures,
+    } = await import('@backend/server/assets/predisposed-picture.server');
+    if (input.slot) {
+      await removePredisposedPictureSlot(input.kind, input.assetId, input.slot);
+      return;
+    }
+    await removePredisposedPictures(input);
   });

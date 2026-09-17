@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeft, Laptop, Network, Search, Trash2, Tv } from 'lucide-react';
+import { ArrowLeft, FileX, Laptop, Network, Search, Trash2, Tv, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -12,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -27,17 +28,17 @@ import {
 } from '@/components/ui/table';
 import { formatAssetLifespan } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, type AssetKind } from '@shared/lib/inventory-schema';
-import type { PreDisposedAsset } from '@shared/lib/disposal-schema';
-import { PREDISPOSAL_REASON_LABEL } from '@shared/lib/disposal-schema';
+import { PREDISPOSAL_REASON_LABEL, picturesComplete, type PreDisposedAsset } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
-import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { TechnicianShell } from '@/technician/technician-shell';
 import {
   listPreDisposedAssetsFn,
   removeAssetsFromPredisposalFn,
+  removePredisposedPicturesFn,
 } from '@backend/server/assets/assets.functions';
+import { PredisposedPictureDialog } from '@/technician/predisposed-picture-dialog';
 
 function assetKey(kind: AssetKind, assetId: PreDisposedAsset['assetId']) {
   return `${kind}:${assetId}`;
@@ -53,6 +54,9 @@ export function TechnicianPreDisposedPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [captureAsset, setCaptureAsset] = useState<PreDisposedAsset | null>(null);
+  const [removePicturesAsset, setRemovePicturesAsset] = useState<PreDisposedAsset | null>(null);
+  const [removingPictures, setRemovingPictures] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,6 +93,7 @@ export function TechnicianPreDisposedPage() {
         a.kind,
         a.predisposedBy,
         PREDISPOSAL_REASON_LABEL[a.reason],
+        picturesComplete(a) ? 'complete' : 'upload picture',
       ]
         .filter(Boolean)
         .join(' ')
@@ -160,6 +165,39 @@ export function TechnicianPreDisposedPage() {
       toast.error(e instanceof Error ? e.message : 'Could not remove assets from the queue');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const applyPictures = (
+    asset: PreDisposedAsset,
+    pictures: Pick<PreDisposedAsset, 'imageWholeAsset' | 'imageSerialNumber'>,
+  ) => {
+    setAssets((prev) =>
+      prev.map((row) =>
+        row.kind === asset.kind && row.assetId === asset.assetId ? { ...row, ...pictures } : row,
+      ),
+    );
+    setCaptureAsset((current) =>
+      current && current.kind === asset.kind && current.assetId === asset.assetId
+        ? { ...current, ...pictures }
+        : current,
+    );
+  };
+
+  const handleRemovePictures = async () => {
+    if (!removePicturesAsset) return;
+    setRemovingPictures(true);
+    try {
+      await removePredisposedPicturesFn({
+        data: { kind: removePicturesAsset.kind, assetId: removePicturesAsset.assetId },
+      });
+      applyPictures(removePicturesAsset, { imageWholeAsset: null, imageSerialNumber: null });
+      setRemovePicturesAsset(null);
+      toast.success('Pictures removed');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not remove pictures');
+    } finally {
+      setRemovingPictures(false);
     }
   };
 
@@ -261,8 +299,8 @@ export function TechnicianPreDisposedPage() {
                   <TableHead className="font-semibold">Life-span</TableHead>
                   <TableHead className="font-semibold">Pre-disposed</TableHead>
                   <TableHead className="font-semibold">By</TableHead>
-                  <TableHead className="font-semibold">Reason</TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -318,11 +356,33 @@ export function TechnicianPreDisposedPage() {
                         <TableCell className="max-w-[10rem] truncate text-sm text-muted-foreground">
                           {a.predisposedBy ?? '—'}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                          {PREDISPOSAL_REASON_LABEL[a.reason]}
-                        </TableCell>
                         <TableCell>
-                          <AssetStatusBadge statusId={a.statusId} />
+                          <PredisposalPictureStatusBadge complete={picturesComplete(a)} />
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          {picturesComplete(a) ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-transform duration-100 ease-out hover:text-destructive active:scale-[0.97]"
+                              aria-label={`Remove pictures for ${a.kind} ${a.assetId}`}
+                              onClick={() => setRemovePicturesAsset(a)}
+                            >
+                              <FileX className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-transform duration-100 ease-out hover:text-foreground active:scale-[0.97]"
+                              aria-label={`Upload for ${a.kind} ${a.assetId}`}
+                              onClick={() => setCaptureAsset(a)}
+                            >
+                              <Upload className="h-4 w-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -386,7 +446,91 @@ export function TechnicianPreDisposedPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PredisposedPictureDialog
+        asset={captureAsset}
+        open={captureAsset != null}
+        onOpenChange={(open) => {
+          if (!open) setCaptureAsset(null);
+        }}
+        onPicturesChange={applyPictures}
+      />
+
+      <AlertDialog
+        open={removePicturesAsset != null}
+        onOpenChange={(open) => {
+          if (!open && !removingPictures) setRemovePicturesAsset(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-[14px] sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove uploaded pictures?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Both photos for {removePicturesAsset ? String(removePicturesAsset.assetId) : 'this asset'} will
+              be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {removePicturesAsset ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <RemovePicturePreview
+                title="Whole asset"
+                src={removePicturesAsset.imageWholeAsset}
+              />
+              <RemovePicturePreview
+                title="Serial number"
+                src={removePicturesAsset.imageSerialNumber}
+              />
+            </div>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-[8px]" disabled={removingPictures}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-[8px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={removingPictures}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleRemovePictures();
+              }}
+            >
+              {removingPictures ? 'Removing…' : 'Remove pictures'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TechnicianShell>
+  );
+}
+
+function PredisposalPictureStatusBadge({ complete }: { complete: boolean }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'rounded-[8px] whitespace-nowrap text-[10px] font-semibold',
+        complete
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+          : 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
+      )}
+    >
+      {complete ? 'Complete' : 'Upload picture'}
+    </Badge>
+  );
+}
+
+function RemovePicturePreview({ title, src }: { title: string; src: string | null }) {
+  return (
+    <div className="min-w-0">
+      <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">{title}</p>
+      {src ? (
+        <img src={src} alt={title} className="h-32 w-full rounded-[8px] border border-border object-cover" />
+      ) : (
+        <div className="flex h-32 items-center justify-center rounded-[8px] border border-dashed border-border text-xs text-muted-foreground">
+          No photo
+        </div>
+      )}
+    </div>
   );
 }
 

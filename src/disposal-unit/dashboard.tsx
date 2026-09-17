@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarCheck, Clock3, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InsightStatCard } from '@/components/insight-stat-card';
 import {
@@ -15,12 +16,29 @@ import { DisposalUnitShell } from '@/disposal-unit/disposal-unit-shell';
 import { usePagination } from '@/hooks/use-pagination';
 import { formatAssetLifespan, formatDateLabel } from '@shared/lib/date-format';
 import type { DisposalDashboardStats, PreDisposedAsset } from '@shared/lib/disposal-schema';
-import { PREDISPOSAL_REASON_LABEL } from '@shared/lib/disposal-schema';
+import { picturesComplete, PREDISPOSAL_REASON_LABEL } from '@shared/lib/disposal-schema';
+import { cn } from '@/lib/utils';
 import {
   getDisposalDashboardStatsFn,
   listDisposalQueueAssetsFn,
 } from '@backend/server/assets/assets.functions';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
+
+function AttachmentStatusBadge({ complete }: { complete: boolean }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'rounded-[8px] whitespace-nowrap text-[10px] font-semibold',
+        complete
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+          : 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
+      )}
+    >
+      {complete ? 'Complete' : 'Incomplete'}
+    </Badge>
+  );
+}
 
 function formatAssetName(asset: PreDisposedAsset) {
   const name = [asset.brand, asset.model].filter(Boolean).join(' ').trim();
@@ -124,18 +142,19 @@ export function DisposalUnitDashboardPage() {
                     <TableHead className="h-11 px-4">Proposed By</TableHead>
                     <TableHead className="h-11 px-4">Reason</TableHead>
                     <TableHead className="h-11 px-4 sm:px-5">Date Submitted</TableHead>
+                    <TableHead className="h-11 px-4 sm:px-5">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={8} className="py-16 text-center text-sm text-muted-foreground">
                         Loading…
                       </TableCell>
                     </TableRow>
                   ) : pagination.paginatedItems.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
+                      <TableCell colSpan={8} className="py-16 text-center text-sm text-muted-foreground">
                         No pre-disposed assets in the disposal queue.
                       </TableCell>
                     </TableRow>
@@ -163,6 +182,9 @@ export function DisposalUnitDashboardPage() {
                         </TableCell>
                         <TableCell className="px-4 py-3 text-muted-foreground sm:px-5">
                           {formatProposedDate(asset.predisposedAt)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 sm:px-5">
+                          <AttachmentStatusBadge complete={picturesComplete(asset)} />
                         </TableCell>
                       </TableRow>
                     ))

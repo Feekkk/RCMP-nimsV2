@@ -1073,6 +1073,8 @@ function mapPreDisposedRow(r: PreDisposedQueryRow & { kind: AssetKind }): PreDis
     reason: mapPredisposalReason(r.reason),
     predisposedAt: formatDateTimeIso(r.predisposed_at),
     predisposedBy: r.predisposed_name?.trim() || r.predisposed_email?.trim() || null,
+    imageWholeAsset: null,
+    imageSerialNumber: null,
   };
 }
 
@@ -1084,7 +1086,8 @@ export async function listPreDisposedAssets(): Promise<PreDisposedAsset[]> {
   ]);
   const rows = [...laptop, ...av, ...network];
   await attachDisplayNames(rows, 'predisposed_oid', 'predisposed_name');
-  return rows.map(mapPreDisposedRow);
+  const { attachPredisposedPictures } = await import('@backend/server/assets/predisposed-picture.server');
+  return attachPredisposedPictures(rows.map(mapPreDisposedRow));
 }
 
 export async function getDisposalDashboardStats(): Promise<DisposalDashboardStats> {

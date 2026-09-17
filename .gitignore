@@ -11,6 +11,7 @@ lerna-debug.log*
 .cursorignore
 database
 upload/dispose
+upload/picture
 
 node_modules
 dist
