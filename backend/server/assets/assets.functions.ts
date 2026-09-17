@@ -227,6 +227,13 @@ export const listDisposalHistoryFn = createServerFn({ method: 'GET' })
     return listDisposalHistory();
   });
 
+export const listStaffDisposalHistoryFn = createServerFn({ method: 'GET' })
+  .middleware([staffMiddleware])
+  .handler(async () => {
+    const { listDisposalHistory } = await import('@backend/server/assets/disposal-repo.server');
+    return listDisposalHistory();
+  });
+
 export const getDisposalReportFn = createServerFn({ method: 'GET' })
   .middleware([disposalUnitMiddleware])
   .inputValidator((noRujukanPelupusan: string) => noRujukanPelupusan)

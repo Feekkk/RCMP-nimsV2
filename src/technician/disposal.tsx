@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from '@tanstack/react-router';
-import { Laptop, List, Network, PackageCheck, Recycle, Search, Tv } from 'lucide-react';
+import { Laptop, Network, PackageCheck, Recycle, Search, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { InsightStatCard } from '@/components/insight-stat-card';
 import {
@@ -33,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
+import { TechnicianDisposalViewMenu } from '@/technician/disposal-view-menu';
 import { TechnicianShell } from '@/technician/technician-shell';
 import {
   listPredisposalEligibleAssetsFn,
@@ -193,12 +193,7 @@ export function TechnicianDisposalPage() {
             Select returned assets and mark them as pre-disposed for the disposal unit.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-[8px]" asChild>
-          <Link to="/technician/pre-disposed">
-            <List className="h-4 w-4" />
-            View pre-disposed
-          </Link>
-        </Button>
+        <TechnicianDisposalViewMenu />
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:mb-6 sm:grid-cols-2">

@@ -32,6 +32,7 @@ import { PREDISPOSAL_REASON_LABEL, picturesComplete, type PreDisposedAsset } fro
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
+import { TechnicianDisposalViewMenu } from '@/technician/disposal-view-menu';
 import { TechnicianShell } from '@/technician/technician-shell';
 import {
   listPreDisposedAssetsFn,
@@ -217,6 +218,7 @@ export function TechnicianPreDisposedPage() {
             them to return status.
           </p>
         </div>
+        <TechnicianDisposalViewMenu />
       </div>
 
       <Card className="rounded-[14px] border-border shadow-sm">

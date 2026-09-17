@@ -35,6 +35,7 @@ const REQUEST_ROUTES = [
 const MAINTENANCE = '/technician/preventive-maintenance' as const;
 const DISPOSAL = '/technician/disposal' as const;
 const PRE_DISPOSED = '/technician/pre-disposed' as const;
+const DISPOSED = '/technician/disposed' as const;
 const HISTORY = '/technician/history' as const;
 const REPORT = '/technician/report' as const;
 const PROFILE = '/technician/profile' as const;
@@ -168,6 +169,7 @@ function TechSideBarNav() {
         active={
           pathname === DISPOSAL ||
           pathname === PRE_DISPOSED ||
+          pathname === DISPOSED ||
           pathname.startsWith(`${DISPOSAL}/`)
         }
       >
