@@ -120,6 +120,7 @@ export function DisposalUnitHistoryPage() {
       if (!matchesDateFilter(batchDateIso(batch), dateFrom, dateTo)) return false;
       if (!q) return true;
       const haystack = [
+        batch.batch,
         batch.noRujukanPelupusan,
         batch.pusat,
         batch.submittedBy ?? '',
@@ -254,7 +255,7 @@ export function DisposalUnitHistoryPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-11 px-4 sm:px-5">No. rujukan</TableHead>
+                    <TableHead className="h-11 px-4 sm:px-5">Batch</TableHead>
                     <TableHead className="h-11 px-4">Assets</TableHead>
                     <TableHead className="h-11 px-4">Pusat</TableHead>
                     <TableHead className="h-11 px-4">Submitted by</TableHead>
@@ -264,9 +265,9 @@ export function DisposalUnitHistoryPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((batch) => (
-                    <TableRow key={batch.noRujukanPelupusan}>
+                    <TableRow key={batch.batch}>
                       <TableCell className="px-4 py-3 font-medium text-foreground sm:px-5">
-                        <code className="text-xs">{batch.noRujukanPelupusan}</code>
+                        <code className="text-xs">{batch.batch}</code>
                         <p className="text-[10px] text-muted-foreground">
                           {batch.assetCount} asset{batch.assetCount === 1 ? '' : 's'}
                         </p>
@@ -315,7 +316,7 @@ export function DisposalUnitHistoryPage() {
             <DialogTitle>Disposal forms</DialogTitle>
             <DialogDescription>
               {report
-                ? `${report.noRujukanPelupusan} · ${report.pusat}`
+                ? `${report.batch} · ${report.noRujukanPelupusan} · ${report.pusat}`
                 : 'Lampiran 1, Lampiran 2, and Borang TP10'}
             </DialogDescription>
           </DialogHeader>

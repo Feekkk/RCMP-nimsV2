@@ -32,6 +32,7 @@ import {
   type AssetKind,
 } from '@shared/lib/inventory-schema';
 import {
+  picturesComplete,
   PREDISPOSAL_REASON_LABEL,
   serializeDisposalBatchAssets,
   type PreDisposedAsset,
@@ -90,7 +91,7 @@ export function DisposalUnitDisposalPage() {
     setLoading(true);
     try {
       const assets = await listDisposalQueueAssetsFn();
-      setRows(assets);
+      setRows(assets.filter(picturesComplete));
       setSelected(new Set());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load pre-disposed assets');
@@ -183,7 +184,7 @@ export function DisposalUnitDisposalPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           {loading
             ? 'Loading pre-disposed assets…'
-            : `${filtered.length} pre-disposed asset${filtered.length === 1 ? '' : 's'}${
+            : `${filtered.length} pre-disposed asset${filtered.length === 1 ? '' : 's'} with complete photos${
                 filtered.length !== rows.length ? ` of ${rows.length}` : ''
               } · Select assets, then continue to the disposal form`}
         </p>
@@ -303,7 +304,7 @@ export function DisposalUnitDisposalPage() {
                 <TableRow>
                   <TableCell colSpan={8} className="py-16 text-center text-sm text-muted-foreground">
                     {rows.length === 0
-                      ? 'No pre-disposed assets in the disposal queue.'
+                      ? 'No pre-disposed assets with complete photos are ready for disposal.'
                       : 'No assets match your filters.'}
                   </TableCell>
                 </TableRow>

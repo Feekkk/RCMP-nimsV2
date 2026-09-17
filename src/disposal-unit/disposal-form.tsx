@@ -8,6 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { DisposalUnitShell } from '@/disposal-unit/disposal-unit-shell';
 import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import {
@@ -15,23 +20,19 @@ import {
   malaysiaNowTime,
   malaysiaTodayIso,
   parseDisposalBatchAssets,
-  type DisposalUploadBatch,
   type PreDisposedAsset,
 } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { DatePickerField } from '@/technician/deploy-return-fields';
-import { DisposalImageField } from '@/disposal-unit/disposal-image-field';
 import {
-  createDisposalUploadBatchFn,
   listDisposalQueueAssetsFn,
+  peekNextDisposalBatchFn,
   submitDisposalBatchFn,
 } from '@backend/server/assets/assets.functions';
 
 type AssetFormFields = {
   latarBelakang: string;
   rekodFizikalHarta: string;
-  imageWholeAsset: string;
-  imageSerialNumber: string;
 };
 
 function assetKey(asset: Pick<PreDisposedAsset, 'kind' | 'assetId'>) {
@@ -47,18 +48,11 @@ function emptyAssetFields(): AssetFormFields {
   return {
     latarBelakang: '',
     rekodFizikalHarta: '',
-    imageWholeAsset: '',
-    imageSerialNumber: '',
   };
 }
 
 function filledCount(fields: AssetFormFields) {
-  return [
-    fields.latarBelakang.trim(),
-    fields.rekodFizikalHarta.trim(),
-    fields.imageWholeAsset.trim(),
-    fields.imageSerialNumber.trim(),
-  ].filter(Boolean).length;
+  return [fields.latarBelakang.trim(), fields.rekodFizikalHarta.trim()].filter(Boolean).length;
 }
 
 export function DisposalUnitDisposalFormPage() {
@@ -67,6 +61,7 @@ export function DisposalUnitDisposalFormPage() {
   const requested = useMemo(() => parseDisposalBatchAssets(search.assets), [search.assets]);
 
   const [queue, setQueue] = useState<PreDisposedAsset[]>([]);
+  const [nextBatch, setNextBatch] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [disposalDate, setDisposalDate] = useState(malaysiaTodayIso);
@@ -76,17 +71,17 @@ export function DisposalUnitDisposalFormPage() {
   const [assetFields, setAssetFields] = useState<Record<string, AssetFormFields>>({});
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [listSearch, setListSearch] = useState('');
-  const [uploadBatch, setUploadBatch] = useState<DisposalUploadBatch | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [assets, batch] = await Promise.all([
-        listDisposalQueueAssetsFn(),
-        createDisposalUploadBatchFn(),
-      ]);
+      const assets = await listDisposalQueueAssetsFn();
       setQueue(assets);
-      setUploadBatch(batch);
+      try {
+        setNextBatch(await peekNextDisposalBatchFn());
+      } catch {
+        setNextBatch(null);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load selected assets');
     } finally {
@@ -162,8 +157,8 @@ export function DisposalUnitDisposalFormPage() {
               assetId: asset.assetId,
               latarBelakang: fields.latarBelakang,
               rekodFizikalHarta: fields.rekodFizikalHarta,
-              imageWholeAsset: fields.imageWholeAsset,
-              imageSerialNumber: fields.imageSerialNumber,
+              imageWholeAsset: asset.imageWholeAsset,
+              imageSerialNumber: asset.imageSerialNumber,
             };
           }),
           disposalDate,
@@ -173,7 +168,7 @@ export function DisposalUnitDisposalFormPage() {
         },
       });
       toast.success(
-        `Submitted ${result.submitted} asset${result.submitted === 1 ? '' : 's'} as ${result.noRujukanPelupusan}`,
+        `Submitted ${result.submitted} asset${result.submitted === 1 ? '' : 's'} as ${result.batch}`,
       );
       await navigate({ to: '/disposal-unit/history' });
     } catch (e) {
@@ -196,10 +191,20 @@ export function DisposalUnitDisposalFormPage() {
             </Button>
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Disposal form</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {loading
-                ? 'Loading selected assets…'
-                : `${selectedAssets.length} asset${selectedAssets.length === 1 ? '' : 's'} in this batch`}
-              {missingCount > 0 ? ` · ${missingCount} no longer pending` : ''}
+              {loading ? (
+                'Loading selected assets…'
+              ) : (
+                <>
+                  {nextBatch ? (
+                    <>
+                      Batch <code className="font-medium text-foreground">{nextBatch}</code>
+                      {' · '}
+                    </>
+                  ) : null}
+                  {`${selectedAssets.length} asset${selectedAssets.length === 1 ? '' : 's'} in this batch`}
+                  {missingCount > 0 ? ` · ${missingCount} no longer pending` : ''}
+                </>
+              )}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
@@ -281,12 +286,12 @@ export function DisposalUnitDisposalFormPage() {
                                 variant="outline"
                                 className={cn(
                                   'rounded-[5px] px-1.5 text-[10px]',
-                                  filled === 4
+                                  filled === 2
                                     ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
                                     : 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
                                 )}
                               >
-                                {filled === 4 ? 'Complete' : `${4 - filled} not filled`}
+                                {filled === 2 ? 'Complete' : `${2 - filled} not filled`}
                               </Badge>
                             </span>
                           </button>
@@ -372,21 +377,13 @@ export function DisposalUnitDisposalFormPage() {
                             className="min-h-[72px] rounded-[8px]"
                           />
                         </div>
-                        <DisposalImageField
-                          label="Image Whole Asset"
-                          value={activeFields.imageWholeAsset}
-                          onChange={(url) => updateAssetField(activeKey, 'imageWholeAsset', url)}
-                          slot="whole"
-                          assetId={String(activeAsset.assetId)}
-                          batch={uploadBatch}
+                        <TechnicianPicturePreview
+                          label="Whole asset"
+                          src={activeAsset.imageWholeAsset}
                         />
-                        <DisposalImageField
-                          label="Image Serial Number"
-                          value={activeFields.imageSerialNumber}
-                          onChange={(url) => updateAssetField(activeKey, 'imageSerialNumber', url)}
-                          slot="serial"
-                          assetId={String(activeAsset.assetId)}
-                          batch={uploadBatch}
+                        <TechnicianPicturePreview
+                          label="Serial number"
+                          src={activeAsset.imageSerialNumber}
                         />
                       </div>
                     </div>
@@ -402,5 +399,37 @@ export function DisposalUnitDisposalFormPage() {
         )}
       </div>
     </DisposalUnitShell>
+  );
+}
+
+function TechnicianPicturePreview({ label, src }: { label: string; src: string | null }) {
+  const [open, setOpen] = useState(false);
+  const href = src ? (src.startsWith('/') ? src : `/${src}`) : null;
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm">{label}</Label>
+      {href ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="block w-full overflow-hidden rounded-[8px] border border-border transition-transform duration-100 ease-out active:scale-[0.97]"
+            aria-label={`View ${label} full size`}
+          >
+            <img src={href} alt="" className="h-36 w-full object-cover" />
+          </button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent className="max-h-[90vh] max-w-[min(90vw,56rem)] border-none bg-black p-3 text-white sm:rounded-[14px] [&>button]:text-white">
+              <DialogTitle className="sr-only">{label}</DialogTitle>
+              <img src={href} alt={label} className="max-h-[82vh] w-full object-contain" />
+            </DialogContent>
+          </Dialog>
+        </>
+      ) : (
+        <div className="flex h-36 items-center justify-center rounded-[8px] border border-dashed border-border text-xs text-muted-foreground">
+          No technician photo
+        </div>
+      )}
+    </div>
   );
 }

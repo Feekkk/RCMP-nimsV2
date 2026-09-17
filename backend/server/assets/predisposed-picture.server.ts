@@ -9,7 +9,7 @@ import type {
   UploadPredisposedPictureResult,
 } from '@shared/lib/disposal-schema';
 import { getSessionUser } from '@backend/server/auth/session.server';
-import { isStaffRole } from '@shared/lib/auth-session';
+import { isDisposalUnitRole, isStaffRole } from '@shared/lib/auth-session';
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'upload', 'picture');
 const KIND_RE = /^(laptop|av|network)$/;
@@ -25,6 +25,13 @@ const MIME_EXT: Record<string, string> = {
 async function assertStaffSession() {
   const session = await getSessionUser();
   if (!session || !isStaffRole(session.roleId)) {
+    throw new Error('Technician access is required.');
+  }
+}
+
+async function assertCanViewPictures() {
+  const session = await getSessionUser();
+  if (!session || (!isStaffRole(session.roleId) && !isDisposalUnitRole(session.roleId))) {
     throw new Error('Technician access is required.');
   }
 }
@@ -150,7 +157,7 @@ export async function servePredisposedPicture(
   fileName: string,
 ): Promise<Response> {
   try {
-    await assertStaffSession();
+    await assertCanViewPictures();
   } catch {
     return new Response('Unauthorized', { status: 401 });
   }

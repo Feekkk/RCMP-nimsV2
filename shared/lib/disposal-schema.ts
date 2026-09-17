@@ -134,6 +134,7 @@ export function parseDisposalBatchAssets(raw: string | null | undefined): MarkPr
 }
 
 export type SubmitDisposalBatchResult = {
+  batch: string;
   noRujukanPelupusan: string;
   submitted: number;
 };
@@ -169,6 +170,7 @@ export type DisposalHistoryAsset = {
 };
 
 export type DisposalHistoryBatch = {
+  batch: string;
   noRujukanPelupusan: string;
   submittedAt: string | null;
   disposalDate: string | null;
@@ -205,6 +207,7 @@ export type DisposalReportAsset = {
 };
 
 export type DisposalReport = {
+  batch: string;
   noRujukanPelupusan: string;
   pusat: string;
   disposalDate: string | null;

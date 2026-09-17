@@ -199,6 +199,39 @@ async function nextNoRujukanPelupusan(conn: DbConnection): Promise<string> {
   return `${prefix}${String(next).padStart(4, '0')}`;
 }
 
+function disposalBatchPrefix() {
+  return `DP-${malaysiaTodayIso().slice(2, 4)}-`;
+}
+
+function formatNextDisposalBatch(last: string | null | undefined) {
+  const prefix = disposalBatchPrefix();
+  const seqPart = last?.startsWith(prefix) ? last.slice(prefix.length) : '';
+  const next = (Number.parseInt(seqPart, 10) || 0) + 1;
+  return `${prefix}${String(next).padStart(2, '0')}`;
+}
+
+async function latestDisposalBatch(
+  query: DbConnection | ReturnType<typeof getDbPool>,
+  forUpdate: boolean,
+) {
+  const prefix = disposalBatchPrefix();
+  const sql = `SELECT batch
+     FROM disposal
+     WHERE batch LIKE ?
+     ORDER BY CAST(SUBSTRING(batch, CHAR_LENGTH(?) + 1) AS UNSIGNED) DESC, batch DESC
+     LIMIT 1${forUpdate ? ' FOR UPDATE' : ''}`;
+  const [rows] = await query.query<(RowDataPacket & { batch: string })[]>(sql, [`${prefix}%`, prefix]);
+  return rows[0]?.batch ?? '';
+}
+
+async function nextDisposalBatch(conn: DbConnection): Promise<string> {
+  return formatNextDisposalBatch(await latestDisposalBatch(conn, true));
+}
+
+export async function peekNextDisposalBatch(): Promise<string> {
+  return formatNextDisposalBatch(await latestDisposalBatch(getDbPool(), false));
+}
+
 type LockedPreDisposalRow = RowDataPacket & {
   pre_disposal_id: number;
   asset_id: string;
@@ -261,6 +294,7 @@ export async function submitDisposalBatch(
     }
 
     const noRujukanPelupusan = await nextNoRujukanPelupusan(conn);
+    const batch = await nextDisposalBatch(conn);
 
     for (const asset of selected) {
       const row = byKey.get(`${asset.kind}:${assetIdValue(asset.kind, asset.assetId)}`);
@@ -280,11 +314,12 @@ export async function submitDisposalBatch(
 
       await conn.execute(
         `INSERT INTO disposal (
-           no_rujukan_pelupusan, pre_disposal_id, asset_id, asset_type,
+           batch, no_rujukan_pelupusan, pre_disposal_id, asset_id, asset_type,
            submitted_by, disposal_date, disposal_time, pusat, disposal_remarks,
            latar_belakang, rekod_fizikal_harta, image_whole_asset, image_serial_number
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          batch,
           noRujukanPelupusan,
           row.pre_disposal_id,
           assetIdValue(asset.kind, asset.assetId),
@@ -312,12 +347,13 @@ export async function submitDisposalBatch(
       ]);
     }
 
-    return { noRujukanPelupusan, submitted: selected.length };
+    return { batch, noRujukanPelupusan, submitted: selected.length };
   });
 }
 
 type HistoryQueryRow = RowDataPacket & {
   disposal_id: number;
+  batch: string;
   no_rujukan_pelupusan: string;
   asset_id: string;
   asset_type: string;
@@ -338,7 +374,7 @@ export async function listDisposalHistory(): Promise<DisposalHistoryBatch[]> {
   const pool = getDbPool();
   const [rows] = await pool.query<HistoryQueryRow[]>(
     `SELECT
-       d.disposal_id, d.no_rujukan_pelupusan, d.asset_id, d.asset_type,
+       d.disposal_id, d.batch, d.no_rujukan_pelupusan, d.asset_id, d.asset_type,
        d.submitted_at, d.disposal_date, d.pusat, d.disposal_remarks,
        u.email AS submitted_email, u.oid AS submitted_oid,
        COALESCE(l.brand, av.brand, n.brand) AS brand,
@@ -367,9 +403,10 @@ export async function listDisposalHistory(): Promise<DisposalHistoryBatch[]> {
       model: row.model,
       serialNum: row.serial_num,
     };
-    let batch = batches.get(row.no_rujukan_pelupusan);
-    if (!batch) {
-      batch = {
+    let group = batches.get(row.batch);
+    if (!group) {
+      group = {
+        batch: row.batch,
         noRujukanPelupusan: row.no_rujukan_pelupusan,
         submittedAt: formatDateTimeIso(row.submitted_at),
         disposalDate: formatSqlDate(row.disposal_date),
@@ -379,16 +416,17 @@ export async function listDisposalHistory(): Promise<DisposalHistoryBatch[]> {
         assetCount: 0,
         assets: [],
       };
-      batches.set(row.no_rujukan_pelupusan, batch);
-      order.push(row.no_rujukan_pelupusan);
+      batches.set(row.batch, group);
+      order.push(row.batch);
     }
-    batch.assets.push(asset);
-    batch.assetCount = batch.assets.length;
+    group.assets.push(asset);
+    group.assetCount = group.assets.length;
   }
   return order.map((key) => batches.get(key)!);
 }
 
 type ReportQueryRow = RowDataPacket & {
+  batch: string;
   no_rujukan_pelupusan: string;
   asset_id: string;
   asset_type: string;
@@ -425,7 +463,7 @@ export async function getDisposalReport(noRujukanPelupusan: string): Promise<Dis
   const pool = getDbPool();
   const [rows] = await pool.query<ReportQueryRow[]>(
     `SELECT
-       d.no_rujukan_pelupusan, d.asset_id, d.asset_type, d.pusat,
+       d.batch, d.no_rujukan_pelupusan, d.asset_id, d.asset_type, d.pusat,
        d.disposal_date, d.disposal_time, d.submitted_at,
        d.latar_belakang, d.rekod_fizikal_harta,
        d.image_whole_asset, d.image_serial_number,
@@ -507,6 +545,7 @@ export async function getDisposalReport(noRujukanPelupusan: string): Promise<Dis
 
   const first = rows[0];
   return {
+    batch: first.batch,
     noRujukanPelupusan: first.no_rujukan_pelupusan,
     pusat: first.pusat,
     disposalDate: formatSqlDate(first.disposal_date),

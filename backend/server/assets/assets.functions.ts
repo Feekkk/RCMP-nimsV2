@@ -205,6 +205,13 @@ export const removeAssetsFromPredisposalFn = createServerFn({ method: 'POST' })
     return removeAssetsFromPredisposal(input.assets, context.staffId);
   });
 
+export const peekNextDisposalBatchFn = createServerFn({ method: 'GET' })
+  .middleware([disposalUnitMiddleware])
+  .handler(async () => {
+    const { peekNextDisposalBatch } = await import('@backend/server/assets/disposal-repo.server');
+    return peekNextDisposalBatch();
+  });
+
 export const submitDisposalBatchFn = createServerFn({ method: 'POST' })
   .middleware([disposalUnitMiddleware])
   .inputValidator((input: SubmitDisposalBatchInput) => input)
