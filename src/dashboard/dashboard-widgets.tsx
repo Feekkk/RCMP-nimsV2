@@ -146,8 +146,8 @@ export function InventoryStatCard({
               className={cn(
                 'rounded-2xl px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 isActive
-                  ? 'bg-muted font-medium text-foreground'
-                  : 'bg-muted/40 text-foreground hover:bg-muted/70',
+                  ? 'count-glass-chip-active font-medium text-foreground'
+                  : 'count-glass-chip text-foreground hover:bg-white/55',
               )}
             >
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

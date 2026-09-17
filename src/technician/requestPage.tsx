@@ -1483,19 +1483,19 @@ export function TechnicianRequestPage() {
 
 const QUEUE_STAT_TONES = {
   amber: {
-    card: 'border-amber-200/70 bg-amber-50/70 dark:border-amber-900/80 dark:bg-amber-950/30',
+    wash: 'bg-amber-300/18',
     badge: 'bg-amber-400 text-amber-950',
     watermark: 'text-amber-400/25 dark:text-amber-300/15',
     ring: 'ring-2 ring-amber-400/50',
   },
   emerald: {
-    card: 'border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-900/80 dark:bg-emerald-950/30',
+    wash: 'bg-emerald-300/18',
     badge: 'bg-emerald-400 text-emerald-950',
     watermark: 'text-emerald-400/25 dark:text-emerald-300/15',
     ring: 'ring-2 ring-emerald-400/50',
   },
   rose: {
-    card: 'border-rose-200/70 bg-rose-50/70 dark:border-rose-900/80 dark:bg-rose-950/30',
+    wash: 'bg-rose-300/18',
     badge: 'bg-rose-400 text-rose-950',
     watermark: 'text-rose-400/25 dark:text-rose-300/15',
     ring: 'ring-2 ring-rose-400/50',
@@ -1526,11 +1526,11 @@ function QueueStatCard({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'relative overflow-hidden rounded-3xl border p-5 text-left shadow-sm transition-all hover:opacity-90',
-        colors.card,
+        'count-glass relative overflow-hidden rounded-3xl p-5 text-left transition-all hover:opacity-90',
         active && colors.ring,
       )}
     >
+      <div className={cn('pointer-events-none absolute inset-0', colors.wash)} />
       <div className="relative z-10 flex items-center gap-2.5">
         <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', colors.badge)}>
           <Icon className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />

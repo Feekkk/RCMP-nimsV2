@@ -6,26 +6,32 @@ export const INSIGHT_CARD_TONES = {
   lime: {
     badge: 'bg-[#c9ef4a] text-[#15240a]',
     watermark: 'text-[#c9ef4a]/35 dark:text-[#c9ef4a]/20',
+    wash: 'bg-[#c9ef4a]/14',
   },
   sky: {
     badge: 'bg-[#7dd6f5] text-[#0b2a38]',
     watermark: 'text-[#7dd6f5]/40 dark:text-[#7dd6f5]/20',
+    wash: 'bg-[#7dd6f5]/16',
   },
   violet: {
     badge: 'bg-[#c4b4ff] text-[#22164a]',
     watermark: 'text-[#c4b4ff]/45 dark:text-[#c4b4ff]/20',
+    wash: 'bg-[#c4b4ff]/18',
   },
   amber: {
     badge: 'bg-amber-300 text-amber-950',
     watermark: 'text-amber-300/45 dark:text-amber-400/20',
+    wash: 'bg-amber-300/16',
   },
   emerald: {
     badge: 'bg-emerald-300 text-emerald-950',
     watermark: 'text-emerald-300/40 dark:text-emerald-400/20',
+    wash: 'bg-emerald-300/16',
   },
   rose: {
     badge: 'bg-rose-300 text-rose-950',
     watermark: 'text-rose-300/40 dark:text-rose-400/20',
+    wash: 'bg-rose-300/16',
   },
 } as const;
 
@@ -62,7 +68,8 @@ export function InsightStatCard({
   );
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden rounded-[28px] border border-border bg-card p-5">
+    <div className="count-glass relative flex h-full flex-col overflow-hidden rounded-[28px] p-5">
+      <div className={cn('pointer-events-none absolute inset-0', colors.wash)} />
       {href ? (
         <Link
           to={href}

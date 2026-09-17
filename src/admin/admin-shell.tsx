@@ -34,13 +34,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-svh bg-background">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-[120px] -left-[80px] h-[420px] w-[420px] rounded-full bg-lavender/[0.16] blur-[90px]" />
         <div className="absolute -top-[160px] right-[8%] h-[480px] w-[480px] rounded-full bg-lavender/[0.08] blur-[90px]" />
       </div>
 
-      <AdminSideBar className="sticky top-0 z-40 hidden h-svh shrink-0 md:flex" onSignOut={handleSignOut} />
+      <AdminSideBar className="fixed inset-y-2 left-2 z-40 hidden h-auto md:flex" onSignOut={handleSignOut} />
 
-      <div className="relative flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md md:hidden">
+      <div className="relative flex min-w-0 flex-1 flex-col md:pl-[15.25rem]">
+        <header className="nav-glass nav-glass-bar sticky top-0 z-30 md:hidden">
           <div className="flex h-14 items-center px-4">
             <Sheet>
               <SheetTrigger asChild>

@@ -27,8 +27,8 @@ function NavLink({
       className={cn(
         'flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors',
         active
-          ? 'bg-lavender/15 text-[oklch(0.45_0.12_290)]'
-          : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
+          ? 'bg-white/70 text-[oklch(0.45_0.12_290)] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.05)]'
+          : 'text-muted-foreground hover:bg-white/45 hover:text-foreground',
       )}
     >
       <Icon className="h-4 w-4 shrink-0 opacity-80" />
@@ -76,7 +76,7 @@ const DisposalUnitSideBar = React.forwardRef<HTMLElement, DisposalUnitSideBarPro
   function DisposalUnitSideBar({ className, embedded, onSignOut, ...props }, ref) {
     const inner = (
       <>
-        <div className="shrink-0 border-b border-border px-4 py-4">
+        <div className="shrink-0 border-b border-black/[0.06] px-4 py-4">
           <NimsLogo size="sm" variant="light" className="mx-auto" />
           <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Disposal unit
@@ -86,7 +86,7 @@ const DisposalUnitSideBar = React.forwardRef<HTMLElement, DisposalUnitSideBarPro
           <DisposalUnitSideBarNav />
         </ScrollArea>
         {onSignOut ? (
-          <div className="shrink-0 border-t border-border p-3">
+          <div className="shrink-0 border-t border-black/[0.06] p-3">
             <Button
               type="button"
               variant="ghost"
@@ -113,7 +113,7 @@ const DisposalUnitSideBar = React.forwardRef<HTMLElement, DisposalUnitSideBarPro
       <aside
         ref={ref}
         className={cn(
-          'flex h-full min-h-0 w-56 shrink-0 flex-col border-r border-border bg-card/95 backdrop-blur-sm',
+          'nav-glass nav-glass-sidebar flex h-full min-h-0 w-56 shrink-0 flex-col overflow-hidden rounded-[20px]',
           className,
         )}
         {...props}

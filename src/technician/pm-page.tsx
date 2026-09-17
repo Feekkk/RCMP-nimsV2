@@ -109,17 +109,17 @@ function StatusBadge({ status }: { status: PmLogStatus }) {
 
 const STAT_TONES = {
   sky: {
-    card: 'border-sky-200/70 bg-sky-50/70 dark:border-sky-900/80 dark:bg-sky-950/30',
+    wash: 'bg-sky-300/18',
     badge: 'bg-sky-400 text-sky-950',
     watermark: 'text-sky-400/25 dark:text-sky-300/15',
   },
   emerald: {
-    card: 'border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-900/80 dark:bg-emerald-950/30',
+    wash: 'bg-emerald-300/18',
     badge: 'bg-emerald-400 text-emerald-950',
     watermark: 'text-emerald-400/25 dark:text-emerald-300/15',
   },
   amber: {
-    card: 'border-amber-200/70 bg-amber-50/70 dark:border-amber-900/80 dark:bg-amber-950/30',
+    wash: 'bg-amber-300/18',
     badge: 'bg-amber-400 text-amber-950',
     watermark: 'text-amber-400/25 dark:text-amber-300/15',
   },
@@ -157,11 +157,11 @@ function StatCard({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        'relative flex h-full min-h-[148px] w-full flex-col overflow-hidden rounded-3xl border p-5 text-left shadow-sm transition-shadow hover:shadow-md',
-        colors.card,
+        'count-glass relative flex h-full min-h-[148px] w-full flex-col overflow-hidden rounded-3xl p-5 text-left transition-shadow hover:shadow-md',
         selected && 'ring-2 ring-foreground/25 ring-offset-2 ring-offset-background',
       )}
     >
+      <div className={cn('pointer-events-none absolute inset-0', colors.wash)} />
       <div className="relative z-10 flex items-center gap-2.5">
         <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', colors.badge)}>
           <Icon className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
