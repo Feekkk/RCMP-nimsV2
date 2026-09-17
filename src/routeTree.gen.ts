@@ -48,6 +48,7 @@ import { Route as AdminPromptRouteImport } from './routes/admin/prompt'
 import { Route as AdminNetworkRouteImport } from './routes/admin/network'
 import { Route as AdminLaptopRouteImport } from './routes/admin/laptop'
 import { Route as AdminExportRouteImport } from './routes/admin/export'
+import { Route as AdminDisposedRouteImport } from './routes/admin/disposed'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminAvRouteImport } from './routes/admin/av'
 import { Route as ApiV1ProfileRouteImport } from './routes/api/v1/profile'
@@ -281,6 +282,11 @@ const AdminExportRoute = AdminExportRouteImport.update({
   path: '/admin/export',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDisposedRoute = AdminDisposedRouteImport.update({
+  id: '/admin/disposed',
+  path: '/admin/disposed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/admin/dashboard',
   path: '/admin/dashboard',
@@ -471,6 +477,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/admin/av': typeof AdminAvRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/disposed': typeof AdminDisposedRoute
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
@@ -547,6 +554,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/admin/av': typeof AdminAvRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/disposed': typeof AdminDisposedRoute
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
@@ -624,6 +632,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/admin/av': typeof AdminAvRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/disposed': typeof AdminDisposedRoute
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
@@ -702,6 +711,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/av'
     | '/admin/dashboard'
+    | '/admin/disposed'
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
@@ -778,6 +788,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/av'
     | '/admin/dashboard'
+    | '/admin/disposed'
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
@@ -854,6 +865,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/av'
     | '/admin/dashboard'
+    | '/admin/disposed'
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
@@ -931,6 +943,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   AdminAvRoute: typeof AdminAvRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDisposedRoute: typeof AdminDisposedRoute
   AdminExportRoute: typeof AdminExportRoute
   AdminLaptopRoute: typeof AdminLaptopRoute
   AdminNetworkRoute: typeof AdminNetworkRoute
@@ -1276,6 +1289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminExportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/disposed': {
+      id: '/admin/disposed'
+      path: '/admin/disposed'
+      fullPath: '/admin/disposed'
+      preLoaderRoute: typeof AdminDisposedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
       path: '/admin/dashboard'
@@ -1542,6 +1562,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   AdminAvRoute: AdminAvRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminDisposedRoute: AdminDisposedRoute,
   AdminExportRoute: AdminExportRoute,
   AdminLaptopRoute: AdminLaptopRoute,
   AdminNetworkRoute: AdminNetworkRoute,

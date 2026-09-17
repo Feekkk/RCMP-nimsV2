@@ -3,12 +3,14 @@ import { Laptop, Network, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   type DashboardAssetKindStats,
+  type DashboardDisposedYearStats,
   type TechnicianDashboardData,
 } from '@shared/lib/dashboard-schema';
 import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import { getTechnicianDashboardFn } from '@backend/server/operations/dashboard.functions';
 import {
   dashboardTodayLine,
+  DisposedStatCard,
   InventoryStatCard,
   RequestTimetable,
   SystemUpdateNotice,
@@ -22,6 +24,13 @@ const EMPTY_ASSET_STATS: DashboardAssetKindStats = {
   total: 0,
   registeredTotal: 0,
   byStatus: [],
+};
+
+const EMPTY_DISPOSED_YEAR: DashboardDisposedYearStats = {
+  year: new Date().getFullYear(),
+  batchCount: 0,
+  assetCount: 0,
+  byKind: { laptop: 0, av: 0, network: 0 },
 };
 
 export function TechnicianDashboardPage() {
@@ -59,7 +68,7 @@ export function TechnicianDashboardPage() {
 
       <SystemUpdateNotice />
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <InventoryStatCard
           icon={Laptop}
           label={ASSET_KIND_LABEL.laptop}
@@ -80,6 +89,10 @@ export function TechnicianDashboardPage() {
           stats={stats?.network ?? EMPTY_ASSET_STATS}
           tone="violet"
           href="/technician/network"
+        />
+        <DisposedStatCard
+          stats={stats?.disposedYear ?? EMPTY_DISPOSED_YEAR}
+          href="/technician/disposed"
         />
       </div>
 

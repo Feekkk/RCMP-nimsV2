@@ -557,6 +557,48 @@ export async function getDisposalReport(noRujukanPelupusan: string): Promise<Dis
   };
 }
 
+export async function getDisposedYearOverview(year?: number): Promise<{
+  year: number;
+  batchCount: number;
+  assetCount: number;
+  byKind: { laptop: number; av: number; network: number };
+}> {
+  const resolvedYear = year ?? Number(malaysiaTodayIso().slice(0, 4));
+  const yearStart = `${resolvedYear}-01-01`;
+  const nextYear = `${resolvedYear + 1}-01-01`;
+  const dateExpr = 'COALESCE(disposal_date, DATE(submitted_at))';
+  const pool = getDbPool();
+  const [[batchRows], [kindRows]] = await Promise.all([
+    pool.query<(RowDataPacket & { n: number })[]>(
+      `SELECT COUNT(DISTINCT batch) AS n
+       FROM disposal
+       WHERE ${dateExpr} >= ? AND ${dateExpr} < ?`,
+      [yearStart, nextYear],
+    ),
+    pool.query<(RowDataPacket & { asset_type: string; n: number })[]>(
+      `SELECT asset_type, COUNT(*) AS n
+       FROM disposal
+       WHERE ${dateExpr} >= ? AND ${dateExpr} < ?
+       GROUP BY asset_type`,
+      [yearStart, nextYear],
+    ),
+  ]);
+
+  const byKind = { laptop: 0, av: 0, network: 0 };
+  for (const row of kindRows) {
+    if (row.asset_type === 'laptop' || row.asset_type === 'av' || row.asset_type === 'network') {
+      byKind[row.asset_type] = Number(row.n);
+    }
+  }
+
+  return {
+    year: resolvedYear,
+    batchCount: Number(batchRows[0]?.n ?? 0),
+    assetCount: byKind.laptop + byKind.av + byKind.network,
+    byKind,
+  };
+}
+
 export async function getDisposalDashboardStatsFromTables(): Promise<{
   pending: number;
   disposedThisMonth: number;

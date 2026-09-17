@@ -35,6 +35,7 @@ export function InsightStatCard({
   icon: Icon,
   label,
   value,
+  valueSuffix,
   hint,
   tone,
   href,
@@ -43,6 +44,7 @@ export function InsightStatCard({
   icon: ElementType;
   label: string;
   value: number;
+  valueSuffix?: string;
   hint?: string;
   tone: InsightCardTone;
   href?: string;
@@ -71,7 +73,12 @@ export function InsightStatCard({
       ) : (
         header
       )}
-      <p className="relative z-10 mt-5 font-serif text-5xl leading-none tracking-tight text-foreground">{value}</p>
+      <p className="relative z-10 mt-5 flex flex-wrap items-baseline gap-x-2 gap-y-1 leading-none tracking-tight text-foreground">
+        <span className="font-serif text-5xl">{value}</span>
+        {valueSuffix ? (
+          <span className="text-sm font-medium text-muted-foreground">{valueSuffix}</span>
+        ) : null}
+      </p>
       {hint ? <p className="relative z-10 mt-2 text-sm text-muted-foreground">{hint}</p> : null}
       {children ? <div className="relative z-10 mt-4">{children}</div> : null}
       <Icon

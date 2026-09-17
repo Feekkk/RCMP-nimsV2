@@ -20,6 +20,7 @@ import { LAPTOP_ASSIGNMENT_BUCKETS } from '@shared/lib/inventory-schema';
 import { canonicalizeCampusBuilding } from '@shared/lib/deploy-return-schema';
 import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
+import { getDisposedYearOverview } from '@backend/server/assets/disposal-repo.server';
 import { getDbPool } from '@backend/server/core/db';
 
 function addDaysIso(iso: string, days: number): string {
@@ -341,6 +342,7 @@ export async function getTechnicianDashboard(
     avDeployByBuilding,
     networkDeployByBuilding,
     holidays,
+    disposedYear,
   ] = await Promise.all([
     loadAssetKindStats(pool, 'laptop'),
     loadAssetKindStats(pool, 'av'),
@@ -350,6 +352,7 @@ export async function getTechnicianDashboard(
     loadPlaceDeployBuildingCounts(pool, 'av'),
     loadPlaceDeployBuildingCounts(pool, 'network'),
     fetchMalaysiaHolidaysForCalendar(calendar.year, calendar.month),
+    getDisposedYearOverview(),
   ]);
   laptop.deployByDivision = laptopDeployByDivision;
   av.deployByBuilding = avDeployByBuilding;
@@ -361,6 +364,7 @@ export async function getTechnicianDashboard(
     laptop,
     av,
     network,
+    disposedYear,
     totalRequest,
     requestPoolCount,
     laptopCount: laptop.registeredTotal,

@@ -7,6 +7,7 @@ import {
   Github,
   Loader2,
   MoreVertical,
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,13 +17,14 @@ import {
   DASHBOARD_ASSET_STORE_STATUS_IDS,
   DASHBOARD_REQUEST_STATUS_LABEL,
   type DashboardAssetKindStats,
+  type DashboardDisposedYearStats,
   type DashboardHoliday,
   type DashboardRequestStatus,
   type DashboardStatusCount,
   type DashboardTimetableEntry,
 } from '@shared/lib/dashboard-schema';
 import { InsightStatCard, type InsightCardTone } from '@/components/insight-stat-card';
-import { formatStatusLabel } from '@shared/lib/inventory-schema';
+import { ASSET_KIND_LABEL, formatStatusLabel } from '@shared/lib/inventory-schema';
 import { formatDateLabel, localDateToIso } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
 
@@ -180,6 +182,34 @@ export function InventoryStatCard({
       ) : (
         <StatusBreakdown items={stats.byStatus} statusIds={INVENTORY_VIEW_STATUS_IDS[view]} />
       )}
+    </InsightStatCard>
+  );
+}
+
+export function DisposedStatCard({
+  stats,
+  href,
+}: {
+  stats: DashboardDisposedYearStats;
+  href: string;
+}) {
+  const rows = [
+    { label: ASSET_KIND_LABEL.laptop, count: stats.byKind.laptop },
+    { label: ASSET_KIND_LABEL.av, count: stats.byKind.av },
+    { label: ASSET_KIND_LABEL.network, count: stats.byKind.network },
+  ];
+
+  return (
+    <InsightStatCard
+      icon={Trash2}
+      label={`Disposed ${stats.year}`}
+      value={stats.batchCount}
+      valueSuffix={stats.batchCount === 1 ? 'total batch' : 'total batches'}
+      hint={`${stats.assetCount} total assets`}
+      tone="rose"
+      href={href}
+    >
+      <BreakdownList rows={rows} />
     </InsightStatCard>
   );
 }

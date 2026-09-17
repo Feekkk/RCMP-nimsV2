@@ -87,10 +87,22 @@ export type DashboardRequestStats = {
   poolByKind: DashboardRequestKindCount[];
 };
 
+export type DashboardDisposedYearStats = {
+  year: number;
+  batchCount: number;
+  assetCount: number;
+  byKind: {
+    laptop: number;
+    av: number;
+    network: number;
+  };
+};
+
 export type TechnicianDashboardStats = {
   laptop: DashboardAssetKindStats;
   av: DashboardAssetKindStats;
   network: DashboardAssetKindStats;
+  disposedYear: DashboardDisposedYearStats;
   totalRequest: DashboardRequestStats;
   requestPoolCount: number;
   laptopCount: number;
