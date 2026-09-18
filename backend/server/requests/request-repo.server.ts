@@ -67,6 +67,15 @@ function formatTs(val: Date | string | null | undefined): string | null {
   return String(val);
 }
 
+function staffLabel(resolvedName: string | null | undefined, oid: string | null | undefined, email: string | null | undefined): string | null {
+  const name = resolvedName?.trim() || '';
+  const id = oid?.trim() || '';
+  const mail = email?.trim() || '';
+  if (name && name !== id) return name;
+  if (mail) return mail;
+  return name || null;
+}
+
 type LaptopRow = RowDataPacket & {
   asset_id: number;
   model: string | null;
@@ -1349,8 +1358,10 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
         asset_status_id: number | null;
         booked_oid: string | null;
         booked_by: string;
+        booked_email: string | null;
         returned_oid: string | null;
         returned_by_name: string;
+        returned_email: string | null;
       })[]
     >(
       `SELECT ra.assignment_id, ra.request_item_id, ra.asset_id, ra.assigned_at,
@@ -1360,7 +1371,8 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
               COALESCE(l.brand, av.brand) AS brand,
               IF(l.asset_id IS NOT NULL, 'laptop', IF(av.asset_id IS NOT NULL, 'av', NULL)) AS pool_kind,
               COALESCE(l.status_id, av.status_id) AS asset_status_id,
-              ub.oid AS booked_oid, ur.oid AS returned_oid
+              ub.oid AS booked_oid, ub.email AS booked_email,
+              ur.oid AS returned_oid, ur.email AS returned_email
        FROM request_assignment ra
        LEFT JOIN laptop l ON ${sqlAssetIdEq('l.asset_id', 'ra.asset_id')}
        LEFT JOIN av av ON ${sqlAssetIdEq('av.asset_id', 'ra.asset_id')}
@@ -1397,8 +1409,8 @@ export async function listRequestLog(): Promise<RequestLogEntry[]> {
         assetStatusId: slotMark ? 0 : (a.asset_status_id ?? 0),
         slotMark,
         unavailableAt: formatTs(a.unavailable_at),
-        bookedBy: a.booked_by?.trim() || null,
-        returnedBy: a.returned_by_name?.trim() || null,
+        bookedBy: staffLabel(a.booked_by, a.booked_oid, a.booked_email),
+        returnedBy: staffLabel(a.returned_by_name, a.returned_oid, a.returned_email),
       };
     });
 

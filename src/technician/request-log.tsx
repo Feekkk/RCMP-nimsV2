@@ -84,6 +84,16 @@ function formatDateTime(at: string): string {
   });
 }
 
+function ManagedStamp({ at, by }: { at: string | null; by: string | null }) {
+  if (!at) return <span>—</span>;
+  return (
+    <div>
+      <p>{formatDateTime(at)}</p>
+      {by ? <p className="mt-0.5">by {by}</p> : null}
+    </div>
+  );
+}
+
 function groupByMonth(entries: RequestLogEntry[]): [string, RequestLogEntry[]][] {
   const map = new Map<string, RequestLogEntry[]>();
   for (const entry of entries) {
@@ -332,7 +342,7 @@ export function TechnicianRequestLogPage() {
       </Card>
 
       <Dialog open={selected != null} onOpenChange={(open) => !open && setSelectedId(null)}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto rounded-[14px]">
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto rounded-[14px]">
           {selected && <RequestLogDetail entry={selected} />}
         </DialogContent>
       </Dialog>
@@ -401,13 +411,17 @@ function RequestLogDetail({ entry }: { entry: RequestLogEntry }) {
                     </TableCell>
                     <TableCell className="text-sm">{a.assetType ?? '—'}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {a.slotMark || !a.assignedAt ? '—' : formatDateTime(a.assignedAt)}
+                      {a.slotMark ? (
+                        '—'
+                      ) : (
+                        <ManagedStamp at={a.assignedAt} by={a.bookedBy} />
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {a.checkoutAt ? formatDateTime(a.checkoutAt) : '—'}
+                      <ManagedStamp at={a.checkoutAt} by={a.bookedBy} />
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {a.returnedAt ? formatDateTime(a.returnedAt) : '—'}
+                      <ManagedStamp at={a.returnedAt} by={a.returnedBy} />
                     </TableCell>
                   </TableRow>
                 ))}
