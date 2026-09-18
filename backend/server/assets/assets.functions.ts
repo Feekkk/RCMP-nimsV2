@@ -21,7 +21,7 @@ import type {
   BulkLaptopImportRow,
   BulkNetworkImportRow,
 } from '@backend/server/assets/assets-repo.server';
-import { disposalUnitMiddleware, staffMiddleware } from '@backend/server/core/auth-middleware';
+import { adminMiddleware, disposalUnitMiddleware, staffMiddleware } from '@backend/server/core/auth-middleware';
 
 export const listAssetsFn = createServerFn({ method: 'GET' })
   .middleware([staffMiddleware])
@@ -229,6 +229,13 @@ export const listDisposalHistoryFn = createServerFn({ method: 'GET' })
 
 export const listStaffDisposalHistoryFn = createServerFn({ method: 'GET' })
   .middleware([staffMiddleware])
+  .handler(async () => {
+    const { listDisposalHistory } = await import('@backend/server/assets/disposal-repo.server');
+    return listDisposalHistory();
+  });
+
+export const listAdminDisposalHistoryFn = createServerFn({ method: 'GET' })
+  .middleware([adminMiddleware])
   .handler(async () => {
     const { listDisposalHistory } = await import('@backend/server/assets/disposal-repo.server');
     return listDisposalHistory();

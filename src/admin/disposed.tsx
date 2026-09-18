@@ -24,7 +24,7 @@ import { isoToLocalDate } from '@shared/lib/date-format';
 import { malaysiaTodayIso } from '@shared/lib/disposal-schema';
 import { ASSET_KIND_LABEL, type AssetKind } from '@shared/lib/inventory-schema';
 import type { DisposalHistoryBatch } from '@shared/lib/disposal-schema';
-import { listStaffDisposalHistoryFn } from '@backend/server/assets/assets.functions';
+import { listAdminDisposalHistoryFn } from '@backend/server/assets/assets.functions';
 import { cn } from '@/lib/utils';
 
 const KIND_ORDER: AssetKind[] = ['laptop', 'av', 'network'];
@@ -72,7 +72,7 @@ export function AdminDisposedPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setBatches(await listStaffDisposalHistoryFn());
+      setBatches(await listAdminDisposalHistoryFn());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load disposal stats');
     } finally {

@@ -17,7 +17,10 @@ import { isoToLocalDate } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL, type AssetId, type AssetKind } from '@shared/lib/inventory-schema';
 import type { DisposalHistoryBatch } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
-import { listStaffDisposalHistoryFn } from '@backend/server/assets/assets.functions';
+import {
+  listAdminDisposalHistoryFn,
+  listStaffDisposalHistoryFn,
+} from '@backend/server/assets/assets.functions';
 
 function formatDate(value: string | null) {
   if (!value) return '—';
@@ -87,7 +90,10 @@ export function DisposedHistoryList({ viewer }: { viewer: 'admin' | 'technician'
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await listStaffDisposalHistoryFn();
+      const rows =
+        viewer === 'admin'
+          ? await listAdminDisposalHistoryFn()
+          : await listStaffDisposalHistoryFn();
       setBatches(rows);
       setOpenBatch(rows[0]?.batch ?? null);
     } catch (e) {
@@ -95,7 +101,7 @@ export function DisposedHistoryList({ viewer }: { viewer: 'admin' | 'technician'
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [viewer]);
 
   useEffect(() => {
     void load();
