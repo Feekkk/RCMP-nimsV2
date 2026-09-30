@@ -75,6 +75,7 @@ import { Route as ApiV1AuthLogoutRouteImport } from './routes/api/v1/auth.logout
 import { Route as ApiV1AuthDevLoginRouteImport } from './routes/api/v1/auth.dev-login'
 import { Route as ApiV1AssetsLookupRouteImport } from './routes/api/v1/assets.lookup'
 import { Route as ApiV1AdminDashboardRouteImport } from './routes/api/v1/admin.dashboard'
+import { Route as ApiAuthSessionPingRouteImport } from './routes/api/auth/session.ping'
 import { Route as ApiAuthMicrosoftCallbackRouteImport } from './routes/api/auth/microsoft.callback'
 import { Route as AdminAssetKindAssetIdRouteImport } from './routes/admin/asset.$kind.$assetId'
 import { Route as UploadPictureKindAssetIdFileNameRouteImport } from './routes/upload/picture.$kind.$assetId.$fileName'
@@ -423,6 +424,11 @@ const ApiV1AdminDashboardRoute = ApiV1AdminDashboardRouteImport.update({
   path: '/api/v1/admin/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSessionPingRoute = ApiAuthSessionPingRouteImport.update({
+  id: '/api/auth/session/ping',
+  path: '/api/auth/session/ping',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthMicrosoftCallbackRoute =
   ApiAuthMicrosoftCallbackRouteImport.update({
     id: '/api/auth/microsoft/callback',
@@ -520,6 +526,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
+  '/api/auth/session/ping': typeof ApiAuthSessionPingRoute
   '/api/v1/admin/dashboard': typeof ApiV1AdminDashboardRoute
   '/api/v1/assets/lookup': typeof ApiV1AssetsLookupRoute
   '/api/v1/auth/dev-login': typeof ApiV1AuthDevLoginRoute
@@ -597,6 +604,7 @@ export interface FileRoutesByTo {
   '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
+  '/api/auth/session/ping': typeof ApiAuthSessionPingRoute
   '/api/v1/admin/dashboard': typeof ApiV1AdminDashboardRoute
   '/api/v1/assets/lookup': typeof ApiV1AssetsLookupRoute
   '/api/v1/auth/dev-login': typeof ApiV1AuthDevLoginRoute
@@ -675,6 +683,7 @@ export interface FileRoutesById {
   '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
+  '/api/auth/session/ping': typeof ApiAuthSessionPingRoute
   '/api/v1/admin/dashboard': typeof ApiV1AdminDashboardRoute
   '/api/v1/assets/lookup': typeof ApiV1AssetsLookupRoute
   '/api/v1/auth/dev-login': typeof ApiV1AuthDevLoginRoute
@@ -754,6 +763,7 @@ export interface FileRouteTypes {
     | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
+    | '/api/auth/session/ping'
     | '/api/v1/admin/dashboard'
     | '/api/v1/assets/lookup'
     | '/api/v1/auth/dev-login'
@@ -831,6 +841,7 @@ export interface FileRouteTypes {
     | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
+    | '/api/auth/session/ping'
     | '/api/v1/admin/dashboard'
     | '/api/v1/assets/lookup'
     | '/api/v1/auth/dev-login'
@@ -908,6 +919,7 @@ export interface FileRouteTypes {
     | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
+    | '/api/auth/session/ping'
     | '/api/v1/admin/dashboard'
     | '/api/v1/assets/lookup'
     | '/api/v1/auth/dev-login'
@@ -986,6 +998,7 @@ export interface RootRouteChildren {
   ApiV1ProfileRoute: typeof ApiV1ProfileRoute
   AdminAssetKindAssetIdRoute: typeof AdminAssetKindAssetIdRoute
   ApiAuthMicrosoftCallbackRoute: typeof ApiAuthMicrosoftCallbackRoute
+  ApiAuthSessionPingRoute: typeof ApiAuthSessionPingRoute
   ApiV1AdminDashboardRoute: typeof ApiV1AdminDashboardRoute
   ApiV1AssetsLookupRoute: typeof ApiV1AssetsLookupRoute
   ApiV1AuthDevLoginRoute: typeof ApiV1AuthDevLoginRoute
@@ -1478,6 +1491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1AdminDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/session/ping': {
+      id: '/api/auth/session/ping'
+      path: '/api/auth/session/ping'
+      fullPath: '/api/auth/session/ping'
+      preLoaderRoute: typeof ApiAuthSessionPingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/microsoft/callback': {
       id: '/api/auth/microsoft/callback'
       path: '/api/auth/microsoft/callback'
@@ -1605,6 +1625,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1ProfileRoute: ApiV1ProfileRoute,
   AdminAssetKindAssetIdRoute: AdminAssetKindAssetIdRoute,
   ApiAuthMicrosoftCallbackRoute: ApiAuthMicrosoftCallbackRoute,
+  ApiAuthSessionPingRoute: ApiAuthSessionPingRoute,
   ApiV1AdminDashboardRoute: ApiV1AdminDashboardRoute,
   ApiV1AssetsLookupRoute: ApiV1AssetsLookupRoute,
   ApiV1AuthDevLoginRoute: ApiV1AuthDevLoginRoute,

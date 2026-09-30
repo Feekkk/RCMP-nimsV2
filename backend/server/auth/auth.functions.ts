@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
+import { redirect } from '@tanstack/react-router';
 import { sessionMiddleware, staffMiddleware } from '@backend/server/core/auth-middleware';
-import { destroySession, establishSession } from '@backend/server/auth/session.server';
+import { destroySession, establishSession, evaluateWebSession } from '@backend/server/auth/session.server';
 
 export const getMicrosoftLoginUrlFn = createServerFn({ method: 'POST' }).handler(async () => {
   const { getMicrosoftLoginRedirect } = await import('@backend/server/auth/microsoft-auth.server');
@@ -19,6 +20,17 @@ export const completeMicrosoftLoginFn = createServerFn({ method: 'POST' })
 export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
   await destroySession();
   return { ok: true };
+});
+
+export const assertActiveWebSessionFn = createServerFn({ method: 'GET' }).handler(async () => {
+  const result = await evaluateWebSession('touch');
+  if (result.kind === 'timeout') {
+    throw redirect({ to: '/login', search: { reason: 'timeout' } });
+  }
+  if (result.kind !== 'ok') {
+    throw redirect({ to: '/login' });
+  }
+  return { ok: true as const };
 });
 
 function assertDevLoginAllowed(): void {

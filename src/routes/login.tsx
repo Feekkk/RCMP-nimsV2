@@ -29,6 +29,9 @@ function MicrosoftIcon() {
 }
 
 export const Route = createFileRoute('/login')({
+  validateSearch: (search: Record<string, unknown>): { reason?: 'timeout' } => ({
+    reason: search.reason === 'timeout' ? 'timeout' : undefined,
+  }),
   head: () => ({
     meta: [
       { title: 'Sign in | NIMS' },
@@ -39,6 +42,7 @@ export const Route = createFileRoute('/login')({
 });
 
 function LoginPage() {
+  const { reason } = Route.useSearch();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(!import.meta.env.DEV);
   const [devRole, setDevRole] = useState<'technician' | 'admin' | 'user' | 'disposal-unit' | null>(null);
@@ -69,10 +73,15 @@ function LoginPage() {
       return;
     }
 
+    if (reason === 'timeout') {
+      setIsLoading(false);
+      return;
+    }
+
     if (microsoftStarted.current) return;
     microsoftStarted.current = true;
     void handleMicrosoftSignIn();
-  }, []);
+  }, [reason]);
 
   const handleDevLogin = async (role: 'technician' | 'admin' | 'user' | 'disposal-unit') => {
     setDevRole(role);
@@ -114,10 +123,18 @@ function LoginPage() {
                   Welcome to NIMS
                 </h1>
                 <p className="mt-2 text-sm leading-[1.5] text-muted-foreground">
-                  Redirecting to Microsoft sign-in…
+                  {reason === 'timeout'
+                    ? 'Sign in again to continue.'
+                    : 'Redirecting to Microsoft sign-in…'}
                 </p>
               </div>
             </div>
+
+            {reason === 'timeout' && (
+              <div className="rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-sm text-amber-900 dark:text-amber-200">
+                You were signed out due to inactivity.
+              </div>
+            )}
 
             {isLoading ? (
               <div className="flex h-11 items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -168,6 +185,12 @@ function LoginPage() {
               </p>
             </div>
           </div>
+
+          {reason === 'timeout' && (
+            <div className="rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-sm text-amber-900 dark:text-amber-200">
+              You were signed out due to inactivity.
+            </div>
+          )}
 
           {!maintenanceLoading && maintenanceEnabled && (
             <div className="rounded-[8px] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-900 dark:text-amber-200">

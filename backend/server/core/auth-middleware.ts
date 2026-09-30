@@ -1,5 +1,6 @@
 import { createMiddleware } from '@tanstack/react-start';
 import { isAdminRole, isDisposalUnitRole, isStaffRole } from '@shared/lib/auth-session';
+import { isWebSessionEndCode } from '@shared/lib/session-policy';
 
 export type SessionContext = {
   staffId: string;
@@ -10,11 +11,19 @@ export type SessionContext = {
 export const sessionMiddleware = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     const { getSessionUser } = await import('@backend/server/auth/session.server');
-    const session = await getSessionUser();
-    if (!session) {
-      throw new Error('Your session has expired. Sign in again to continue.');
+    try {
+      const session = await getSessionUser();
+      if (!session) {
+        throw new Error('Your session has expired. Sign in again to continue.');
+      }
+      return next({ context: { staffId: session.staffId, roleId: session.roleId } as SessionContext });
+    } catch (error) {
+      if (error instanceof Error && isWebSessionEndCode(error.message)) {
+        const { setResponseStatus } = await import('@tanstack/react-start/server');
+        setResponseStatus(401);
+      }
+      throw error;
     }
-    return next({ context: { staffId: session.staffId, roleId: session.roleId } as SessionContext });
   },
 );
 

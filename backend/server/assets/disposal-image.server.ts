@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { isDisposalUnitRole } from '@shared/lib/auth-session';
-import { getSessionUser } from '@backend/server/auth/session.server';
+import { getSessionUser, webSessionEndResponse } from '@backend/server/auth/session.server';
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'upload', 'dispose');
 const YEAR_RE = /^\d{4}$/;
@@ -19,8 +19,8 @@ function assertDisposalUnitSession() {
 export async function serveDisposalImage(year: string, batch: string, fileName: string): Promise<Response> {
   try {
     await assertDisposalUnitSession();
-  } catch {
-    return new Response('Unauthorized', { status: 401 });
+  } catch (error) {
+    return webSessionEndResponse(error) ?? new Response('Unauthorized', { status: 401 });
   }
   const safeYear = path.basename(year);
   const safeBatch = path.basename(batch);

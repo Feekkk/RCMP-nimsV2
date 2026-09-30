@@ -93,9 +93,62 @@ export function readUserSession(): SessionUser | null {
   }
 }
 
+const SESSION_CHANNEL = 'nims-web-session';
+const SESSION_EVENT_KEY = 'nims-web-session-event';
+
+export type ClientSessionEvent =
+  | { type: 'activity'; at: number }
+  | { type: 'logout'; reason: 'manual' | 'timeout' };
+
+export function publishClientSessionEvent(event: ClientSessionEvent): void {
+  if (typeof window === 'undefined') return;
+  const payload = { ...event, nonce: Date.now() };
+  try {
+    const channel = new BroadcastChannel(SESSION_CHANNEL);
+    channel.postMessage(payload);
+    channel.close();
+  } catch {
+    // no-op
+  }
+  try {
+    localStorage.setItem(SESSION_EVENT_KEY, JSON.stringify(payload));
+  } catch {
+    // no-op
+  }
+}
+
+export function subscribeClientSessionEvents(onEvent: (event: ClientSessionEvent) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  let channel: BroadcastChannel | null = null;
+  const handle = (event: ClientSessionEvent) => onEvent(event);
+  try {
+    channel = new BroadcastChannel(SESSION_CHANNEL);
+    channel.onmessage = (message: MessageEvent<ClientSessionEvent & { nonce?: number }>) => {
+      if (message.data?.type === 'activity' || message.data?.type === 'logout') handle(message.data);
+    };
+  } catch {
+    channel = null;
+  }
+  const onStorage = (storageEvent: StorageEvent) => {
+    if (storageEvent.key !== SESSION_EVENT_KEY || !storageEvent.newValue) return;
+    try {
+      const parsed = JSON.parse(storageEvent.newValue) as ClientSessionEvent;
+      if (parsed.type === 'activity' || parsed.type === 'logout') handle(parsed);
+    } catch {
+      // no-op
+    }
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    channel?.close();
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
 /** Clears the local UI cache and the server-side session cookie. */
 export async function clearAllSessions(): Promise<void> {
   if (typeof window === 'undefined') return;
+  publishClientSessionEvent({ type: 'logout', reason: 'manual' });
   sessionStorage.removeItem(TECHNICIAN_SESSION_KEY);
   sessionStorage.removeItem(USER_SESSION_KEY);
   try {

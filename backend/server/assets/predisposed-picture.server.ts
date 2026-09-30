@@ -8,7 +8,7 @@ import type {
   UploadPredisposedPictureInput,
   UploadPredisposedPictureResult,
 } from '@shared/lib/disposal-schema';
-import { getSessionUser } from '@backend/server/auth/session.server';
+import { getSessionUser, webSessionEndResponse } from '@backend/server/auth/session.server';
 import { isDisposalUnitRole, isStaffRole } from '@shared/lib/auth-session';
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'upload', 'picture');
@@ -158,8 +158,8 @@ export async function servePredisposedPicture(
 ): Promise<Response> {
   try {
     await assertCanViewPictures();
-  } catch {
-    return new Response('Unauthorized', { status: 401 });
+  } catch (error) {
+    return webSessionEndResponse(error) ?? new Response('Unauthorized', { status: 401 });
   }
   const safeKind = path.basename(kind);
   const safeId = path.basename(assetId);

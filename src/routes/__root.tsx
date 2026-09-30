@@ -2,6 +2,9 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 
 import nimsMobileIcon from "../assets/nims-mobile.png?url";
 import "../styles.css";
+import { SessionIdleMonitor } from "@/auth/session-idle-monitor";
+import { assertActiveWebSessionFn } from "@backend/server/auth/auth.functions";
+import { isProtectedWebPath } from "@shared/lib/session-policy";
 
 function NotFoundComponent() {
   return (
@@ -28,6 +31,10 @@ function NotFoundComponent() {
 }
 
 export const Route = createRootRoute({
+  beforeLoad: async ({ location }) => {
+    if (!isProtectedWebPath(location.pathname)) return;
+    await assertActiveWebSessionFn();
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -87,5 +94,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  return (
+    <>
+      <SessionIdleMonitor />
+      <Outlet />
+    </>
+  );
 }
