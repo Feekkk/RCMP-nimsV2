@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileText, History, Search } from 'lucide-react';
+import { Download, FileText, History, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,10 +25,19 @@ import { isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import type { DisposalHistoryBatch, DisposalReport } from '@shared/lib/disposal-schema';
 import { DatePickerField } from '@/technician/deploy-return-fields';
+import { downloadDisposalLampiran1 } from '@/lib/disposal-lampiran1-workbook';
+import { downloadDisposalLampiran2 } from '@/lib/disposal-lampiran2-document';
+import { downloadDisposalTpa10 } from '@/lib/disposal-tpa10-document';
 import {
   getDisposalReportFn,
   listDisposalHistoryFn,
 } from '@backend/server/assets/assets.functions';
+
+const REPORT_DOWNLOADS = [
+  { label: 'Lampiran 1', download: downloadDisposalLampiran1 },
+  { label: 'Lampiran 2', download: downloadDisposalLampiran2 },
+  { label: 'TPA10', download: downloadDisposalTpa10 },
+] as const;
 
 function startOfDayMs(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
@@ -88,6 +97,18 @@ export function DisposalUnitHistoryPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [report, setReport] = useState<DisposalReport | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  const handleDownload = async (label: string, download: () => Promise<void>) => {
+    setDownloading(label);
+    try {
+      await download();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : `Could not generate ${label}`);
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -323,91 +344,51 @@ export function DisposalUnitHistoryPage() {
           {reportLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Loading forms…</p>
           ) : report ? (
-            <div className="space-y-5 text-sm">
-              <section className="space-y-2">
-                <h3 className="font-semibold">Lampiran 1</h3>
-                {report.lampiran1.map((asset) => (
-                  <div
-                    key={`l1-${asset.kind}:${asset.assetId}`}
-                    className="rounded-[10px] border border-border bg-muted/30 p-3"
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-3 gap-2">
+                {REPORT_DOWNLOADS.map(({ label, download }) => (
+                  <Button
+                    key={label}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 rounded-[8px]"
+                    disabled={downloading !== null}
+                    onClick={() => void handleDownload(label, () => download(report))}
                   >
-                    <p className="font-medium">{asset.nama}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ASSET_KIND_LABEL[asset.kind]} · {asset.assetId} · {asset.serialNum ?? '—'}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Tarikh penerimaan: {asset.tarikhPenerimaan ?? '—'} · Supplier: {asset.supplier ?? '—'} ·
-                      Qty: {asset.qty} · Cost: {asset.purchaseCost ?? '—'}
-                    </p>
-                  </div>
+                    <Download className="h-4 w-4" />
+                    {downloading === label ? 'Preparing…' : label}
+                  </Button>
                 ))}
-              </section>
-              <section className="space-y-2">
-                <h3 className="font-semibold">Lampiran 2</h3>
-                {report.lampiran2.map((asset) => (
-                  <div
-                    key={`l2-${asset.kind}:${asset.assetId}`}
-                    className="rounded-[10px] border border-border bg-muted/30 p-3"
-                  >
-                    <p className="font-medium">{asset.nama}</p>
-                    <p className="text-xs text-muted-foreground">Pusat: {report.pusat}</p>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="mb-1 text-[10px] text-muted-foreground">Whole asset</p>
-                        {asset.imageWholeAsset ? (
-                          <img
-                            src={storedImageSrc(asset.imageWholeAsset)}
-                            alt="Whole asset"
-                            className="h-24 w-full rounded-[8px] object-cover"
-                          />
-                        ) : (
-                          <p className="text-xs text-muted-foreground">—</p>
-                        )}
-                      </div>
-                      <div>
-                        <p className="mb-1 text-[10px] text-muted-foreground">Serial number</p>
-                        {asset.imageSerialNumber ? (
-                          <img
-                            src={storedImageSrc(asset.imageSerialNumber)}
-                            alt="Serial number"
-                            className="h-24 w-full rounded-[8px] object-cover"
-                          />
-                        ) : (
-                          <p className="text-xs text-muted-foreground">—</p>
-                        )}
-                      </div>
+              </div>
+              <ul className="divide-y divide-border rounded-[10px] border border-border">
+                {report.lampiran1.map((asset, index) => (
+                  <li key={`${asset.kind}:${asset.assetId}`} className="flex items-center gap-3 px-3 py-2.5">
+                    <span className="w-5 shrink-0 text-xs tabular-nums text-muted-foreground">{index + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{asset.nama}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {ASSET_KIND_LABEL[asset.kind]} · {asset.assetId}
+                        {asset.serialNum ? ` · ${asset.serialNum}` : ''}
+                      </p>
                     </div>
-                  </div>
+                    <div className="flex shrink-0 gap-1.5">
+                      {[asset.imageWholeAsset, asset.imageSerialNumber].map((src, i) =>
+                        src ? (
+                          <img
+                            key={i}
+                            src={storedImageSrc(src)}
+                            alt=""
+                            className="h-10 w-10 rounded-[6px] border border-border object-cover"
+                          />
+                        ) : (
+                          <span key={i} className="h-10 w-10 rounded-[6px] border border-dashed border-border" />
+                        ),
+                      )}
+                    </div>
+                  </li>
                 ))}
-              </section>
-              <section className="space-y-2">
-                <h3 className="font-semibold">Borang TP10</h3>
-                {report.borangTp10.map((asset) => (
-                  <div
-                    key={`tp10-${asset.kind}:${asset.assetId}`}
-                    className="rounded-[10px] border border-border bg-muted/30 p-3"
-                  >
-                    <p className="font-medium">{asset.nama}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Latar belakang: {asset.latarBelakang ?? '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Rekod fizikal harta: {asset.rekodFizikalHarta ?? '—'}
-                    </p>
-                    {asset.repairs.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No repair records</p>
-                    ) : (
-                      <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                        {asset.repairs.map((repair, idx) => (
-                          <li key={`${asset.assetId}-r-${idx}`}>
-                            {repair.repairDate ?? '—'} · {repair.issueSummary ?? '—'}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </section>
+              </ul>
             </div>
           ) : null}
         </DialogContent>
