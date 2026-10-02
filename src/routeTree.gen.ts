@@ -9,222 +9,151 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as UserRequestRouteImport } from './routes/user/request'
-import { Route as UserHistoryRouteImport } from './routes/user/history'
-import { Route as UserEditProfileRouteImport } from './routes/user/edit-profile'
-import { Route as TechnicianWarrantyRouteImport } from './routes/technician/warranty'
-import { Route as TechnicianReturnRouteImport } from './routes/technician/return'
-import { Route as TechnicianRequestsRouteImport } from './routes/technician/requests'
-import { Route as TechnicianRequestViewRouteImport } from './routes/technician/request-view'
-import { Route as TechnicianRequestLogRouteImport } from './routes/technician/request-log'
-import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
-import { Route as TechnicianReportRouteImport } from './routes/technician/report'
-import { Route as TechnicianRepairRouteImport } from './routes/technician/repair'
-import { Route as TechnicianPreventiveMaintenanceRouteImport } from './routes/technician/preventive-maintenance'
-import { Route as TechnicianPreDisposedRouteImport } from './routes/technician/pre-disposed'
-import { Route as TechnicianPmFormRouteImport } from './routes/technician/pm-form'
-import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
-import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
-import { Route as TechnicianHistoryRouteImport } from './routes/technician/history'
-import { Route as TechnicianHandoverStaffRouteImport } from './routes/technician/handover-staff'
-import { Route as TechnicianDisposedRouteImport } from './routes/technician/disposed'
-import { Route as TechnicianDisposalRouteImport } from './routes/technician/disposal'
-import { Route as TechnicianDeployRouteImport } from './routes/technician/deploy'
-import { Route as TechnicianDashboardRouteImport } from './routes/technician/dashboard'
-import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bulk-import'
-import { Route as TechnicianAvRouteImport } from './routes/technician/av'
-import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
-import { Route as DisposalUnitHistoryRouteImport } from './routes/disposal-unit/history'
-import { Route as DisposalUnitDisposalFormRouteImport } from './routes/disposal-unit/disposal-form'
-import { Route as DisposalUnitDisposalRouteImport } from './routes/disposal-unit/disposal'
-import { Route as DisposalUnitDashboardRouteImport } from './routes/disposal-unit/dashboard'
-import { Route as AdminUsersRouteImport } from './routes/admin/users'
-import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
-import { Route as AdminRequestRouteImport } from './routes/admin/request'
-import { Route as AdminPromptRouteImport } from './routes/admin/prompt'
-import { Route as AdminNetworkRouteImport } from './routes/admin/network'
-import { Route as AdminLaptopRouteImport } from './routes/admin/laptop'
-import { Route as AdminExportRouteImport } from './routes/admin/export'
-import { Route as AdminDisposedRouteImport } from './routes/admin/disposed'
-import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminAvRouteImport } from './routes/admin/av'
-import { Route as ApiV1ProfileRouteImport } from './routes/api/v1/profile'
-import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
-import { Route as ApiV1DashboardRouteImport } from './routes/api/v1/dashboard'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as AdminDisposedRouteImport } from './routes/admin/disposed'
+import { Route as AdminExportRouteImport } from './routes/admin/export'
+import { Route as AdminLaptopRouteImport } from './routes/admin/laptop'
+import { Route as AdminNetworkRouteImport } from './routes/admin/network'
+import { Route as AdminPromptRouteImport } from './routes/admin/prompt'
+import { Route as AdminRequestRouteImport } from './routes/admin/request'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as DisposalUnitDashboardRouteImport } from './routes/disposal-unit/dashboard'
+import { Route as DisposalUnitDisposalRouteImport } from './routes/disposal-unit/disposal'
+import { Route as DisposalUnitDisposalFormRouteImport } from './routes/disposal-unit/disposal-form'
+import { Route as DisposalUnitHistoryRouteImport } from './routes/disposal-unit/history'
+import { Route as TechnicianAddAssetRouteImport } from './routes/technician/add-asset'
+import { Route as TechnicianAvRouteImport } from './routes/technician/av'
+import { Route as TechnicianBulkImportRouteImport } from './routes/technician/bulk-import'
+import { Route as TechnicianDashboardRouteImport } from './routes/technician/dashboard'
+import { Route as TechnicianDeployRouteImport } from './routes/technician/deploy'
+import { Route as TechnicianDisposalRouteImport } from './routes/technician/disposal'
+import { Route as TechnicianDisposedRouteImport } from './routes/technician/disposed'
+import { Route as TechnicianHandoverStaffRouteImport } from './routes/technician/handover-staff'
+import { Route as TechnicianHistoryRouteImport } from './routes/technician/history'
+import { Route as TechnicianLaptopRouteImport } from './routes/technician/laptop'
+import { Route as TechnicianNetworkRouteImport } from './routes/technician/network'
+import { Route as TechnicianPmFormRouteImport } from './routes/technician/pm-form'
+import { Route as TechnicianPreDisposedRouteImport } from './routes/technician/pre-disposed'
+import { Route as TechnicianPreventiveMaintenanceRouteImport } from './routes/technician/preventive-maintenance'
+import { Route as TechnicianRepairRouteImport } from './routes/technician/repair'
+import { Route as TechnicianReportRouteImport } from './routes/technician/report'
+import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
+import { Route as TechnicianRequestLogRouteImport } from './routes/technician/request-log'
+import { Route as TechnicianRequestViewRouteImport } from './routes/technician/request-view'
+import { Route as TechnicianRequestsRouteImport } from './routes/technician/requests'
+import { Route as TechnicianReturnRouteImport } from './routes/technician/return'
+import { Route as TechnicianWarrantyRouteImport } from './routes/technician/warranty'
+import { Route as UserEditProfileRouteImport } from './routes/user/edit-profile'
+import { Route as UserHistoryRouteImport } from './routes/user/history'
+import { Route as UserRequestRouteImport } from './routes/user/request'
 import { Route as ApiCronOverdueReturnEmailsRouteImport } from './routes/api/cron/overdue-return-emails'
-import { Route as ApiV1StaffIndexRouteImport } from './routes/api/v1/staff.index'
-import { Route as ApiV1RequestsIndexRouteImport } from './routes/api/v1/requests.index'
-import { Route as ApiV1AssetsIndexRouteImport } from './routes/api/v1/assets.index'
-import { Route as TechnicianAssetKindAssetIdRouteImport } from './routes/technician/asset.$kind.$assetId'
-import { Route as ApiV1RequestsSlotUnavailableRouteImport } from './routes/api/v1/requests.slot-unavailable'
-import { Route as ApiV1RequestsSlotNotTakenRouteImport } from './routes/api/v1/requests.slot-not-taken'
-import { Route as ApiV1RequestsReturnRouteImport } from './routes/api/v1/requests.return'
-import { Route as ApiV1RequestsRejectRouteImport } from './routes/api/v1/requests.reject'
-import { Route as ApiV1RequestsPoolRouteImport } from './routes/api/v1/requests.pool'
-import { Route as ApiV1RequestsPendingRouteImport } from './routes/api/v1/requests.pending'
-import { Route as ApiV1RequestsLogRouteImport } from './routes/api/v1/requests.log'
-import { Route as ApiV1RequestsCheckoutRouteImport } from './routes/api/v1/requests.checkout'
-import { Route as ApiV1RequestsCancelUnavailableRouteImport } from './routes/api/v1/requests.cancel-unavailable'
-import { Route as ApiV1RequestsCancelNotTakenRouteImport } from './routes/api/v1/requests.cancel-not-taken'
-import { Route as ApiV1RequestsBookRouteImport } from './routes/api/v1/requests.book'
-import { Route as ApiV1AuthRefreshRouteImport } from './routes/api/v1/auth.refresh'
-import { Route as ApiV1AuthMeRouteImport } from './routes/api/v1/auth.me'
-import { Route as ApiV1AuthLogoutRouteImport } from './routes/api/v1/auth.logout'
-import { Route as ApiV1AuthDevLoginRouteImport } from './routes/api/v1/auth.dev-login'
-import { Route as ApiV1AssetsLookupRouteImport } from './routes/api/v1/assets.lookup'
-import { Route as ApiV1AdminDashboardRouteImport } from './routes/api/v1/admin.dashboard'
-import { Route as ApiAuthSessionPingRouteImport } from './routes/api/auth/session.ping'
-import { Route as ApiAuthMicrosoftCallbackRouteImport } from './routes/api/auth/microsoft.callback'
+import { Route as ApiV1DashboardRouteImport } from './routes/api/v1/dashboard'
+import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
+import { Route as ApiV1ProfileRouteImport } from './routes/api/v1/profile'
 import { Route as AdminAssetKindAssetIdRouteImport } from './routes/admin/asset.$kind.$assetId'
-import { Route as UploadPictureKindAssetIdFileNameRouteImport } from './routes/upload/picture.$kind.$assetId.$fileName'
-import { Route as UploadDisposeYearBatchFileNameRouteImport } from './routes/upload/dispose.$year.$batch.$fileName'
-import { Route as ApiV1RequestsPoolRemoveRouteImport } from './routes/api/v1/requests.pool.remove'
-import { Route as ApiV1RequestsPoolMarkRouteImport } from './routes/api/v1/requests.pool.mark'
-import { Route as ApiV1AuthMicrosoftTokenRouteImport } from './routes/api/v1/auth.microsoft.token'
-import { Route as ApiV1AuthMicrosoftStartRouteImport } from './routes/api/v1/auth.microsoft.start'
+import { Route as ApiAuthMicrosoftCallbackRouteImport } from './routes/api/auth/microsoft.callback'
+import { Route as ApiAuthSessionPingRouteImport } from './routes/api/auth/session.ping'
+import { Route as ApiV1AdminDashboardRouteImport } from './routes/api/v1/admin.dashboard'
+import { Route as ApiV1AssetsIndexRouteImport } from './routes/api/v1/assets.index'
+import { Route as ApiV1AssetsLookupRouteImport } from './routes/api/v1/assets.lookup'
+import { Route as ApiV1AuthDevLoginRouteImport } from './routes/api/v1/auth.dev-login'
+import { Route as ApiV1AuthLogoutRouteImport } from './routes/api/v1/auth.logout'
+import { Route as ApiV1AuthMeRouteImport } from './routes/api/v1/auth.me'
+import { Route as ApiV1AuthRefreshRouteImport } from './routes/api/v1/auth.refresh'
+import { Route as ApiV1RequestsIndexRouteImport } from './routes/api/v1/requests.index'
+import { Route as ApiV1RequestsBookRouteImport } from './routes/api/v1/requests.book'
+import { Route as ApiV1RequestsCancelNotTakenRouteImport } from './routes/api/v1/requests.cancel-not-taken'
+import { Route as ApiV1RequestsCancelUnavailableRouteImport } from './routes/api/v1/requests.cancel-unavailable'
+import { Route as ApiV1RequestsCheckoutRouteImport } from './routes/api/v1/requests.checkout'
+import { Route as ApiV1RequestsLogRouteImport } from './routes/api/v1/requests.log'
+import { Route as ApiV1RequestsPendingRouteImport } from './routes/api/v1/requests.pending'
+import { Route as ApiV1RequestsPoolRouteImport } from './routes/api/v1/requests.pool'
+import { Route as ApiV1RequestsRejectRouteImport } from './routes/api/v1/requests.reject'
+import { Route as ApiV1RequestsReturnRouteImport } from './routes/api/v1/requests.return'
+import { Route as ApiV1RequestsSlotNotTakenRouteImport } from './routes/api/v1/requests.slot-not-taken'
+import { Route as ApiV1RequestsSlotUnavailableRouteImport } from './routes/api/v1/requests.slot-unavailable'
+import { Route as ApiV1StaffIndexRouteImport } from './routes/api/v1/staff.index'
+import { Route as TechnicianAssetKindAssetIdRouteImport } from './routes/technician/asset.$kind.$assetId'
 import { Route as ApiV1AssetsKindAssetIdRouteImport } from './routes/api/v1/assets.$kind.$assetId'
+import { Route as ApiV1AuthMicrosoftStartRouteImport } from './routes/api/v1/auth.microsoft.start'
+import { Route as ApiV1AuthMicrosoftTokenRouteImport } from './routes/api/v1/auth.microsoft.token'
+import { Route as ApiV1RequestsPoolMarkRouteImport } from './routes/api/v1/requests.pool.mark'
+import { Route as ApiV1RequestsPoolRemoveRouteImport } from './routes/api/v1/requests.pool.remove'
+import { Route as UploadDisposeYearBatchFileNameRouteImport } from './routes/upload/dispose.$year.$batch.$fileName'
+import { Route as UploadPictureKindAssetIdFileNameRouteImport } from './routes/upload/picture.$kind.$assetId.$fileName'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UserRequestRoute = UserRequestRouteImport.update({
-  id: '/user/request',
-  path: '/user/request',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UserHistoryRoute = UserHistoryRouteImport.update({
-  id: '/user/history',
-  path: '/user/history',
+const AdminAvRoute = AdminAvRouteImport.update({
+  id: '/admin/av',
+  path: '/admin/av',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UserEditProfileRoute = UserEditProfileRouteImport.update({
-  id: '/user/edit-profile',
-  path: '/user/edit-profile',
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianWarrantyRoute = TechnicianWarrantyRouteImport.update({
-  id: '/technician/warranty',
-  path: '/technician/warranty',
+const AdminDisposedRoute = AdminDisposedRouteImport.update({
+  id: '/admin/disposed',
+  path: '/admin/disposed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianReturnRoute = TechnicianReturnRouteImport.update({
-  id: '/technician/return',
-  path: '/technician/return',
+const AdminExportRoute = AdminExportRouteImport.update({
+  id: '/admin/export',
+  path: '/admin/export',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianRequestsRoute = TechnicianRequestsRouteImport.update({
-  id: '/technician/requests',
-  path: '/technician/requests',
+const AdminLaptopRoute = AdminLaptopRouteImport.update({
+  id: '/admin/laptop',
+  path: '/admin/laptop',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianRequestViewRoute = TechnicianRequestViewRouteImport.update({
-  id: '/technician/request-view',
-  path: '/technician/request-view',
+const AdminNetworkRoute = AdminNetworkRouteImport.update({
+  id: '/admin/network',
+  path: '/admin/network',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianRequestLogRoute = TechnicianRequestLogRouteImport.update({
-  id: '/technician/request-log',
-  path: '/technician/request-log',
+const AdminPromptRoute = AdminPromptRouteImport.update({
+  id: '/admin/prompt',
+  path: '/admin/prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianRequestAssetsRoute = TechnicianRequestAssetsRouteImport.update({
-  id: '/technician/request-assets',
-  path: '/technician/request-assets',
+const AdminRequestRoute = AdminRequestRouteImport.update({
+  id: '/admin/request',
+  path: '/admin/request',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianReportRoute = TechnicianReportRouteImport.update({
-  id: '/technician/report',
-  path: '/technician/report',
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianRepairRoute = TechnicianRepairRouteImport.update({
-  id: '/technician/repair',
-  path: '/technician/repair',
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianPreventiveMaintenanceRoute =
-  TechnicianPreventiveMaintenanceRouteImport.update({
-    id: '/technician/preventive-maintenance',
-    path: '/technician/preventive-maintenance',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const TechnicianPreDisposedRoute = TechnicianPreDisposedRouteImport.update({
-  id: '/technician/pre-disposed',
-  path: '/technician/pre-disposed',
+const DisposalUnitDashboardRoute = DisposalUnitDashboardRouteImport.update({
+  id: '/disposal-unit/dashboard',
+  path: '/disposal-unit/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianPmFormRoute = TechnicianPmFormRouteImport.update({
-  id: '/technician/pm-form',
-  path: '/technician/pm-form',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianNetworkRoute = TechnicianNetworkRouteImport.update({
-  id: '/technician/network',
-  path: '/technician/network',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianLaptopRoute = TechnicianLaptopRouteImport.update({
-  id: '/technician/laptop',
-  path: '/technician/laptop',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianHistoryRoute = TechnicianHistoryRouteImport.update({
-  id: '/technician/history',
-  path: '/technician/history',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianHandoverStaffRoute = TechnicianHandoverStaffRouteImport.update({
-  id: '/technician/handover-staff',
-  path: '/technician/handover-staff',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianDisposedRoute = TechnicianDisposedRouteImport.update({
-  id: '/technician/disposed',
-  path: '/technician/disposed',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianDisposalRoute = TechnicianDisposalRouteImport.update({
-  id: '/technician/disposal',
-  path: '/technician/disposal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianDeployRoute = TechnicianDeployRouteImport.update({
-  id: '/technician/deploy',
-  path: '/technician/deploy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianDashboardRoute = TechnicianDashboardRouteImport.update({
-  id: '/technician/dashboard',
-  path: '/technician/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianBulkImportRoute = TechnicianBulkImportRouteImport.update({
-  id: '/technician/bulk-import',
-  path: '/technician/bulk-import',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianAvRoute = TechnicianAvRouteImport.update({
-  id: '/technician/av',
-  path: '/technician/av',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianAddAssetRoute = TechnicianAddAssetRouteImport.update({
-  id: '/technician/add-asset',
-  path: '/technician/add-asset',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DisposalUnitHistoryRoute = DisposalUnitHistoryRouteImport.update({
-  id: '/disposal-unit/history',
-  path: '/disposal-unit/history',
+const DisposalUnitDisposalRoute = DisposalUnitDisposalRouteImport.update({
+  id: '/disposal-unit/disposal',
+  path: '/disposal-unit/disposal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DisposalUnitDisposalFormRoute =
@@ -233,79 +162,135 @@ const DisposalUnitDisposalFormRoute =
     path: '/disposal-unit/disposal-form',
     getParentRoute: () => rootRouteImport,
   } as any)
-const DisposalUnitDisposalRoute = DisposalUnitDisposalRouteImport.update({
-  id: '/disposal-unit/disposal',
-  path: '/disposal-unit/disposal',
+const DisposalUnitHistoryRoute = DisposalUnitHistoryRouteImport.update({
+  id: '/disposal-unit/history',
+  path: '/disposal-unit/history',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DisposalUnitDashboardRoute = DisposalUnitDashboardRouteImport.update({
-  id: '/disposal-unit/dashboard',
-  path: '/disposal-unit/dashboard',
+const TechnicianAddAssetRoute = TechnicianAddAssetRouteImport.update({
+  id: '/technician/add-asset',
+  path: '/technician/add-asset',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
+const TechnicianAvRoute = TechnicianAvRouteImport.update({
+  id: '/technician/av',
+  path: '/technician/av',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/admin/settings',
-  path: '/admin/settings',
+const TechnicianBulkImportRoute = TechnicianBulkImportRouteImport.update({
+  id: '/technician/bulk-import',
+  path: '/technician/bulk-import',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRequestRoute = AdminRequestRouteImport.update({
-  id: '/admin/request',
-  path: '/admin/request',
+const TechnicianDashboardRoute = TechnicianDashboardRouteImport.update({
+  id: '/technician/dashboard',
+  path: '/technician/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminPromptRoute = AdminPromptRouteImport.update({
-  id: '/admin/prompt',
-  path: '/admin/prompt',
+const TechnicianDeployRoute = TechnicianDeployRouteImport.update({
+  id: '/technician/deploy',
+  path: '/technician/deploy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminNetworkRoute = AdminNetworkRouteImport.update({
-  id: '/admin/network',
-  path: '/admin/network',
+const TechnicianDisposalRoute = TechnicianDisposalRouteImport.update({
+  id: '/technician/disposal',
+  path: '/technician/disposal',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminLaptopRoute = AdminLaptopRouteImport.update({
-  id: '/admin/laptop',
-  path: '/admin/laptop',
+const TechnicianDisposedRoute = TechnicianDisposedRouteImport.update({
+  id: '/technician/disposed',
+  path: '/technician/disposed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminExportRoute = AdminExportRouteImport.update({
-  id: '/admin/export',
-  path: '/admin/export',
+const TechnicianHandoverStaffRoute = TechnicianHandoverStaffRouteImport.update({
+  id: '/technician/handover-staff',
+  path: '/technician/handover-staff',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminDisposedRoute = AdminDisposedRouteImport.update({
-  id: '/admin/disposed',
-  path: '/admin/disposed',
+const TechnicianHistoryRoute = TechnicianHistoryRouteImport.update({
+  id: '/technician/history',
+  path: '/technician/history',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminDashboardRoute = AdminDashboardRouteImport.update({
-  id: '/admin/dashboard',
-  path: '/admin/dashboard',
+const TechnicianLaptopRoute = TechnicianLaptopRouteImport.update({
+  id: '/technician/laptop',
+  path: '/technician/laptop',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminAvRoute = AdminAvRouteImport.update({
-  id: '/admin/av',
-  path: '/admin/av',
+const TechnicianNetworkRoute = TechnicianNetworkRouteImport.update({
+  id: '/technician/network',
+  path: '/technician/network',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1ProfileRoute = ApiV1ProfileRouteImport.update({
-  id: '/api/v1/profile',
-  path: '/api/v1/profile',
+const TechnicianPmFormRoute = TechnicianPmFormRouteImport.update({
+  id: '/technician/pm-form',
+  path: '/technician/pm-form',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1HealthRoute = ApiV1HealthRouteImport.update({
-  id: '/api/v1/health',
-  path: '/api/v1/health',
+const TechnicianPreDisposedRoute = TechnicianPreDisposedRouteImport.update({
+  id: '/technician/pre-disposed',
+  path: '/technician/pre-disposed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1DashboardRoute = ApiV1DashboardRouteImport.update({
-  id: '/api/v1/dashboard',
-  path: '/api/v1/dashboard',
+const TechnicianPreventiveMaintenanceRoute =
+  TechnicianPreventiveMaintenanceRouteImport.update({
+    id: '/technician/preventive-maintenance',
+    path: '/technician/preventive-maintenance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TechnicianRepairRoute = TechnicianRepairRouteImport.update({
+  id: '/technician/repair',
+  path: '/technician/repair',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianReportRoute = TechnicianReportRouteImport.update({
+  id: '/technician/report',
+  path: '/technician/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianRequestAssetsRoute = TechnicianRequestAssetsRouteImport.update({
+  id: '/technician/request-assets',
+  path: '/technician/request-assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianRequestLogRoute = TechnicianRequestLogRouteImport.update({
+  id: '/technician/request-log',
+  path: '/technician/request-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianRequestViewRoute = TechnicianRequestViewRouteImport.update({
+  id: '/technician/request-view',
+  path: '/technician/request-view',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianRequestsRoute = TechnicianRequestsRouteImport.update({
+  id: '/technician/requests',
+  path: '/technician/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianReturnRoute = TechnicianReturnRouteImport.update({
+  id: '/technician/return',
+  path: '/technician/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianWarrantyRoute = TechnicianWarrantyRouteImport.update({
+  id: '/technician/warranty',
+  path: '/technician/warranty',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserEditProfileRoute = UserEditProfileRouteImport.update({
+  id: '/user/edit-profile',
+  path: '/user/edit-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserHistoryRoute = UserHistoryRouteImport.update({
+  id: '/user/history',
+  path: '/user/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserRequestRoute = UserRequestRouteImport.update({
+  id: '/user/request',
+  path: '/user/request',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronOverdueReturnEmailsRoute =
@@ -314,119 +299,24 @@ const ApiCronOverdueReturnEmailsRoute =
     path: '/api/cron/overdue-return-emails',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiV1StaffIndexRoute = ApiV1StaffIndexRouteImport.update({
-  id: '/api/v1/staff/',
-  path: '/api/v1/staff/',
+const ApiV1DashboardRoute = ApiV1DashboardRouteImport.update({
+  id: '/api/v1/dashboard',
+  path: '/api/v1/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1RequestsIndexRoute = ApiV1RequestsIndexRouteImport.update({
-  id: '/api/v1/requests/',
-  path: '/api/v1/requests/',
+const ApiV1HealthRoute = ApiV1HealthRouteImport.update({
+  id: '/api/v1/health',
+  path: '/api/v1/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1AssetsIndexRoute = ApiV1AssetsIndexRouteImport.update({
-  id: '/api/v1/assets/',
-  path: '/api/v1/assets/',
+const ApiV1ProfileRoute = ApiV1ProfileRouteImport.update({
+  id: '/api/v1/profile',
+  path: '/api/v1/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnicianAssetKindAssetIdRoute =
-  TechnicianAssetKindAssetIdRouteImport.update({
-    id: '/technician/asset/$kind/$assetId',
-    path: '/technician/asset/$kind/$assetId',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1RequestsSlotUnavailableRoute =
-  ApiV1RequestsSlotUnavailableRouteImport.update({
-    id: '/api/v1/requests/slot-unavailable',
-    path: '/api/v1/requests/slot-unavailable',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1RequestsSlotNotTakenRoute =
-  ApiV1RequestsSlotNotTakenRouteImport.update({
-    id: '/api/v1/requests/slot-not-taken',
-    path: '/api/v1/requests/slot-not-taken',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1RequestsReturnRoute = ApiV1RequestsReturnRouteImport.update({
-  id: '/api/v1/requests/return',
-  path: '/api/v1/requests/return',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsRejectRoute = ApiV1RequestsRejectRouteImport.update({
-  id: '/api/v1/requests/reject',
-  path: '/api/v1/requests/reject',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsPoolRoute = ApiV1RequestsPoolRouteImport.update({
-  id: '/api/v1/requests/pool',
-  path: '/api/v1/requests/pool',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsPendingRoute = ApiV1RequestsPendingRouteImport.update({
-  id: '/api/v1/requests/pending',
-  path: '/api/v1/requests/pending',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsLogRoute = ApiV1RequestsLogRouteImport.update({
-  id: '/api/v1/requests/log',
-  path: '/api/v1/requests/log',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsCheckoutRoute = ApiV1RequestsCheckoutRouteImport.update({
-  id: '/api/v1/requests/checkout',
-  path: '/api/v1/requests/checkout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsCancelUnavailableRoute =
-  ApiV1RequestsCancelUnavailableRouteImport.update({
-    id: '/api/v1/requests/cancel-unavailable',
-    path: '/api/v1/requests/cancel-unavailable',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1RequestsCancelNotTakenRoute =
-  ApiV1RequestsCancelNotTakenRouteImport.update({
-    id: '/api/v1/requests/cancel-not-taken',
-    path: '/api/v1/requests/cancel-not-taken',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1RequestsBookRoute = ApiV1RequestsBookRouteImport.update({
-  id: '/api/v1/requests/book',
-  path: '/api/v1/requests/book',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthRefreshRoute = ApiV1AuthRefreshRouteImport.update({
-  id: '/api/v1/auth/refresh',
-  path: '/api/v1/auth/refresh',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthMeRoute = ApiV1AuthMeRouteImport.update({
-  id: '/api/v1/auth/me',
-  path: '/api/v1/auth/me',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthLogoutRoute = ApiV1AuthLogoutRouteImport.update({
-  id: '/api/v1/auth/logout',
-  path: '/api/v1/auth/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthDevLoginRoute = ApiV1AuthDevLoginRouteImport.update({
-  id: '/api/v1/auth/dev-login',
-  path: '/api/v1/auth/dev-login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AssetsLookupRoute = ApiV1AssetsLookupRouteImport.update({
-  id: '/api/v1/assets/lookup',
-  path: '/api/v1/assets/lookup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AdminDashboardRoute = ApiV1AdminDashboardRouteImport.update({
-  id: '/api/v1/admin/dashboard',
-  path: '/api/v1/admin/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthSessionPingRoute = ApiAuthSessionPingRouteImport.update({
-  id: '/api/auth/session/ping',
-  path: '/api/auth/session/ping',
+const AdminAssetKindAssetIdRoute = AdminAssetKindAssetIdRouteImport.update({
+  id: '/admin/asset/$kind/$assetId',
+  path: '/admin/asset/$kind/$assetId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthMicrosoftCallbackRoute =
@@ -435,36 +325,124 @@ const ApiAuthMicrosoftCallbackRoute =
     path: '/api/auth/microsoft/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminAssetKindAssetIdRoute = AdminAssetKindAssetIdRouteImport.update({
-  id: '/admin/asset/$kind/$assetId',
-  path: '/admin/asset/$kind/$assetId',
+const ApiAuthSessionPingRoute = ApiAuthSessionPingRouteImport.update({
+  id: '/api/auth/session/ping',
+  path: '/api/auth/session/ping',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UploadPictureKindAssetIdFileNameRoute =
-  UploadPictureKindAssetIdFileNameRouteImport.update({
-    id: '/upload/picture/$kind/$assetId/$fileName',
-    path: '/upload/picture/$kind/$assetId/$fileName',
+const ApiV1AdminDashboardRoute = ApiV1AdminDashboardRouteImport.update({
+  id: '/api/v1/admin/dashboard',
+  path: '/api/v1/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AssetsIndexRoute = ApiV1AssetsIndexRouteImport.update({
+  id: '/api/v1/assets/',
+  path: '/api/v1/assets/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AssetsLookupRoute = ApiV1AssetsLookupRouteImport.update({
+  id: '/api/v1/assets/lookup',
+  path: '/api/v1/assets/lookup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AuthDevLoginRoute = ApiV1AuthDevLoginRouteImport.update({
+  id: '/api/v1/auth/dev-login',
+  path: '/api/v1/auth/dev-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AuthLogoutRoute = ApiV1AuthLogoutRouteImport.update({
+  id: '/api/v1/auth/logout',
+  path: '/api/v1/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AuthMeRoute = ApiV1AuthMeRouteImport.update({
+  id: '/api/v1/auth/me',
+  path: '/api/v1/auth/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1AuthRefreshRoute = ApiV1AuthRefreshRouteImport.update({
+  id: '/api/v1/auth/refresh',
+  path: '/api/v1/auth/refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RequestsIndexRoute = ApiV1RequestsIndexRouteImport.update({
+  id: '/api/v1/requests/',
+  path: '/api/v1/requests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RequestsBookRoute = ApiV1RequestsBookRouteImport.update({
+  id: '/api/v1/requests/book',
+  path: '/api/v1/requests/book',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RequestsCancelNotTakenRoute =
+  ApiV1RequestsCancelNotTakenRouteImport.update({
+    id: '/api/v1/requests/cancel-not-taken',
+    path: '/api/v1/requests/cancel-not-taken',
     getParentRoute: () => rootRouteImport,
   } as any)
-const UploadDisposeYearBatchFileNameRoute =
-  UploadDisposeYearBatchFileNameRouteImport.update({
-    id: '/upload/dispose/$year/$batch/$fileName',
-    path: '/upload/dispose/$year/$batch/$fileName',
+const ApiV1RequestsCancelUnavailableRoute =
+  ApiV1RequestsCancelUnavailableRouteImport.update({
+    id: '/api/v1/requests/cancel-unavailable',
+    path: '/api/v1/requests/cancel-unavailable',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiV1RequestsPoolRemoveRoute = ApiV1RequestsPoolRemoveRouteImport.update({
-  id: '/remove',
-  path: '/remove',
-  getParentRoute: () => ApiV1RequestsPoolRoute,
+const ApiV1RequestsCheckoutRoute = ApiV1RequestsCheckoutRouteImport.update({
+  id: '/api/v1/requests/checkout',
+  path: '/api/v1/requests/checkout',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1RequestsPoolMarkRoute = ApiV1RequestsPoolMarkRouteImport.update({
-  id: '/mark',
-  path: '/mark',
-  getParentRoute: () => ApiV1RequestsPoolRoute,
+const ApiV1RequestsLogRoute = ApiV1RequestsLogRouteImport.update({
+  id: '/api/v1/requests/log',
+  path: '/api/v1/requests/log',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1AuthMicrosoftTokenRoute = ApiV1AuthMicrosoftTokenRouteImport.update({
-  id: '/api/v1/auth/microsoft/token',
-  path: '/api/v1/auth/microsoft/token',
+const ApiV1RequestsPendingRoute = ApiV1RequestsPendingRouteImport.update({
+  id: '/api/v1/requests/pending',
+  path: '/api/v1/requests/pending',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RequestsPoolRoute = ApiV1RequestsPoolRouteImport.update({
+  id: '/api/v1/requests/pool',
+  path: '/api/v1/requests/pool',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RequestsRejectRoute = ApiV1RequestsRejectRouteImport.update({
+  id: '/api/v1/requests/reject',
+  path: '/api/v1/requests/reject',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RequestsReturnRoute = ApiV1RequestsReturnRouteImport.update({
+  id: '/api/v1/requests/return',
+  path: '/api/v1/requests/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1RequestsSlotNotTakenRoute =
+  ApiV1RequestsSlotNotTakenRouteImport.update({
+    id: '/api/v1/requests/slot-not-taken',
+    path: '/api/v1/requests/slot-not-taken',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiV1RequestsSlotUnavailableRoute =
+  ApiV1RequestsSlotUnavailableRouteImport.update({
+    id: '/api/v1/requests/slot-unavailable',
+    path: '/api/v1/requests/slot-unavailable',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiV1StaffIndexRoute = ApiV1StaffIndexRouteImport.update({
+  id: '/api/v1/staff/',
+  path: '/api/v1/staff/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicianAssetKindAssetIdRoute =
+  TechnicianAssetKindAssetIdRouteImport.update({
+    id: '/technician/asset/$kind/$assetId',
+    path: '/technician/asset/$kind/$assetId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiV1AssetsKindAssetIdRoute = ApiV1AssetsKindAssetIdRouteImport.update({
+  id: '/api/v1/assets/$kind/$assetId',
+  path: '/api/v1/assets/$kind/$assetId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiV1AuthMicrosoftStartRoute = ApiV1AuthMicrosoftStartRouteImport.update({
@@ -472,11 +450,33 @@ const ApiV1AuthMicrosoftStartRoute = ApiV1AuthMicrosoftStartRouteImport.update({
   path: '/api/v1/auth/microsoft/start',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1AssetsKindAssetIdRoute = ApiV1AssetsKindAssetIdRouteImport.update({
-  id: '/api/v1/assets/$kind/$assetId',
-  path: '/api/v1/assets/$kind/$assetId',
+const ApiV1AuthMicrosoftTokenRoute = ApiV1AuthMicrosoftTokenRouteImport.update({
+  id: '/api/v1/auth/microsoft/token',
+  path: '/api/v1/auth/microsoft/token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1RequestsPoolMarkRoute = ApiV1RequestsPoolMarkRouteImport.update({
+  id: '/mark',
+  path: '/mark',
+  getParentRoute: () => ApiV1RequestsPoolRoute,
+} as any)
+const ApiV1RequestsPoolRemoveRoute = ApiV1RequestsPoolRemoveRouteImport.update({
+  id: '/remove',
+  path: '/remove',
+  getParentRoute: () => ApiV1RequestsPoolRoute,
+} as any)
+const UploadDisposeYearBatchFileNameRoute =
+  UploadDisposeYearBatchFileNameRouteImport.update({
+    id: '/upload/dispose/$year/$batch/$fileName',
+    path: '/upload/dispose/$year/$batch/$fileName',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const UploadPictureKindAssetIdFileNameRoute =
+  UploadPictureKindAssetIdFileNameRouteImport.update({
+    id: '/upload/picture/$kind/$assetId/$fileName',
+    path: '/upload/picture/$kind/$assetId/$fileName',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -1029,13 +1029,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -1043,270 +1036,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/user/request': {
-      id: '/user/request'
-      path: '/user/request'
-      fullPath: '/user/request'
-      preLoaderRoute: typeof UserRequestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/user/history': {
-      id: '/user/history'
-      path: '/user/history'
-      fullPath: '/user/history'
-      preLoaderRoute: typeof UserHistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/user/edit-profile': {
-      id: '/user/edit-profile'
-      path: '/user/edit-profile'
-      fullPath: '/user/edit-profile'
-      preLoaderRoute: typeof UserEditProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/warranty': {
-      id: '/technician/warranty'
-      path: '/technician/warranty'
-      fullPath: '/technician/warranty'
-      preLoaderRoute: typeof TechnicianWarrantyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/return': {
-      id: '/technician/return'
-      path: '/technician/return'
-      fullPath: '/technician/return'
-      preLoaderRoute: typeof TechnicianReturnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/requests': {
-      id: '/technician/requests'
-      path: '/technician/requests'
-      fullPath: '/technician/requests'
-      preLoaderRoute: typeof TechnicianRequestsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/request-view': {
-      id: '/technician/request-view'
-      path: '/technician/request-view'
-      fullPath: '/technician/request-view'
-      preLoaderRoute: typeof TechnicianRequestViewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/request-log': {
-      id: '/technician/request-log'
-      path: '/technician/request-log'
-      fullPath: '/technician/request-log'
-      preLoaderRoute: typeof TechnicianRequestLogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/request-assets': {
-      id: '/technician/request-assets'
-      path: '/technician/request-assets'
-      fullPath: '/technician/request-assets'
-      preLoaderRoute: typeof TechnicianRequestAssetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/report': {
-      id: '/technician/report'
-      path: '/technician/report'
-      fullPath: '/technician/report'
-      preLoaderRoute: typeof TechnicianReportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/repair': {
-      id: '/technician/repair'
-      path: '/technician/repair'
-      fullPath: '/technician/repair'
-      preLoaderRoute: typeof TechnicianRepairRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/preventive-maintenance': {
-      id: '/technician/preventive-maintenance'
-      path: '/technician/preventive-maintenance'
-      fullPath: '/technician/preventive-maintenance'
-      preLoaderRoute: typeof TechnicianPreventiveMaintenanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/pre-disposed': {
-      id: '/technician/pre-disposed'
-      path: '/technician/pre-disposed'
-      fullPath: '/technician/pre-disposed'
-      preLoaderRoute: typeof TechnicianPreDisposedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/pm-form': {
-      id: '/technician/pm-form'
-      path: '/technician/pm-form'
-      fullPath: '/technician/pm-form'
-      preLoaderRoute: typeof TechnicianPmFormRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/network': {
-      id: '/technician/network'
-      path: '/technician/network'
-      fullPath: '/technician/network'
-      preLoaderRoute: typeof TechnicianNetworkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/laptop': {
-      id: '/technician/laptop'
-      path: '/technician/laptop'
-      fullPath: '/technician/laptop'
-      preLoaderRoute: typeof TechnicianLaptopRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/history': {
-      id: '/technician/history'
-      path: '/technician/history'
-      fullPath: '/technician/history'
-      preLoaderRoute: typeof TechnicianHistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/handover-staff': {
-      id: '/technician/handover-staff'
-      path: '/technician/handover-staff'
-      fullPath: '/technician/handover-staff'
-      preLoaderRoute: typeof TechnicianHandoverStaffRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/disposed': {
-      id: '/technician/disposed'
-      path: '/technician/disposed'
-      fullPath: '/technician/disposed'
-      preLoaderRoute: typeof TechnicianDisposedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/disposal': {
-      id: '/technician/disposal'
-      path: '/technician/disposal'
-      fullPath: '/technician/disposal'
-      preLoaderRoute: typeof TechnicianDisposalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/deploy': {
-      id: '/technician/deploy'
-      path: '/technician/deploy'
-      fullPath: '/technician/deploy'
-      preLoaderRoute: typeof TechnicianDeployRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/dashboard': {
-      id: '/technician/dashboard'
-      path: '/technician/dashboard'
-      fullPath: '/technician/dashboard'
-      preLoaderRoute: typeof TechnicianDashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/bulk-import': {
-      id: '/technician/bulk-import'
-      path: '/technician/bulk-import'
-      fullPath: '/technician/bulk-import'
-      preLoaderRoute: typeof TechnicianBulkImportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/av': {
-      id: '/technician/av'
-      path: '/technician/av'
-      fullPath: '/technician/av'
-      preLoaderRoute: typeof TechnicianAvRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/add-asset': {
-      id: '/technician/add-asset'
-      path: '/technician/add-asset'
-      fullPath: '/technician/add-asset'
-      preLoaderRoute: typeof TechnicianAddAssetRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/disposal-unit/history': {
-      id: '/disposal-unit/history'
-      path: '/disposal-unit/history'
-      fullPath: '/disposal-unit/history'
-      preLoaderRoute: typeof DisposalUnitHistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/disposal-unit/disposal-form': {
-      id: '/disposal-unit/disposal-form'
-      path: '/disposal-unit/disposal-form'
-      fullPath: '/disposal-unit/disposal-form'
-      preLoaderRoute: typeof DisposalUnitDisposalFormRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/disposal-unit/disposal': {
-      id: '/disposal-unit/disposal'
-      path: '/disposal-unit/disposal'
-      fullPath: '/disposal-unit/disposal'
-      preLoaderRoute: typeof DisposalUnitDisposalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/disposal-unit/dashboard': {
-      id: '/disposal-unit/dashboard'
-      path: '/disposal-unit/dashboard'
-      fullPath: '/disposal-unit/dashboard'
-      preLoaderRoute: typeof DisposalUnitDashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/admin/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/request': {
-      id: '/admin/request'
-      path: '/admin/request'
-      fullPath: '/admin/request'
-      preLoaderRoute: typeof AdminRequestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/prompt': {
-      id: '/admin/prompt'
-      path: '/admin/prompt'
-      fullPath: '/admin/prompt'
-      preLoaderRoute: typeof AdminPromptRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/network': {
-      id: '/admin/network'
-      path: '/admin/network'
-      fullPath: '/admin/network'
-      preLoaderRoute: typeof AdminNetworkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/laptop': {
-      id: '/admin/laptop'
-      path: '/admin/laptop'
-      fullPath: '/admin/laptop'
-      preLoaderRoute: typeof AdminLaptopRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/export': {
-      id: '/admin/export'
-      path: '/admin/export'
-      fullPath: '/admin/export'
-      preLoaderRoute: typeof AdminExportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/disposed': {
-      id: '/admin/disposed'
-      path: '/admin/disposed'
-      fullPath: '/admin/disposed'
-      preLoaderRoute: typeof AdminDisposedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/dashboard': {
-      id: '/admin/dashboard'
-      path: '/admin/dashboard'
-      fullPath: '/admin/dashboard'
-      preLoaderRoute: typeof AdminDashboardRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/av': {
@@ -1316,25 +1050,270 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAvRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/profile': {
-      id: '/api/v1/profile'
-      path: '/api/v1/profile'
-      fullPath: '/api/v1/profile'
-      preLoaderRoute: typeof ApiV1ProfileRouteImport
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/health': {
-      id: '/api/v1/health'
-      path: '/api/v1/health'
-      fullPath: '/api/v1/health'
-      preLoaderRoute: typeof ApiV1HealthRouteImport
+    '/admin/disposed': {
+      id: '/admin/disposed'
+      path: '/admin/disposed'
+      fullPath: '/admin/disposed'
+      preLoaderRoute: typeof AdminDisposedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/dashboard': {
-      id: '/api/v1/dashboard'
-      path: '/api/v1/dashboard'
-      fullPath: '/api/v1/dashboard'
-      preLoaderRoute: typeof ApiV1DashboardRouteImport
+    '/admin/export': {
+      id: '/admin/export'
+      path: '/admin/export'
+      fullPath: '/admin/export'
+      preLoaderRoute: typeof AdminExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/laptop': {
+      id: '/admin/laptop'
+      path: '/admin/laptop'
+      fullPath: '/admin/laptop'
+      preLoaderRoute: typeof AdminLaptopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/network': {
+      id: '/admin/network'
+      path: '/admin/network'
+      fullPath: '/admin/network'
+      preLoaderRoute: typeof AdminNetworkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/prompt': {
+      id: '/admin/prompt'
+      path: '/admin/prompt'
+      fullPath: '/admin/prompt'
+      preLoaderRoute: typeof AdminPromptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/request': {
+      id: '/admin/request'
+      path: '/admin/request'
+      fullPath: '/admin/request'
+      preLoaderRoute: typeof AdminRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disposal-unit/dashboard': {
+      id: '/disposal-unit/dashboard'
+      path: '/disposal-unit/dashboard'
+      fullPath: '/disposal-unit/dashboard'
+      preLoaderRoute: typeof DisposalUnitDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disposal-unit/disposal': {
+      id: '/disposal-unit/disposal'
+      path: '/disposal-unit/disposal'
+      fullPath: '/disposal-unit/disposal'
+      preLoaderRoute: typeof DisposalUnitDisposalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disposal-unit/disposal-form': {
+      id: '/disposal-unit/disposal-form'
+      path: '/disposal-unit/disposal-form'
+      fullPath: '/disposal-unit/disposal-form'
+      preLoaderRoute: typeof DisposalUnitDisposalFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disposal-unit/history': {
+      id: '/disposal-unit/history'
+      path: '/disposal-unit/history'
+      fullPath: '/disposal-unit/history'
+      preLoaderRoute: typeof DisposalUnitHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/add-asset': {
+      id: '/technician/add-asset'
+      path: '/technician/add-asset'
+      fullPath: '/technician/add-asset'
+      preLoaderRoute: typeof TechnicianAddAssetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/av': {
+      id: '/technician/av'
+      path: '/technician/av'
+      fullPath: '/technician/av'
+      preLoaderRoute: typeof TechnicianAvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/bulk-import': {
+      id: '/technician/bulk-import'
+      path: '/technician/bulk-import'
+      fullPath: '/technician/bulk-import'
+      preLoaderRoute: typeof TechnicianBulkImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/dashboard': {
+      id: '/technician/dashboard'
+      path: '/technician/dashboard'
+      fullPath: '/technician/dashboard'
+      preLoaderRoute: typeof TechnicianDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/deploy': {
+      id: '/technician/deploy'
+      path: '/technician/deploy'
+      fullPath: '/technician/deploy'
+      preLoaderRoute: typeof TechnicianDeployRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/disposal': {
+      id: '/technician/disposal'
+      path: '/technician/disposal'
+      fullPath: '/technician/disposal'
+      preLoaderRoute: typeof TechnicianDisposalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/disposed': {
+      id: '/technician/disposed'
+      path: '/technician/disposed'
+      fullPath: '/technician/disposed'
+      preLoaderRoute: typeof TechnicianDisposedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/handover-staff': {
+      id: '/technician/handover-staff'
+      path: '/technician/handover-staff'
+      fullPath: '/technician/handover-staff'
+      preLoaderRoute: typeof TechnicianHandoverStaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/history': {
+      id: '/technician/history'
+      path: '/technician/history'
+      fullPath: '/technician/history'
+      preLoaderRoute: typeof TechnicianHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/laptop': {
+      id: '/technician/laptop'
+      path: '/technician/laptop'
+      fullPath: '/technician/laptop'
+      preLoaderRoute: typeof TechnicianLaptopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/network': {
+      id: '/technician/network'
+      path: '/technician/network'
+      fullPath: '/technician/network'
+      preLoaderRoute: typeof TechnicianNetworkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/pm-form': {
+      id: '/technician/pm-form'
+      path: '/technician/pm-form'
+      fullPath: '/technician/pm-form'
+      preLoaderRoute: typeof TechnicianPmFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/pre-disposed': {
+      id: '/technician/pre-disposed'
+      path: '/technician/pre-disposed'
+      fullPath: '/technician/pre-disposed'
+      preLoaderRoute: typeof TechnicianPreDisposedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/preventive-maintenance': {
+      id: '/technician/preventive-maintenance'
+      path: '/technician/preventive-maintenance'
+      fullPath: '/technician/preventive-maintenance'
+      preLoaderRoute: typeof TechnicianPreventiveMaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/repair': {
+      id: '/technician/repair'
+      path: '/technician/repair'
+      fullPath: '/technician/repair'
+      preLoaderRoute: typeof TechnicianRepairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/report': {
+      id: '/technician/report'
+      path: '/technician/report'
+      fullPath: '/technician/report'
+      preLoaderRoute: typeof TechnicianReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/request-assets': {
+      id: '/technician/request-assets'
+      path: '/technician/request-assets'
+      fullPath: '/technician/request-assets'
+      preLoaderRoute: typeof TechnicianRequestAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/request-log': {
+      id: '/technician/request-log'
+      path: '/technician/request-log'
+      fullPath: '/technician/request-log'
+      preLoaderRoute: typeof TechnicianRequestLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/request-view': {
+      id: '/technician/request-view'
+      path: '/technician/request-view'
+      fullPath: '/technician/request-view'
+      preLoaderRoute: typeof TechnicianRequestViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/requests': {
+      id: '/technician/requests'
+      path: '/technician/requests'
+      fullPath: '/technician/requests'
+      preLoaderRoute: typeof TechnicianRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/return': {
+      id: '/technician/return'
+      path: '/technician/return'
+      fullPath: '/technician/return'
+      preLoaderRoute: typeof TechnicianReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/warranty': {
+      id: '/technician/warranty'
+      path: '/technician/warranty'
+      fullPath: '/technician/warranty'
+      preLoaderRoute: typeof TechnicianWarrantyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/edit-profile': {
+      id: '/user/edit-profile'
+      path: '/user/edit-profile'
+      fullPath: '/user/edit-profile'
+      preLoaderRoute: typeof UserEditProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/history': {
+      id: '/user/history'
+      path: '/user/history'
+      fullPath: '/user/history'
+      preLoaderRoute: typeof UserHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/request': {
+      id: '/user/request'
+      path: '/user/request'
+      fullPath: '/user/request'
+      preLoaderRoute: typeof UserRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/overdue-return-emails': {
@@ -1344,165 +1323,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronOverdueReturnEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/staff/': {
-      id: '/api/v1/staff/'
-      path: '/api/v1/staff'
-      fullPath: '/api/v1/staff/'
-      preLoaderRoute: typeof ApiV1StaffIndexRouteImport
+    '/api/v1/dashboard': {
+      id: '/api/v1/dashboard'
+      path: '/api/v1/dashboard'
+      fullPath: '/api/v1/dashboard'
+      preLoaderRoute: typeof ApiV1DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/requests/': {
-      id: '/api/v1/requests/'
-      path: '/api/v1/requests'
-      fullPath: '/api/v1/requests/'
-      preLoaderRoute: typeof ApiV1RequestsIndexRouteImport
+    '/api/v1/health': {
+      id: '/api/v1/health'
+      path: '/api/v1/health'
+      fullPath: '/api/v1/health'
+      preLoaderRoute: typeof ApiV1HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/assets/': {
-      id: '/api/v1/assets/'
-      path: '/api/v1/assets'
-      fullPath: '/api/v1/assets/'
-      preLoaderRoute: typeof ApiV1AssetsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/asset/$kind/$assetId': {
-      id: '/technician/asset/$kind/$assetId'
-      path: '/technician/asset/$kind/$assetId'
-      fullPath: '/technician/asset/$kind/$assetId'
-      preLoaderRoute: typeof TechnicianAssetKindAssetIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/slot-unavailable': {
-      id: '/api/v1/requests/slot-unavailable'
-      path: '/api/v1/requests/slot-unavailable'
-      fullPath: '/api/v1/requests/slot-unavailable'
-      preLoaderRoute: typeof ApiV1RequestsSlotUnavailableRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/slot-not-taken': {
-      id: '/api/v1/requests/slot-not-taken'
-      path: '/api/v1/requests/slot-not-taken'
-      fullPath: '/api/v1/requests/slot-not-taken'
-      preLoaderRoute: typeof ApiV1RequestsSlotNotTakenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/return': {
-      id: '/api/v1/requests/return'
-      path: '/api/v1/requests/return'
-      fullPath: '/api/v1/requests/return'
-      preLoaderRoute: typeof ApiV1RequestsReturnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/reject': {
-      id: '/api/v1/requests/reject'
-      path: '/api/v1/requests/reject'
-      fullPath: '/api/v1/requests/reject'
-      preLoaderRoute: typeof ApiV1RequestsRejectRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/pool': {
-      id: '/api/v1/requests/pool'
-      path: '/api/v1/requests/pool'
-      fullPath: '/api/v1/requests/pool'
-      preLoaderRoute: typeof ApiV1RequestsPoolRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/pending': {
-      id: '/api/v1/requests/pending'
-      path: '/api/v1/requests/pending'
-      fullPath: '/api/v1/requests/pending'
-      preLoaderRoute: typeof ApiV1RequestsPendingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/log': {
-      id: '/api/v1/requests/log'
-      path: '/api/v1/requests/log'
-      fullPath: '/api/v1/requests/log'
-      preLoaderRoute: typeof ApiV1RequestsLogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/checkout': {
-      id: '/api/v1/requests/checkout'
-      path: '/api/v1/requests/checkout'
-      fullPath: '/api/v1/requests/checkout'
-      preLoaderRoute: typeof ApiV1RequestsCheckoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/cancel-unavailable': {
-      id: '/api/v1/requests/cancel-unavailable'
-      path: '/api/v1/requests/cancel-unavailable'
-      fullPath: '/api/v1/requests/cancel-unavailable'
-      preLoaderRoute: typeof ApiV1RequestsCancelUnavailableRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/cancel-not-taken': {
-      id: '/api/v1/requests/cancel-not-taken'
-      path: '/api/v1/requests/cancel-not-taken'
-      fullPath: '/api/v1/requests/cancel-not-taken'
-      preLoaderRoute: typeof ApiV1RequestsCancelNotTakenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/book': {
-      id: '/api/v1/requests/book'
-      path: '/api/v1/requests/book'
-      fullPath: '/api/v1/requests/book'
-      preLoaderRoute: typeof ApiV1RequestsBookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/refresh': {
-      id: '/api/v1/auth/refresh'
-      path: '/api/v1/auth/refresh'
-      fullPath: '/api/v1/auth/refresh'
-      preLoaderRoute: typeof ApiV1AuthRefreshRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/me': {
-      id: '/api/v1/auth/me'
-      path: '/api/v1/auth/me'
-      fullPath: '/api/v1/auth/me'
-      preLoaderRoute: typeof ApiV1AuthMeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/logout': {
-      id: '/api/v1/auth/logout'
-      path: '/api/v1/auth/logout'
-      fullPath: '/api/v1/auth/logout'
-      preLoaderRoute: typeof ApiV1AuthLogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/dev-login': {
-      id: '/api/v1/auth/dev-login'
-      path: '/api/v1/auth/dev-login'
-      fullPath: '/api/v1/auth/dev-login'
-      preLoaderRoute: typeof ApiV1AuthDevLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/assets/lookup': {
-      id: '/api/v1/assets/lookup'
-      path: '/api/v1/assets/lookup'
-      fullPath: '/api/v1/assets/lookup'
-      preLoaderRoute: typeof ApiV1AssetsLookupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/admin/dashboard': {
-      id: '/api/v1/admin/dashboard'
-      path: '/api/v1/admin/dashboard'
-      fullPath: '/api/v1/admin/dashboard'
-      preLoaderRoute: typeof ApiV1AdminDashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/session/ping': {
-      id: '/api/auth/session/ping'
-      path: '/api/auth/session/ping'
-      fullPath: '/api/auth/session/ping'
-      preLoaderRoute: typeof ApiAuthSessionPingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/microsoft/callback': {
-      id: '/api/auth/microsoft/callback'
-      path: '/api/auth/microsoft/callback'
-      fullPath: '/api/auth/microsoft/callback'
-      preLoaderRoute: typeof ApiAuthMicrosoftCallbackRouteImport
+    '/api/v1/profile': {
+      id: '/api/v1/profile'
+      path: '/api/v1/profile'
+      fullPath: '/api/v1/profile'
+      preLoaderRoute: typeof ApiV1ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/asset/$kind/$assetId': {
@@ -1512,39 +1351,172 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAssetKindAssetIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/upload/picture/$kind/$assetId/$fileName': {
-      id: '/upload/picture/$kind/$assetId/$fileName'
-      path: '/upload/picture/$kind/$assetId/$fileName'
-      fullPath: '/upload/picture/$kind/$assetId/$fileName'
-      preLoaderRoute: typeof UploadPictureKindAssetIdFileNameRouteImport
+    '/api/auth/microsoft/callback': {
+      id: '/api/auth/microsoft/callback'
+      path: '/api/auth/microsoft/callback'
+      fullPath: '/api/auth/microsoft/callback'
+      preLoaderRoute: typeof ApiAuthMicrosoftCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/upload/dispose/$year/$batch/$fileName': {
-      id: '/upload/dispose/$year/$batch/$fileName'
-      path: '/upload/dispose/$year/$batch/$fileName'
-      fullPath: '/upload/dispose/$year/$batch/$fileName'
-      preLoaderRoute: typeof UploadDisposeYearBatchFileNameRouteImport
+    '/api/auth/session/ping': {
+      id: '/api/auth/session/ping'
+      path: '/api/auth/session/ping'
+      fullPath: '/api/auth/session/ping'
+      preLoaderRoute: typeof ApiAuthSessionPingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/requests/pool/remove': {
-      id: '/api/v1/requests/pool/remove'
-      path: '/remove'
-      fullPath: '/api/v1/requests/pool/remove'
-      preLoaderRoute: typeof ApiV1RequestsPoolRemoveRouteImport
-      parentRoute: typeof ApiV1RequestsPoolRoute
+    '/api/v1/admin/dashboard': {
+      id: '/api/v1/admin/dashboard'
+      path: '/api/v1/admin/dashboard'
+      fullPath: '/api/v1/admin/dashboard'
+      preLoaderRoute: typeof ApiV1AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/api/v1/requests/pool/mark': {
-      id: '/api/v1/requests/pool/mark'
-      path: '/mark'
-      fullPath: '/api/v1/requests/pool/mark'
-      preLoaderRoute: typeof ApiV1RequestsPoolMarkRouteImport
-      parentRoute: typeof ApiV1RequestsPoolRoute
+    '/api/v1/assets/': {
+      id: '/api/v1/assets/'
+      path: '/api/v1/assets'
+      fullPath: '/api/v1/assets/'
+      preLoaderRoute: typeof ApiV1AssetsIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/api/v1/auth/microsoft/token': {
-      id: '/api/v1/auth/microsoft/token'
-      path: '/api/v1/auth/microsoft/token'
-      fullPath: '/api/v1/auth/microsoft/token'
-      preLoaderRoute: typeof ApiV1AuthMicrosoftTokenRouteImport
+    '/api/v1/assets/lookup': {
+      id: '/api/v1/assets/lookup'
+      path: '/api/v1/assets/lookup'
+      fullPath: '/api/v1/assets/lookup'
+      preLoaderRoute: typeof ApiV1AssetsLookupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/auth/dev-login': {
+      id: '/api/v1/auth/dev-login'
+      path: '/api/v1/auth/dev-login'
+      fullPath: '/api/v1/auth/dev-login'
+      preLoaderRoute: typeof ApiV1AuthDevLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/auth/logout': {
+      id: '/api/v1/auth/logout'
+      path: '/api/v1/auth/logout'
+      fullPath: '/api/v1/auth/logout'
+      preLoaderRoute: typeof ApiV1AuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/auth/me': {
+      id: '/api/v1/auth/me'
+      path: '/api/v1/auth/me'
+      fullPath: '/api/v1/auth/me'
+      preLoaderRoute: typeof ApiV1AuthMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/auth/refresh': {
+      id: '/api/v1/auth/refresh'
+      path: '/api/v1/auth/refresh'
+      fullPath: '/api/v1/auth/refresh'
+      preLoaderRoute: typeof ApiV1AuthRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/': {
+      id: '/api/v1/requests/'
+      path: '/api/v1/requests'
+      fullPath: '/api/v1/requests/'
+      preLoaderRoute: typeof ApiV1RequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/book': {
+      id: '/api/v1/requests/book'
+      path: '/api/v1/requests/book'
+      fullPath: '/api/v1/requests/book'
+      preLoaderRoute: typeof ApiV1RequestsBookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/cancel-not-taken': {
+      id: '/api/v1/requests/cancel-not-taken'
+      path: '/api/v1/requests/cancel-not-taken'
+      fullPath: '/api/v1/requests/cancel-not-taken'
+      preLoaderRoute: typeof ApiV1RequestsCancelNotTakenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/cancel-unavailable': {
+      id: '/api/v1/requests/cancel-unavailable'
+      path: '/api/v1/requests/cancel-unavailable'
+      fullPath: '/api/v1/requests/cancel-unavailable'
+      preLoaderRoute: typeof ApiV1RequestsCancelUnavailableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/checkout': {
+      id: '/api/v1/requests/checkout'
+      path: '/api/v1/requests/checkout'
+      fullPath: '/api/v1/requests/checkout'
+      preLoaderRoute: typeof ApiV1RequestsCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/log': {
+      id: '/api/v1/requests/log'
+      path: '/api/v1/requests/log'
+      fullPath: '/api/v1/requests/log'
+      preLoaderRoute: typeof ApiV1RequestsLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/pending': {
+      id: '/api/v1/requests/pending'
+      path: '/api/v1/requests/pending'
+      fullPath: '/api/v1/requests/pending'
+      preLoaderRoute: typeof ApiV1RequestsPendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/pool': {
+      id: '/api/v1/requests/pool'
+      path: '/api/v1/requests/pool'
+      fullPath: '/api/v1/requests/pool'
+      preLoaderRoute: typeof ApiV1RequestsPoolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/reject': {
+      id: '/api/v1/requests/reject'
+      path: '/api/v1/requests/reject'
+      fullPath: '/api/v1/requests/reject'
+      preLoaderRoute: typeof ApiV1RequestsRejectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/return': {
+      id: '/api/v1/requests/return'
+      path: '/api/v1/requests/return'
+      fullPath: '/api/v1/requests/return'
+      preLoaderRoute: typeof ApiV1RequestsReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/slot-not-taken': {
+      id: '/api/v1/requests/slot-not-taken'
+      path: '/api/v1/requests/slot-not-taken'
+      fullPath: '/api/v1/requests/slot-not-taken'
+      preLoaderRoute: typeof ApiV1RequestsSlotNotTakenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/slot-unavailable': {
+      id: '/api/v1/requests/slot-unavailable'
+      path: '/api/v1/requests/slot-unavailable'
+      fullPath: '/api/v1/requests/slot-unavailable'
+      preLoaderRoute: typeof ApiV1RequestsSlotUnavailableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/staff/': {
+      id: '/api/v1/staff/'
+      path: '/api/v1/staff'
+      fullPath: '/api/v1/staff/'
+      preLoaderRoute: typeof ApiV1StaffIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technician/asset/$kind/$assetId': {
+      id: '/technician/asset/$kind/$assetId'
+      path: '/technician/asset/$kind/$assetId'
+      fullPath: '/technician/asset/$kind/$assetId'
+      preLoaderRoute: typeof TechnicianAssetKindAssetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/assets/$kind/$assetId': {
+      id: '/api/v1/assets/$kind/$assetId'
+      path: '/api/v1/assets/$kind/$assetId'
+      fullPath: '/api/v1/assets/$kind/$assetId'
+      preLoaderRoute: typeof ApiV1AssetsKindAssetIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/v1/auth/microsoft/start': {
@@ -1554,11 +1526,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1AuthMicrosoftStartRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/assets/$kind/$assetId': {
-      id: '/api/v1/assets/$kind/$assetId'
-      path: '/api/v1/assets/$kind/$assetId'
-      fullPath: '/api/v1/assets/$kind/$assetId'
-      preLoaderRoute: typeof ApiV1AssetsKindAssetIdRouteImport
+    '/api/v1/auth/microsoft/token': {
+      id: '/api/v1/auth/microsoft/token'
+      path: '/api/v1/auth/microsoft/token'
+      fullPath: '/api/v1/auth/microsoft/token'
+      preLoaderRoute: typeof ApiV1AuthMicrosoftTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/requests/pool/mark': {
+      id: '/api/v1/requests/pool/mark'
+      path: '/mark'
+      fullPath: '/api/v1/requests/pool/mark'
+      preLoaderRoute: typeof ApiV1RequestsPoolMarkRouteImport
+      parentRoute: typeof ApiV1RequestsPoolRoute
+    }
+    '/api/v1/requests/pool/remove': {
+      id: '/api/v1/requests/pool/remove'
+      path: '/remove'
+      fullPath: '/api/v1/requests/pool/remove'
+      preLoaderRoute: typeof ApiV1RequestsPoolRemoveRouteImport
+      parentRoute: typeof ApiV1RequestsPoolRoute
+    }
+    '/upload/dispose/$year/$batch/$fileName': {
+      id: '/upload/dispose/$year/$batch/$fileName'
+      path: '/upload/dispose/$year/$batch/$fileName'
+      fullPath: '/upload/dispose/$year/$batch/$fileName'
+      preLoaderRoute: typeof UploadDisposeYearBatchFileNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/upload/picture/$kind/$assetId/$fileName': {
+      id: '/upload/picture/$kind/$assetId/$fileName'
+      path: '/upload/picture/$kind/$assetId/$fileName'
+      fullPath: '/upload/picture/$kind/$assetId/$fileName'
+      preLoaderRoute: typeof UploadPictureKindAssetIdFileNameRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
