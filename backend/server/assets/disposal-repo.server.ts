@@ -16,6 +16,7 @@ import {
   type SubmitDisposalBatchResult,
 } from '@shared/lib/disposal-schema';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
+import { disposalPhotoPath } from '@shared/lib/disposal-photo';
 import { getDbPool } from '@backend/server/core/db';
 
 type DbConnection = Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>;
@@ -245,12 +246,7 @@ function optionalText(value: string | null | undefined): string | null {
 }
 
 function optionalPath(value: string | null | undefined): string | null {
-  const trimmed = optionalText(value);
-  if (!trimmed) return null;
-  if (trimmed.length > 512) {
-    throw new Error('Image path/URL must be 512 characters or fewer.');
-  }
-  return trimmed;
+  return disposalPhotoPath(value);
 }
 
 export async function submitDisposalBatch(
@@ -535,8 +531,8 @@ export async function getDisposalReport(noRujukanPelupusan: string): Promise<Dis
       tarikhPenerimaan: formatSqlDate(row.do_date) ?? formatSqlDate(row.po_date),
       purchaseCost: purchaseCost != null && Number.isFinite(purchaseCost) ? purchaseCost : null,
       qty: 1,
-      imageWholeAsset: row.image_whole_asset,
-      imageSerialNumber: row.image_serial_number,
+      imageWholeAsset: disposalPhotoPath(row.image_whole_asset),
+      imageSerialNumber: disposalPhotoPath(row.image_serial_number),
       latarBelakang: row.latar_belakang,
       rekodFizikalHarta: row.rekod_fizikal_harta,
       repairs: repairsByKey.get(`${row.asset_type}:${row.asset_id}`) ?? [],

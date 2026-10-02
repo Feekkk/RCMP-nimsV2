@@ -1,6 +1,7 @@
 import type { RowDataPacket } from 'mysql2';
 import type { AssetKind } from '@shared/lib/inventory-schema';
 import type { ActivityLogCategory, ActivityLogEntry } from '@shared/lib/activity-log-schema';
+import { redactActivityPersonalData } from '@shared/lib/activity-redaction';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
@@ -550,7 +551,9 @@ async function loadInventoryEvents(events: ActivityLogEntry[]) {
   }
 }
 
-export async function listActivityLog(): Promise<ActivityLogEntry[]> {
+export async function listActivityLog(options?: {
+  revealPersonalData?: boolean;
+}): Promise<ActivityLogEntry[]> {
   const events: ActivityLogEntry[] = [];
 
   await Promise.all([
@@ -563,8 +566,11 @@ export async function listActivityLog(): Promise<ActivityLogEntry[]> {
     loadInventoryEvents(events),
   ]);
 
-  return events
-    .filter((e) => e.sortKey > 0)
-    .sort((a, b) => b.sortKey - a.sortKey)
-    .slice(0, MAX_EVENTS);
+  const visible = events.filter((e) => e.sortKey > 0).sort((a, b) => b.sortKey - a.sortKey).slice(0, MAX_EVENTS);
+  if (options?.revealPersonalData) return visible;
+  return visible.map((entry) => ({
+    ...entry,
+    actor: redactActivityPersonalData(entry.actor),
+    detail: redactActivityPersonalData(entry.detail),
+  }));
 }

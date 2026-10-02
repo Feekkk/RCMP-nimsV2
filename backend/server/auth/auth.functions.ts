@@ -23,7 +23,7 @@ export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
 });
 
 export const assertActiveWebSessionFn = createServerFn({ method: 'GET' }).handler(async () => {
-  const result = await evaluateWebSession('touch');
+  const result = await evaluateWebSession('read');
   if (result.kind === 'timeout') {
     throw redirect({ to: '/login', search: { reason: 'timeout' } });
   }

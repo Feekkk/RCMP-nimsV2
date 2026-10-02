@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import { AlertDialog, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -64,35 +64,37 @@ export function SessionIdleMonitor() {
   const clockRef = useRef<Clock | null>(null);
   const warningRef = useRef(false);
   const stayingRef = useRef(false);
-  const lastPingRef = useRef(0);
+  const lastActivityPingRef = useRef(0);
   const pingingRef = useRef(false);
   const mountedRef = useRef(true);
 
-  const applyPing = (payload: SessionPingPayload) => {
+  const applyPing = useCallback((payload: SessionPingPayload) => {
     const offset = payload.serverNow - Date.now();
+    const serverActivityAt = payload.lastActivityAt - offset;
     clockRef.current = {
-      lastActivityAt: payload.lastActivityAt - offset,
+      lastActivityAt: Math.max(clockRef.current?.lastActivityAt ?? 0, serverActivityAt),
       absoluteEndsAt: payload.issuedAt + payload.absoluteTimeoutMs - offset,
       idleTimeoutMs: payload.idleTimeoutMs,
       warningLeadMs: payload.warningLeadMs,
     };
-    lastPingRef.current = Date.now();
-    const idleRemaining = payload.idleTimeoutMs - (Date.now() - (payload.lastActivityAt - offset));
+    const idleRemaining = payload.idleTimeoutMs - (Date.now() - clockRef.current.lastActivityAt);
     if (idleRemaining > payload.warningLeadMs) {
       warningRef.current = false;
       if (mountedRef.current) setRemainingMs(null);
     }
-  };
+  }, []);
 
-  const ping = async (stay: boolean) => {
-    const response = await fetch(stay ? '/api/auth/session/ping?stay=1' : '/api/auth/session/ping', {
+  const ping = useCallback(async (mode: 'read' | 'activity' | 'stay') => {
+    const query = mode === 'stay' ? '?stay=1' : mode === 'activity' ? '?activity=1' : '';
+    const response = await fetch(`/api/auth/session/ping${query}`, {
       credentials: 'same-origin',
       cache: 'no-store',
     });
     if (!response.ok) return;
     const payload = (await response.json()) as SessionPingPayload;
     if (payload.ok) applyPing(payload);
-  };
+    if (mode !== 'read') lastActivityPingRef.current = Date.now();
+  }, [applyPing]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -128,9 +130,9 @@ export function SessionIdleMonitor() {
       if (now - clock.lastActivityAt < 1000) return;
       clock.lastActivityAt = now;
       publishClientSessionEvent({ type: 'activity', at: now });
-      if (pingingRef.current || now - lastPingRef.current < SESSION_ACTIVITY_THROTTLE_MS) return;
+      if (pingingRef.current || now - lastActivityPingRef.current < SESSION_ACTIVITY_THROTTLE_MS) return;
       pingingRef.current = true;
-      void ping(false).finally(() => {
+      void ping('activity').finally(() => {
         pingingRef.current = false;
       });
     };
@@ -155,7 +157,7 @@ export function SessionIdleMonitor() {
       setRemainingMs(null);
     });
 
-    void ping(false);
+    void ping('read');
 
     const timer = window.setInterval(() => {
       const clock = clockRef.current;
@@ -185,12 +187,12 @@ export function SessionIdleMonitor() {
         window.removeEventListener(eventName, markActivity, { capture: true });
       }
     };
-  }, [pathname]);
+  }, [pathname, ping]);
 
   const staySignedIn = async () => {
     stayingRef.current = true;
     try {
-      await ping(true);
+      await ping('stay');
       const now = Date.now();
       publishClientSessionEvent({ type: 'activity', at: now });
       warningRef.current = false;

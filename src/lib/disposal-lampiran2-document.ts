@@ -1,5 +1,6 @@
 import type { DisposalReport, DisposalReportAsset } from '@shared/lib/disposal-schema';
-import { downloadDocx, escapeXml, loadDocxTemplate, toRunText } from '@/lib/docx-template';
+import { DISPOSAL_PHOTO_MAX_BYTES, DISPOSAL_PHOTO_TYPES, disposalDownloadStem, disposalPhotoPath } from '@shared/lib/disposal-photo';
+import { escapeXml, loadDocxTemplate, renderDocxBlob, toRunText } from '@/lib/docx-template';
 
 const RELS_PATH = 'word/_rels/document.xml.rels';
 const IMAGE_RELATIONSHIP = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
@@ -10,9 +11,17 @@ const PHOTO_BORDER = 15875;
 type Photo = { relId: string; name: string; width: number; height: number };
 
 async function loadPhotoAsJpeg(src: string) {
-  const response = await fetch(src.startsWith('/') ? src : `/${src}`);
+  const path = disposalPhotoPath(src);
+  if (!path) return null;
+  const response = await fetch(path, { credentials: 'same-origin', redirect: 'error' });
   if (!response.ok) return null;
-  const bitmap = await createImageBitmap(await response.blob());
+  const headerType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
+  const advertisedLength = Number(response.headers.get('content-length') ?? '');
+  if (Number.isFinite(advertisedLength) && advertisedLength > DISPOSAL_PHOTO_MAX_BYTES) return null;
+  const blob = await response.blob();
+  const type = (blob.type || headerType).split(';')[0]?.trim().toLowerCase() ?? '';
+  if (!DISPOSAL_PHOTO_TYPES.has(type) || blob.size > DISPOSAL_PHOTO_MAX_BYTES) return null;
+  const bitmap = await createImageBitmap(blob);
   const canvas = document.createElement('canvas');
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
@@ -53,8 +62,10 @@ function fillAssetBlock(block: string, asset: DisposalReportAsset, report: Dispo
     .replaceAll('<w:pPr>', '<w:pPr><w:keepNext/>');
 }
 
-export async function downloadDisposalLampiran2(report: DisposalReport) {
-  if (report.lampiran2.length === 0) return;
+export async function buildDisposalLampiran2(
+  report: DisposalReport,
+): Promise<{ blob: Blob; fileName: string } | null> {
+  if (report.lampiran2.length === 0) return null;
 
   const { zip, body, withBody } = await loadDocxTemplate('/templates/lampiran2.docx');
   const blockStart = body.lastIndexOf('<w:p ', body.indexOf('NO RUJUKAN PELUPUSAN'));
@@ -82,5 +93,8 @@ export async function downloadDisposalLampiran2(report: DisposalReport) {
   if (!rels) throw new Error('The Lampiran 2 template is invalid.');
   zip.file(RELS_PATH, rels.replace('</Relationships>', `${relationships.join('')}</Relationships>`));
 
-  await downloadDocx(zip, withBody(header + sections.join('')), `LAMPIRAN 2 - ${report.noRujukanPelupusan}.docx`);
+  return {
+    blob: await renderDocxBlob(zip, withBody(header + sections.join(''))),
+    fileName: `LAMPIRAN 2 - ${disposalDownloadStem(report.noRujukanPelupusan)}.docx`,
+  };
 }

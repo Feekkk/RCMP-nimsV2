@@ -38,6 +38,7 @@ import {
 } from '@shared/lib/asset-status-actions';
 import { coerceToIsoDate, formatIsoToDdMmYy, sqlDateToIso } from '@shared/lib/date-format';
 import { purchaseSqlParams } from '@shared/lib/purchase-field-utils';
+import { missingStaffDirectoryFields, staffDirectoryIncompleteMessage } from '@shared/lib/deploy-return-schema';
 import {
   assetIdNewestYearFirstSql,
   assetIdNumericCore,
@@ -174,8 +175,15 @@ async function assertEmployeeNo(
   conn: Awaited<ReturnType<ReturnType<typeof getDbPool>['getConnection']>>,
   employeeNo: string,
 ) {
-  const [rows] = await conn.query<(RowDataPacket & { employee_no: string })[]>(
-    'SELECT employee_no FROM staff WHERE employee_no = ? LIMIT 1',
+  const [rows] = await conn.query<
+    (RowDataPacket & {
+      employee_no: string;
+      full_name: string | null;
+      email: string | null;
+      department: string | null;
+    })[]
+  >(
+    'SELECT employee_no, full_name, email, department FROM staff WHERE employee_no = ? LIMIT 1',
     [employeeNo],
   );
   if (!rows[0]) {
@@ -183,6 +191,12 @@ async function assertEmployeeNo(
       `No staff member matches employee number "${employeeNo}". Check the number or add the person to the staff directory first.`,
     );
   }
+  const missing = missingStaffDirectoryFields({
+    fullName: rows[0].full_name,
+    email: rows[0].email,
+    faculty: rows[0].department,
+  });
+  if (missing.length) throw new Error(staffDirectoryIncompleteMessage(missing));
 }
 
 async function insertLaptopHandover(
@@ -278,6 +292,8 @@ type LaptopRow = RowDataPacket &
     place_handover_remarks?: string | null;
     created_at?: Date | string | null;
     registered_by_name?: string | null;
+    registered_oid?: string | null;
+    registered_display_name?: string | null;
     proposed_at?: Date | string | null;
     proposed_oid?: string | null;
     proposed_email?: string | null;
@@ -358,7 +374,7 @@ function mapLaptop(row: LaptopRow): LaptopAsset {
     placeZone: row.place_zone?.trim() || null,
     placeHandoverRemarks: row.place_handover_remarks?.trim() || null,
     registeredAt: trailAt(row.created_at) || null,
-    registeredBy: row.registered_by_name?.trim() || null,
+    registeredBy: row.registered_display_name?.trim() || row.registered_by_name?.trim() || null,
     proposedAt: trailAt(row.proposed_at) || null,
     proposedBy: row.proposed_name?.trim() || row.proposed_email?.trim() || null,
     ...mapPurchase(row),
@@ -454,32 +470,25 @@ function attachOpenPlace<T extends AvAsset | NetworkAsset>(
   });
 }
 
-let laptopRegisteredByReady: Promise<void> | null = null;
+export type LaptopRegistrar = {
+  userId: number | null;
+  name: string | null;
+};
 
-async function ensureLaptopRegisteredByColumn() {
-  if (!laptopRegisteredByReady) {
-    laptopRegisteredByReady = (async () => {
-      const pool = getDbPool();
-      try {
-        await pool.query('ALTER TABLE laptop ADD COLUMN registered_by_name VARCHAR(255) NULL');
-      } catch (e) {
-        const code = typeof e === 'object' && e && 'code' in e ? String((e as { code: unknown }).code) : '';
-        const msg = e instanceof Error ? e.message : '';
-        if (code !== 'ER_DUP_FIELDNAME' && !msg.toLowerCase().includes('duplicate column')) {
-          throw e;
-        }
-      }
-    })();
-  }
-  await laptopRegisteredByReady;
+function registrarValues(registrar: LaptopRegistrar | null) {
+  const userId = registrar?.userId;
+  return {
+    id: typeof userId === 'number' && Number.isInteger(userId) && userId > 0 ? userId : null,
+    name: registrar?.name?.trim() || null,
+  };
 }
 
 const LAPTOP_INSERT = `INSERT INTO laptop (
   asset_id, acc_code, serial_num, brand, model, supplier, category, part_number,
   processor, memory, os, storage, gpu,
   PO_DATE, PO_NUM, DO_DATE, DO_NUM, INVOICE_DATE, INVOICE_NUM, PURCHASE_COST,
-  status_id, remarks, registered_by_name
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  status_id, remarks, registered_by, registered_by_name
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 const AV_INSERT = `INSERT INTO av (
   asset_id, acc_code, asset_id_old, category, brand, model, supplier, serial_num,
@@ -493,10 +502,11 @@ const NETWORK_INSERT = `INSERT INTO network (
   status_id, remarks
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-function laptopParams(input: CreateLaptopInput, registeredByName: string | null = null) {
+function laptopParams(input: CreateLaptopInput, registrar: LaptopRegistrar | null = null) {
   const category = canonicalizeLaptopCategory(input.category);
   if (!category) throw new Error('Category is required.');
   const purchase = normalizePurchaseForUpdate(input);
+  const recordedBy = registrarValues(registrar);
   return [
     input.assetId,
     input.accCode ?? null,
@@ -514,7 +524,8 @@ function laptopParams(input: CreateLaptopInput, registeredByName: string | null 
     ...purchaseSqlParams(purchase),
     input.statusId,
     input.remarks ?? null,
-    registeredByName?.trim() || null,
+    recordedBy.id,
+    recordedBy.name,
   ];
 }
 
@@ -556,10 +567,10 @@ function networkParams(input: CreateNetworkInput) {
 export async function listAssets(kind: AssetKind) {
   const pool = getDbPool();
   if (kind === 'laptop') {
-    await ensureLaptopRegisteredByColumn();
     const [rows] = await pool.query<LaptopRow[]>(
       `SELECT l.*, ho.recipient_division, ho.recipient_name, hp.place_handler, hp.place_building, hp.place_level, hp.place_zone,
-              hp.place_handover_remarks, pd.proposed_at, pd.proposed_oid, pd.proposed_email
+              hp.place_handover_remarks, pd.proposed_at, pd.proposed_oid, pd.proposed_email,
+              reg_user.oid AS registered_oid
        FROM laptop l
        LEFT JOIN (
          SELECT h.asset_id, s.division AS recipient_division, s.full_name AS recipient_name
@@ -606,6 +617,7 @@ export async function listAssets(kind: AssetKind) {
            GROUP BY asset_id
          ) latest ON latest.pre_disposal_id = p.pre_disposal_id
        ) pd ON ${sqlUtf8AssetId('pd.asset_id')} = ${sqlUtf8AssetId('l.asset_id')}
+       LEFT JOIN users reg_user ON reg_user.id = l.registered_by
        ORDER BY ${assetIdNewestYearFirstSql('l.asset_id')}`,
     );
     const fallbackByOid = new Map<string, string>();
@@ -615,12 +627,18 @@ export async function listAssets(kind: AssetKind) {
       if (oid && email) fallbackByOid.set(oid, email);
     }
     const names = await getDisplayNamesByOids(
-      rows.map((row) => row.proposed_oid),
+      [...rows.map((row) => row.proposed_oid), ...rows.map((row) => row.registered_oid)],
       fallbackByOid,
     );
     for (const row of rows) {
       const oid = row.proposed_oid?.trim();
       row.proposed_name = oid ? names.get(oid) ?? null : null;
+      const registeredOid = row.registered_oid?.trim();
+      const registeredName = registeredOid ? names.get(registeredOid) : null;
+      row.registered_display_name =
+        registeredName && registeredName !== registeredOid && !registeredName.includes('@')
+          ? registeredName
+          : null;
     }
     return rows.map(mapLaptop);
   }
@@ -651,11 +669,10 @@ async function maybeInsertWarranty(
   }
 }
 
-export async function createLaptop(input: CreateLaptopInput, registeredByName: string | null = null) {
-  await ensureLaptopRegisteredByColumn();
+export async function createLaptop(input: CreateLaptopInput, registrar: LaptopRegistrar | null = null) {
   const pool = getDbPool();
   const { warranty, ...laptop } = input;
-  await pool.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId: input.assetId }, registeredByName));
+  await pool.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId: input.assetId }, registrar));
   await maybeInsertWarranty('laptop', input.assetId, warranty);
   const [rows] = await pool.query<LaptopRow[]>('SELECT * FROM laptop WHERE asset_id = ?', [input.assetId]);
   if (!rows[0]) {
@@ -688,8 +705,7 @@ export async function createNetwork(input: CreateNetworkInput) {
   return mapNetwork(rows[0]);
 }
 
-export async function bulkCreateLaptops(rows: BulkLaptopImportRow[], registeredByName: string | null = null) {
-  await ensureLaptopRegisteredByColumn();
+export async function bulkCreateLaptops(rows: BulkLaptopImportRow[], registrar: LaptopRegistrar | null = null) {
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
@@ -701,7 +717,7 @@ export async function bulkCreateLaptops(rows: BulkLaptopImportRow[], registeredB
           'An asset ID could not be assigned after generation. Try saving again, or contact support if this keeps happening.',
         );
       }
-      await conn.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId }, registeredByName));
+      await conn.execute(LAPTOP_INSERT, laptopParams({ ...laptop, assetId }, registrar));
       await maybeInsertWarranty('laptop', assetId, warranty, conn);
       if (handover) {
         await insertLaptopHandover(conn, assetId, handover);
@@ -775,9 +791,9 @@ export async function bulkCreateNetwork(rows: BulkNetworkImportRow[]) {
 
 export async function bulkCreateLaptopsWithGeneratedIds(
   rows: BulkLaptopImportRow[],
-  registeredByName: string | null = null,
+  registrar: LaptopRegistrar | null = null,
 ) {
-  return bulkCreateLaptops(await fillLaptopAssetIds(rows), registeredByName);
+  return bulkCreateLaptops(await fillLaptopAssetIds(rows), registrar);
 }
 
 export async function bulkCreateAvWithGeneratedIds(rows: BulkAvImportRow[]) {

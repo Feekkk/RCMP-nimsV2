@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import type { DisposalReport } from '@shared/lib/disposal-schema';
 import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import { isoToLocalDate } from '@shared/lib/date-format';
-import { downloadBlob } from '@/lib/download-blob';
+import { disposalDownloadStem } from '@shared/lib/disposal-photo';
 
 const HEADERS = [
   'BIL',
@@ -26,7 +26,7 @@ const THIN: Partial<ExcelJS.Border> = { style: 'thin', color: { argb: 'FF000000'
 const DOUBLE: Partial<ExcelJS.Border> = { style: 'double', color: { argb: 'FF000000' } };
 const BOX: Partial<ExcelJS.Borders> = { top: THIN, left: THIN, bottom: THIN, right: THIN };
 
-export async function downloadDisposalLampiran1(report: DisposalReport) {
+export async function buildDisposalLampiran1(report: DisposalReport): Promise<{ blob: Blob; fileName: string }> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Sheet1', {
     pageSetup: { margins: { left: 0.7, right: 0.7, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } },
@@ -107,10 +107,10 @@ export async function downloadDisposalLampiran1(report: DisposalReport) {
   totals.getCell(6).numFmt = '#,##0.00';
 
   const buffer = await workbook.xlsx.writeBuffer();
-  downloadBlob(
-    new Blob([new Uint8Array(buffer as ArrayBuffer)], {
+  return {
+    blob: new Blob([new Uint8Array(buffer as ArrayBuffer)], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     }),
-    `LAMPIRAN 1 - ${report.noRujukanPelupusan}.xlsx`,
-  );
+    fileName: `LAMPIRAN 1 - ${disposalDownloadStem(report.noRujukanPelupusan)}.xlsx`,
+  };
 }

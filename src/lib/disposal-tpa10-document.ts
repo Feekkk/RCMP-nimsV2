@@ -1,5 +1,6 @@
 import type { DisposalReport, DisposalReportAsset } from '@shared/lib/disposal-schema';
-import { downloadDocx, loadDocxTemplate, toRunText } from '@/lib/docx-template';
+import { disposalDownloadStem } from '@shared/lib/disposal-photo';
+import { loadDocxTemplate, renderDocxBlob, toRunText } from '@/lib/docx-template';
 
 const TEXT_NODE = /<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g;
 
@@ -62,8 +63,10 @@ function withPageBreakBefore(page: string) {
   return page.replace('<w:pPr>', '<w:pPr><w:pageBreakBefore/>');
 }
 
-export async function downloadDisposalTpa10(report: DisposalReport) {
-  if (report.borangTp10.length === 0) return;
+export async function buildDisposalTpa10(
+  report: DisposalReport,
+): Promise<{ blob: Blob; fileName: string } | null> {
+  if (report.borangTp10.length === 0) return null;
 
   const { zip, body, withBody } = await loadDocxTemplate('/templates/tpa10.docx');
   const pages = report.borangTp10.map((asset, index) => {
@@ -71,5 +74,8 @@ export async function downloadDisposalTpa10(report: DisposalReport) {
     return index === 0 ? filled : withPageBreakBefore(filled);
   });
 
-  await downloadDocx(zip, withBody(pages.join('')), `TPA10 - ${report.noRujukanPelupusan}.docx`);
+  return {
+    blob: await renderDocxBlob(zip, withBody(pages.join(''))),
+    fileName: `TPA10 - ${disposalDownloadStem(report.noRujukanPelupusan)}.docx`,
+  };
 }

@@ -33,13 +33,14 @@ function renumberDrawings(xml: string) {
     .replace(/ w14:paraId="[^"]*"/g, '');
 }
 
-export async function downloadDocx(zip: JSZip, documentXml: string, fileName: string) {
+export async function renderDocxBlob(zip: JSZip, documentXml: string): Promise<Blob> {
   zip.file(DOCUMENT_PATH, renumberDrawings(documentXml));
-  downloadBlob(
-    await zip.generateAsync({
-      type: 'blob',
-      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    }),
-    fileName,
-  );
+  return zip.generateAsync({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
+}
+
+export async function downloadDocx(zip: JSZip, documentXml: string, fileName: string) {
+  downloadBlob(await renderDocxBlob(zip, documentXml), fileName);
 }

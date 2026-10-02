@@ -131,6 +131,7 @@ export type PendingRequest = {
   requesterName: string;
   requesterEmail: string;
   requesterPhone: string | null;
+  confirmationEmailError: string | null;
   borrowDate: string;
   returnDate: string;
   programType: string;
