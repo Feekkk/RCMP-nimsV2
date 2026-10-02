@@ -1,18 +1,7 @@
-import JSZip from 'jszip';
 import type { DisposalReport, DisposalReportAsset } from '@shared/lib/disposal-schema';
-import { downloadBlob } from '@/lib/download-blob';
+import { downloadDocx, loadDocxTemplate, toRunText } from '@/lib/docx-template';
 
-const TEMPLATE_URL = '/templates/tpa10.docx';
-const DOCUMENT_PATH = 'word/document.xml';
 const TEXT_NODE = /<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g;
-
-function escapeXml(value: string) {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function toRunText(value: string) {
-  return escapeXml(value).replace(/\r?\n/g, '</w:t><w:br/><w:t xml:space="preserve">');
-}
 
 function createFiller(xml: string) {
   let result = xml;
@@ -73,41 +62,14 @@ function withPageBreakBefore(page: string) {
   return page.replace('<w:pPr>', '<w:pPr><w:pageBreakBefore/>');
 }
 
-function renumberDrawings(xml: string) {
-  let id = 1;
-  return xml
-    .replace(/(<wp:docPr\b[^>]*?\bid=")\d+"/g, (_, prefix: string) => `${prefix}${id++}"`)
-    .replace(/ w14:paraId="[^"]*"/g, '');
-}
-
 export async function downloadDisposalTpa10(report: DisposalReport) {
   if (report.borangTp10.length === 0) return;
 
-  const response = await fetch(TEMPLATE_URL);
-  if (!response.ok) throw new Error('Could not load the TPA10 template.');
-  const zip = await JSZip.loadAsync(await response.arrayBuffer());
-  const xml = await zip.file(DOCUMENT_PATH)?.async('string');
-  if (!xml) throw new Error('The TPA10 template is invalid.');
-
-  const bodyStart = xml.indexOf('<w:body>') + '<w:body>'.length;
-  const sectionStart = xml.lastIndexOf('<w:sectPr');
-  const page = xml.slice(bodyStart, sectionStart);
-
+  const { zip, body, withBody } = await loadDocxTemplate('/templates/tpa10.docx');
   const pages = report.borangTp10.map((asset, index) => {
-    const filled = fillAssetPage(page, asset, report);
+    const filled = fillAssetPage(body, asset, report);
     return index === 0 ? filled : withPageBreakBefore(filled);
   });
 
-  zip.file(
-    DOCUMENT_PATH,
-    renumberDrawings(xml.slice(0, bodyStart) + pages.join('') + xml.slice(sectionStart)),
-  );
-
-  downloadBlob(
-    await zip.generateAsync({
-      type: 'blob',
-      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    }),
-    `TPA10 - ${report.noRujukanPelupusan}.docx`,
-  );
+  await downloadDocx(zip, withBody(pages.join('')), `TPA10 - ${report.noRujukanPelupusan}.docx`);
 }

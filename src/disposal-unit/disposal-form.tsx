@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { downloadDisposalLampiran1 } from '@/lib/disposal-lampiran1-workbook';
 import { downloadDisposalTpa10 } from '@/lib/disposal-tpa10-document';
+import { downloadDisposalLampiran2 } from '@/lib/disposal-lampiran2-document';
 import {
   getDisposalReportFn,
   listDisposalQueueAssetsFn,
@@ -177,6 +178,7 @@ export function DisposalUnitDisposalFormPage() {
         const report = await getDisposalReportFn({ data: result.noRujukanPelupusan });
         await downloadDisposalLampiran1(report);
         await downloadDisposalTpa10(report);
+        await downloadDisposalLampiran2(report);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not generate disposal documents');
       }
