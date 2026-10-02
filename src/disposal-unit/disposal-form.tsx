@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { downloadDisposalLampiran1 } from '@/lib/disposal-lampiran1-workbook';
+import { downloadDisposalTpa10 } from '@/lib/disposal-tpa10-document';
 import {
   getDisposalReportFn,
   listDisposalQueueAssetsFn,
@@ -173,9 +174,11 @@ export function DisposalUnitDisposalFormPage() {
         `Submitted ${result.submitted} asset${result.submitted === 1 ? '' : 's'} as ${result.batch}`,
       );
       try {
-        await downloadDisposalLampiran1(await getDisposalReportFn({ data: result.noRujukanPelupusan }));
+        const report = await getDisposalReportFn({ data: result.noRujukanPelupusan });
+        await downloadDisposalLampiran1(report);
+        await downloadDisposalTpa10(report);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Could not generate Lampiran 1');
+        toast.error(e instanceof Error ? e.message : 'Could not generate disposal documents');
       }
       await navigate({ to: '/disposal-unit/history' });
     } catch (e) {

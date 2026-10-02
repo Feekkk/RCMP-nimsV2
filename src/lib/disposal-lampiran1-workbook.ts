@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import type { DisposalReport } from '@shared/lib/disposal-schema';
 import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import { isoToLocalDate } from '@shared/lib/date-format';
+import { downloadBlob } from '@/lib/download-blob';
 
 const HEADERS = [
   'BIL',
@@ -106,14 +107,10 @@ export async function downloadDisposalLampiran1(report: DisposalReport) {
   totals.getCell(6).numFmt = '#,##0.00';
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const url = URL.createObjectURL(
+  downloadBlob(
     new Blob([new Uint8Array(buffer as ArrayBuffer)], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     }),
+    `LAMPIRAN 1 - ${report.noRujukanPelupusan}.xlsx`,
   );
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `LAMPIRAN 1 - ${report.noRujukanPelupusan.replace(/[\\/:*?"<>|]/g, '-')}.xlsx`;
-  link.click();
-  URL.revokeObjectURL(url);
 }
