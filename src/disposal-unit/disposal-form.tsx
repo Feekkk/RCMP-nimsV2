@@ -24,7 +24,9 @@ import {
 } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { DatePickerField } from '@/technician/deploy-return-fields';
+import { downloadDisposalLampiran1 } from '@/lib/disposal-lampiran1-workbook';
 import {
+  getDisposalReportFn,
   listDisposalQueueAssetsFn,
   peekNextDisposalBatchFn,
   submitDisposalBatchFn,
@@ -170,6 +172,11 @@ export function DisposalUnitDisposalFormPage() {
       toast.success(
         `Submitted ${result.submitted} asset${result.submitted === 1 ? '' : 's'} as ${result.batch}`,
       );
+      try {
+        await downloadDisposalLampiran1(await getDisposalReportFn({ data: result.noRujukanPelupusan }));
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not generate Lampiran 1');
+      }
       await navigate({ to: '/disposal-unit/history' });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not submit this disposal batch');
