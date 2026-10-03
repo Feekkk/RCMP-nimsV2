@@ -972,6 +972,7 @@ type RequestHeaderRow = RowDataPacket & {
   requester_name: string;
   requester_email: string | null;
   requester_phone: string | null;
+  confirmation_email_error: string | null;
   borrow_date: Date | string;
   return_date: Date | string;
   program_type: string;
@@ -981,14 +982,24 @@ type RequestHeaderRow = RowDataPacket & {
 };
 
 export async function listPendingRequests(): Promise<PendingRequest[]> {
+  const { ensureRequestEmailFailureTable } = await import('@backend/server/email/request-email-failure.server');
+  let includeEmailFailures = true;
+  try {
+    await ensureRequestEmailFailureTable();
+  } catch (error) {
+    includeEmailFailures = false;
+    console.error('[request-email] failure log is unavailable', error);
+  }
   const pool = getDbPool();
   const [headers] = await pool.query<RequestHeaderRow[]>(
     `SELECT r.request_id, r.requested_by, u.oid AS requester_oid,
             u.email AS requester_email, u.phone AS requester_phone,
+            ${includeEmailFailures ? 'ef.last_error' : 'NULL'} AS confirmation_email_error,
             r.borrow_date, r.return_date, r.program_type, r.usage_location,
             r.remarks, r.created_at
      FROM request r
      INNER JOIN users u ON u.id = r.requested_by
+     ${includeEmailFailures ? 'LEFT JOIN request_email_failure ef ON ef.request_id = r.request_id' : ''}
      WHERE r.rejected_at IS NULL
      ORDER BY r.created_at DESC`,
   );
@@ -1103,6 +1114,7 @@ export async function listPendingRequests(): Promise<PendingRequest[]> {
       requesterName: h.requester_name || requesterProfile.fullName,
       requesterEmail: requesterProfile.email,
       requesterPhone: requesterProfile.phone,
+      confirmationEmailError: h.confirmation_email_error?.trim() || null,
       borrowDate: formatDate(h.borrow_date),
       returnDate: formatDate(h.return_date),
       programType: h.program_type,

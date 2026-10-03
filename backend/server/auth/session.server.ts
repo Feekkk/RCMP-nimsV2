@@ -163,7 +163,7 @@ async function clearSessionCookie(): Promise<void> {
   await session.clear();
 }
 
-export async function evaluateWebSession(mode: 'touch' | 'force'): Promise<WebSessionEvaluation> {
+export async function evaluateWebSession(mode: 'read' | 'touch' | 'force'): Promise<WebSessionEvaluation> {
   if (!hasSessionCookie()) return { kind: 'anonymous' };
   const { policy } = sessionOptions();
   const session = await getAppSession();
@@ -199,7 +199,7 @@ export async function evaluateWebSession(mode: 'touch' | 'force'): Promise<WebSe
   }
 
   let lastActivityAt = data.lastActivityAt;
-  if (mode === 'force' || now - lastActivityAt >= SESSION_ACTIVITY_THROTTLE_MS) {
+  if (mode !== 'read' && (mode === 'force' || now - lastActivityAt >= SESSION_ACTIVITY_THROTTLE_MS)) {
     lastActivityAt = now;
     await session.update({ lastActivityAt });
   }

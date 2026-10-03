@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { CreatePmLogInput, PmLogListFilters, UpdatePmLogAssetsInput } from '@shared/lib/pm-schema';
 import { staffMiddleware } from '@backend/server/core/auth-middleware';
+import { isAdminRole } from '@shared/lib/auth-session';
 
 export const getPmLocationTreeFn = createServerFn({ method: 'GET' })
   .middleware([staffMiddleware])
@@ -28,9 +29,9 @@ export const createPmLogFn = createServerFn({ method: 'POST' })
 export const listPmLogsFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((data: PmLogListFilters) => data)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { listPmLogs } = await import('@backend/server/operations/pm-repo.server');
-    return listPmLogs(data);
+    return listPmLogs(data, { includePerformerEmail: isAdminRole(context.roleId) });
   });
 
 export const listPmLogBuildingsFn = createServerFn({ method: 'GET' })
@@ -43,9 +44,9 @@ export const listPmLogBuildingsFn = createServerFn({ method: 'GET' })
 export const updatePmLogAssetsFn = createServerFn({ method: 'POST' })
   .middleware([staffMiddleware])
   .inputValidator((data: UpdatePmLogAssetsInput) => data)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { updatePmLogAssets } = await import('@backend/server/operations/pm-repo.server');
-    return updatePmLogAssets(data);
+    return updatePmLogAssets(data, context);
   });
 
 export const getPmStatsFn = createServerFn({ method: 'GET' })

@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "overdue-emails": "npx tsx backend/scripts/run-overdue-return-emails.ts",
+    "db:migrate": "npx tsx backend/scripts/apply-sql-migrations.ts",
     "ai:reindex": "npx tsx backend/scripts/ai-reindex-embeddings.ts",
     "ai:golden": "npx tsx backend/scripts/ai-golden-questions.ts"
   },

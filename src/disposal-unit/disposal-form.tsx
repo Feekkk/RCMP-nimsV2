@@ -24,9 +24,7 @@ import {
 } from '@shared/lib/disposal-schema';
 import { cn } from '@/lib/utils';
 import { DatePickerField } from '@/technician/deploy-return-fields';
-import { downloadDisposalLampiran1 } from '@/lib/disposal-lampiran1-workbook';
-import { downloadDisposalTpa10 } from '@/lib/disposal-tpa10-document';
-import { downloadDisposalLampiran2 } from '@/lib/disposal-lampiran2-document';
+import { downloadDisposalBundle } from '@/lib/disposal-documents';
 import {
   getDisposalReportFn,
   listDisposalQueueAssetsFn,
@@ -176,11 +174,21 @@ export function DisposalUnitDisposalFormPage() {
       );
       try {
         const report = await getDisposalReportFn({ data: result.noRujukanPelupusan });
-        await downloadDisposalLampiran1(report);
-        await downloadDisposalTpa10(report);
-        await downloadDisposalLampiran2(report);
+        try {
+          await downloadDisposalBundle(report);
+        } catch (e) {
+          toast.error(
+            e instanceof Error
+              ? `${e.message} Open History to download Lampiran 1, Lampiran 2, and TPA10.`
+              : 'The automatic download was blocked. Open History to download Lampiran 1, Lampiran 2, and TPA10.',
+          );
+        }
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Could not generate disposal documents');
+        toast.error(
+          e instanceof Error
+            ? `${e.message} Open History to download the forms.`
+            : 'Could not generate disposal documents. Open History to download the forms.',
+        );
       }
       await navigate({ to: '/disposal-unit/history' });
     } catch (e) {

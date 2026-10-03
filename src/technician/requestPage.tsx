@@ -50,7 +50,8 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
-import { readTechnicianSession } from '@shared/lib/auth-session';
+import { isStaffRole, readTechnicianSession } from '@shared/lib/auth-session';
+import { malaysiaWhatsappHref } from '@shared/lib/phone';
 import {
   REQUEST_STATUS_ACTIVE,
   REQUEST_STATUS_BOOKED,
@@ -91,19 +92,14 @@ import {
 } from '@backend/server/requests/request.functions';
 import { RequestReturnFields } from '@/technician/request-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
-function whatsappChatHref(phone: string): string | null {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length < 8) return null;
-  const international = digits.startsWith('0') ? `60${digits.slice(1)}` : digits;
-  return `https://wa.me/${international}`;
-}
-
 function outlookComposeHref(email: string): string {
   return `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(email)}`;
 }
 
 function RequesterContactLinks({ email, phone }: { email: string; phone: string | null }) {
-  const whatsappHref = phone ? whatsappChatHref(phone) : null;
+  const viewer = readTechnicianSession();
+  if (!viewer || !isStaffRole(viewer.roleId)) return null;
+  const whatsappHref = malaysiaWhatsappHref(phone);
   if (!email && !phone) return null;
   return (
     <p className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -819,6 +815,11 @@ export function TechnicianRequestPage() {
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border px-4 py-4">
           <RequesterContactLinks email={req.requesterEmail} phone={req.requesterPhone} />
+          {req.confirmationEmailError ? (
+            <p className="mb-3 text-xs text-amber-800 dark:text-amber-200">
+              Confirmation email failed after retry: {req.confirmationEmailError}
+            </p>
+          ) : null}
           <p className="mb-3 text-xs text-muted-foreground">
             {formatDateLabel(req.borrowDate)} → {formatDateLabel(req.returnDate)} · {req.programType}{' '}
             · {req.usageLocation}

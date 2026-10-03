@@ -19,8 +19,20 @@ import type {
   BulkAvImportRow,
   BulkLaptopImportRow,
   BulkNetworkImportRow,
+  LaptopRegistrar,
 } from '@backend/server/assets/assets-repo.server';
+import { isDisposalUnitRole } from '@shared/lib/auth-session';
 import { adminMiddleware, disposalUnitMiddleware, staffMiddleware } from '@backend/server/core/auth-middleware';
+
+function laptopRegistrar(session: { staffId?: string; fullName?: string } | null): LaptopRegistrar {
+  const userId = Number(session?.staffId);
+  return {
+    userId: Number.isInteger(userId) && userId > 0 ? userId : null,
+    name: session?.fullName?.trim() || null,
+  };
+}
+
+const DISPOSAL_FORM_NAMES = new Set(['lampiran1', 'lampiran2', 'tpa10']);
 
 export const listAssetsFn = createServerFn({ method: 'GET' })
   .middleware([staffMiddleware])
@@ -37,7 +49,7 @@ export const createLaptopFn = createServerFn({ method: 'POST' })
     const { getSessionUser } = await import('@backend/server/auth/session.server');
     const session = await getSessionUser();
     const { createLaptop } = await import('@backend/server/assets/assets-repo.server');
-    return createLaptop(input, session?.fullName?.trim() || session?.email || null);
+    return createLaptop(input, laptopRegistrar(session));
   });
 
 export const createAvFn = createServerFn({ method: 'POST' })
@@ -71,7 +83,7 @@ export const bulkCreateLaptopsImportFn = createServerFn({ method: 'POST' })
     const { getSessionUser } = await import('@backend/server/auth/session.server');
     const session = await getSessionUser();
     const { bulkCreateLaptopsWithGeneratedIds } = await import('@backend/server/assets/assets-repo.server');
-    return bulkCreateLaptopsWithGeneratedIds(rows, session?.fullName?.trim() || session?.email || null);
+    return bulkCreateLaptopsWithGeneratedIds(rows, laptopRegistrar(session));
   });
 
 export const bulkCreateAvImportFn = createServerFn({ method: 'POST' })
@@ -217,9 +229,31 @@ export const listAdminDisposalHistoryFn = createServerFn({ method: 'GET' })
 export const getDisposalReportFn = createServerFn({ method: 'GET' })
   .middleware([disposalUnitMiddleware])
   .inputValidator((noRujukanPelupusan: string) => noRujukanPelupusan)
-  .handler(async ({ data: noRujukanPelupusan }) => {
+  .handler(async ({ data: noRujukanPelupusan, context }) => {
+    if (!isDisposalUnitRole(context.roleId)) {
+      throw new Error('Disposal unit access is required. Sign in with a disposal unit account to continue.');
+    }
     const { getDisposalReport } = await import('@backend/server/assets/disposal-repo.server');
     return getDisposalReport(noRujukanPelupusan);
+  });
+
+export const logDisposalFormDownloadFn = createServerFn({ method: 'POST' })
+  .middleware([disposalUnitMiddleware])
+  .inputValidator((input: { noRujukanPelupusan: string; form: string }) => {
+    const noRujukanPelupusan = input?.noRujukanPelupusan?.trim() ?? '';
+    const form = input?.form?.trim() ?? '';
+    if (!noRujukanPelupusan || noRujukanPelupusan.length > 64 || !DISPOSAL_FORM_NAMES.has(form)) {
+      throw new Error('This disposal form could not be recorded.');
+    }
+    return { noRujukanPelupusan, form };
+  })
+  .handler(async ({ data, context }) => {
+    if (!isDisposalUnitRole(context.roleId)) {
+      throw new Error('Disposal unit access is required. Sign in with a disposal unit account to continue.');
+    }
+    const { logDisposalFormDownload } = await import('@backend/server/assets/disposal-download-log.server');
+    await logDisposalFormDownload({ ...data, staffId: context.staffId });
+    return { ok: true as const };
   });
 
 export const uploadPredisposedPictureFn = createServerFn({ method: 'POST' })

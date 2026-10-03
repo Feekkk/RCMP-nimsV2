@@ -25,9 +25,13 @@ import { isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
 import { ASSET_KIND_LABEL } from '@shared/lib/inventory-schema';
 import type { DisposalHistoryBatch, DisposalReport } from '@shared/lib/disposal-schema';
 import { DatePickerField } from '@/technician/deploy-return-fields';
-import { downloadDisposalLampiran1 } from '@/lib/disposal-lampiran1-workbook';
-import { downloadDisposalLampiran2 } from '@/lib/disposal-lampiran2-document';
-import { downloadDisposalTpa10 } from '@/lib/disposal-tpa10-document';
+import { disposalPhotoPath } from '@shared/lib/disposal-photo';
+import {
+  downloadDisposalBundle,
+  downloadDisposalLampiran1,
+  downloadDisposalLampiran2,
+  downloadDisposalTpa10,
+} from '@/lib/disposal-documents';
 import {
   getDisposalReportFn,
   listDisposalHistoryFn,
@@ -80,7 +84,7 @@ function formatDate(value: string | null) {
 }
 
 function storedImageSrc(value: string) {
-  return value.startsWith('/') ? value : `/${value}`;
+  return disposalPhotoPath(value);
 }
 
 function formatAssetLabel(asset: DisposalHistoryBatch['assets'][number]) {
@@ -345,7 +349,19 @@ export function DisposalUnitHistoryPage() {
             <p className="py-8 text-center text-sm text-muted-foreground">Loading forms…</p>
           ) : report ? (
             <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="gap-1.5 rounded-[8px]"
+                  disabled={downloading !== null}
+                  onClick={() =>
+                    void handleDownload('All forms', () => downloadDisposalBundle(report))
+                  }
+                >
+                  <Download className="h-4 w-4" />
+                  {downloading === 'All forms' ? 'Preparing…' : 'All forms'}
+                </Button>
                 {REPORT_DOWNLOADS.map(({ label, download }) => (
                   <Button
                     key={label}
@@ -373,18 +389,19 @@ export function DisposalUnitHistoryPage() {
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
-                      {[asset.imageWholeAsset, asset.imageSerialNumber].map((src, i) =>
-                        src ? (
+                      {[asset.imageWholeAsset, asset.imageSerialNumber].map((src, i) => {
+                        const imageSrc = src ? storedImageSrc(src) : null;
+                        return imageSrc ? (
                           <img
                             key={i}
-                            src={storedImageSrc(src)}
+                            src={imageSrc}
                             alt=""
                             className="h-10 w-10 rounded-[6px] border border-border object-cover"
                           />
                         ) : (
                           <span key={i} className="h-10 w-10 rounded-[6px] border border-dashed border-border" />
-                        ),
-                      )}
+                        );
+                      })}
                     </div>
                   </li>
                 ))}

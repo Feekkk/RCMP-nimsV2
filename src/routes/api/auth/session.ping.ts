@@ -6,8 +6,10 @@ export const Route = createFileRoute('/api/auth/session/ping')({
     handlers: {
       GET: async ({ request }) => {
         const { evaluateWebSession } = await import('@backend/server/auth/session.server');
-        const stay = new URL(request.url).searchParams.get('stay') === '1';
-        const result = await evaluateWebSession(stay ? 'force' : 'touch');
+        const params = new URL(request.url).searchParams;
+        const stay = params.get('stay') === '1';
+        const activity = params.get('activity') === '1';
+        const result = await evaluateWebSession(stay ? 'force' : activity ? 'touch' : 'read');
         if (result.kind === 'ok') {
           return Response.json(
             {

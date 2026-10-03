@@ -32,6 +32,7 @@ import {
 import { usePagination } from '@/hooks/use-pagination';
 import type { StaffDirectoryRow, StaffDivision, StaffHandoverAsset } from '@shared/lib/staff-schema';
 import { STAFF_DIVISIONS } from '@shared/lib/staff-schema';
+import { missingStaffDirectoryFields } from '@shared/lib/deploy-return-schema';
 import { formatDateLabel } from '@shared/lib/date-format';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
@@ -78,10 +79,12 @@ function staffToForm(row: StaffDirectoryRow): StaffFormState {
 function isCompleteStaff(row: StaffDirectoryRow): boolean {
   return (
     Boolean(row.employeeNo.trim()) &&
-    Boolean(row.fullName.trim()) &&
     STAFF_DIVISIONS.includes((row.division ?? '') as StaffDivision) &&
-    Boolean(row.department?.trim()) &&
-    Boolean(row.email?.includes('@'))
+    missingStaffDirectoryFields({
+      fullName: row.fullName,
+      email: row.email,
+      faculty: row.department,
+    }).length === 0
   );
 }
 

@@ -14,7 +14,9 @@ import type {
   UpdatePmLogAssetsInput,
 } from '@shared/lib/pm-schema';
 import { derivePmLogStatus, pmAssetKey } from '@shared/lib/pm-schema';
+import { isAdminRole } from '@shared/lib/auth-session';
 import { sqlDateToIso as toIsoDate } from '@shared/lib/date-format';
+import { getDisplayNamesByOids } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 
 function monthBounds(now = new Date()): { from: string; to: string } {
@@ -297,7 +299,10 @@ export async function createPmLog(input: CreatePmLogInput): Promise<CreatePmLogR
   }
 }
 
-export async function updatePmLogAssets(input: UpdatePmLogAssetsInput): Promise<CreatePmLogResult> {
+export async function updatePmLogAssets(
+  input: UpdatePmLogAssetsInput,
+  actor: { staffId: string; roleId: number },
+): Promise<CreatePmLogResult> {
   const pmLogId = Number(input.pmLogId);
   if (!Number.isFinite(pmLogId) || pmLogId <= 0) throw new Error('Maintenance visit is required.');
   if (!Array.isArray(input.assets) || input.assets.length === 0) {
@@ -305,6 +310,16 @@ export async function updatePmLogAssets(input: UpdatePmLogAssetsInput): Promise<
   }
 
   const pool = getDbPool();
+  const [owners] = await pool.query<(RowDataPacket & { performed_by: number })[]>(
+    'SELECT performed_by FROM pm_log WHERE pm_log_id = ? LIMIT 1',
+    [pmLogId],
+  );
+  const actorId = Number(actor.staffId);
+  if (!owners[0]) throw new Error('This maintenance visit could not be found.');
+  if (!isAdminRole(actor.roleId) && actorId !== Number(owners[0].performed_by)) {
+    throw new Error('You can only update maintenance visits you recorded.');
+  }
+
   const [existing] = await pool.query<LogAssetRow[]>(
     `SELECT pm_log_asset_id, pm_log_id, asset_type, asset_id, asset_category, asset_label,
             serial_num, \`condition\`, remarks, follow_up_required, resolved_at
@@ -400,6 +415,7 @@ type LogRow = RowDataPacket & {
   remarks: string | null;
   performed_by: number;
   performed_email: string | null;
+  performed_oid: string | null;
   assets_total: number;
   good_count: number;
   faulty_count: number;
@@ -434,7 +450,10 @@ function mapLogAsset(row: LogAssetRow): PmLogAsset {
   };
 }
 
-export async function listPmLogs(filters: PmLogListFilters = {}): Promise<PmLogListRow[]> {
+export async function listPmLogs(
+  filters: PmLogListFilters = {},
+  options?: { includePerformerEmail?: boolean },
+): Promise<PmLogListRow[]> {
   const pool = getDbPool();
   const where: string[] = ['1=1'];
   const params: unknown[] = [];
@@ -458,7 +477,7 @@ export async function listPmLogs(filters: PmLogListFilters = {}): Promise<PmLogL
 
   const [rows] = await pool.query<LogRow[]>(
     `SELECT l.pm_log_id, l.pm_date, l.building, l.level, l.zone, l.status, l.remarks,
-            l.performed_by, u.email AS performed_email,
+            l.performed_by, u.email AS performed_email, u.oid AS performed_oid,
             COUNT(a.pm_log_asset_id) AS assets_total,
             SUM(CASE WHEN a.\`condition\` = 'good' THEN 1 ELSE 0 END) AS good_count,
             SUM(CASE WHEN a.\`condition\` = 'faulty' THEN 1 ELSE 0 END) AS faulty_count
@@ -467,7 +486,7 @@ export async function listPmLogs(filters: PmLogListFilters = {}): Promise<PmLogL
      LEFT JOIN pm_log_asset a ON a.pm_log_id = l.pm_log_id
      WHERE ${where.join(' AND ')}
      GROUP BY l.pm_log_id, l.pm_date, l.building, l.level, l.zone, l.status, l.remarks,
-              l.performed_by, u.email
+              l.performed_by, u.email, u.oid
      ORDER BY l.pm_date DESC, l.pm_log_id DESC`,
     params,
   );
@@ -491,8 +510,12 @@ export async function listPmLogs(filters: PmLogListFilters = {}): Promise<PmLogL
     assetsByLog.set(row.pm_log_id, list);
   }
 
+  const performerNames = await getDisplayNamesByOids(rows.map((row) => row.performed_oid));
   let mapped = rows.map((row): PmLogListRow => {
     const email = row.performed_email?.trim() || null;
+    const oid = row.performed_oid?.trim();
+    const resolved = oid ? performerNames.get(oid) : null;
+    const display = resolved && resolved !== oid && !resolved.includes('@') ? resolved : null;
     return {
       pmLogId: row.pm_log_id,
       pmDate: toIsoDate(row.pm_date),
@@ -501,8 +524,8 @@ export async function listPmLogs(filters: PmLogListFilters = {}): Promise<PmLogL
       zone: row.zone,
       status: row.status,
       remarks: row.remarks,
-      performedBy: email ?? `User #${row.performed_by}`,
-      performedByEmail: email,
+      performedBy: display ?? `User #${row.performed_by}`,
+      performedByEmail: options?.includePerformerEmail ? email : null,
       assetsTotal: Number(row.assets_total) || 0,
       goodCount: Number(row.good_count) || 0,
       faultyCount: Number(row.faulty_count) || 0,
