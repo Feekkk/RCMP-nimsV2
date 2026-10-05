@@ -253,7 +253,7 @@ export function PredisposedPictureDialog({
   return (
     <Dialog open={open && asset != null} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto rounded-[14px] sm:max-w-lg"
+        className="max-h-[90vh] overflow-y-auto rounded-[14px] sm:max-w-4xl"
         onPointerDownOutside={(event) => event.preventDefault()}
         onFocusOutside={(event) => event.preventDefault()}
         onInteractOutside={(event) => event.preventDefault()}
@@ -329,7 +329,7 @@ export function PredisposedPictureDialog({
               {live ? (
                 <video
                   ref={setVideoEl}
-                  className="aspect-video h-52 w-full object-cover"
+                  className="aspect-video w-full object-cover"
                   autoPlay
                   playsInline
                   muted
@@ -338,7 +338,7 @@ export function PredisposedPictureDialog({
                 <img
                   src={currentDraft.preview}
                   alt={copy?.title}
-                  className="aspect-video h-52 w-full object-cover"
+                  className="aspect-video w-full object-cover"
                 />
               ) : null}
             </div>

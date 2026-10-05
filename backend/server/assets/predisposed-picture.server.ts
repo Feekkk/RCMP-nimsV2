@@ -8,10 +8,12 @@ import type {
   UploadPredisposedPictureInput,
   UploadPredisposedPictureResult,
 } from '@shared/lib/disposal-schema';
+import { malaysiaTodayIso } from '@shared/lib/disposal-schema';
 import { getSessionUser, webSessionEndResponse } from '@backend/server/auth/session.server';
 import { isDisposalUnitRole, isStaffRole } from '@shared/lib/auth-session';
 
-const UPLOAD_ROOT = path.join(process.cwd(), 'upload', 'picture');
+const UPLOAD_ROOT = path.join(process.cwd(), 'upload');
+const YEAR_RE = /^\d{4}$/;
 const KIND_RE = /^(laptop|av|network)$/;
 const ASSET_RE = /^[A-Za-z0-9._-]{1,64}$/;
 const FILE_RE = /^(whole|serial)\.(jpg|jpeg|png|webp)$/i;
@@ -49,12 +51,34 @@ function assertKind(kind: string): AssetKind {
   return kind;
 }
 
-function publicUrl(kind: AssetKind, assetId: string, fileName: string): string {
+function currentYear(): string {
+  return malaysiaTodayIso().slice(0, 4);
+}
+
+function assetDir(year: string, assetId: string): string {
+  return path.join(UPLOAD_ROOT, year, 'dispose', 'picture', assetId);
+}
+
+function legacyDir(kind: AssetKind, assetId: string): string {
+  return path.join(UPLOAD_ROOT, 'picture', kind, assetId);
+}
+
+function publicUrl(year: string, assetId: string, fileName: string): string {
+  return `/upload/${year}/dispose/picture/${assetId}/${fileName}`;
+}
+
+function legacyPublicUrl(kind: AssetKind, assetId: string, fileName: string): string {
   return `/upload/picture/${kind}/${assetId}/${fileName}`;
 }
 
-function assetDir(kind: AssetKind, assetId: string): string {
-  return path.join(UPLOAD_ROOT, kind, assetId);
+async function listYears(): Promise<string[]> {
+  let names: string[];
+  try {
+    names = await readdir(UPLOAD_ROOT);
+  } catch {
+    return [];
+  }
+  return names.filter((name) => YEAR_RE.test(name)).sort((a, b) => b.localeCompare(a));
 }
 
 async function findSlotFile(dir: string, slot: PredisposedPictureSlot): Promise<string | null> {
@@ -68,17 +92,59 @@ async function findSlotFile(dir: string, slot: PredisposedPictureSlot): Promise<
   return match ?? null;
 }
 
+async function locateSlot(
+  kind: AssetKind,
+  assetId: string,
+  slot: PredisposedPictureSlot,
+): Promise<string | null> {
+  for (const year of await listYears()) {
+    const file = await findSlotFile(assetDir(year, assetId), slot);
+    if (file) return publicUrl(year, assetId, file);
+  }
+  const legacy = await findSlotFile(legacyDir(kind, assetId), slot);
+  return legacy ? legacyPublicUrl(kind, assetId, legacy) : null;
+}
+
+async function clearSlot(kind: AssetKind, assetId: string, slot: PredisposedPictureSlot): Promise<void> {
+  const dirs = [...(await listYears()).map((year) => assetDir(year, assetId)), legacyDir(kind, assetId)];
+  await Promise.all(
+    dirs.map(async (dir) => {
+      const existing = await findSlotFile(dir, slot);
+      if (existing) await unlink(path.join(dir, existing)).catch(() => {});
+    }),
+  );
+}
+
+function imageResponse(fileName: string, data: Buffer): Response {
+  const ext = path.extname(fileName).toLowerCase();
+  const contentType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+  return new Response(new Uint8Array(data), {
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'private, max-age=86400',
+    },
+  });
+}
+
+async function authorizePictureView(): Promise<Response | null> {
+  try {
+    await assertCanViewPictures();
+    return null;
+  } catch (error) {
+    return webSessionEndResponse(error) ?? new Response('Unauthorized', { status: 401 });
+  }
+}
+
 export async function readPredisposedPictures(
   kind: AssetKind,
   assetId: string | number,
 ): Promise<{ imageWholeAsset: string | null; imageSerialNumber: string | null }> {
   const id = safeAssetId(String(assetId));
-  const dir = assetDir(kind, id);
-  const [whole, serial] = await Promise.all([findSlotFile(dir, 'whole'), findSlotFile(dir, 'serial')]);
-  return {
-    imageWholeAsset: whole ? publicUrl(kind, id, whole) : null,
-    imageSerialNumber: serial ? publicUrl(kind, id, serial) : null,
-  };
+  const [imageWholeAsset, imageSerialNumber] = await Promise.all([
+    locateSlot(kind, id, 'whole'),
+    locateSlot(kind, id, 'serial'),
+  ]);
+  return { imageWholeAsset, imageSerialNumber };
 }
 
 export async function attachPredisposedPictures(rows: PreDisposedAsset[]): Promise<PreDisposedAsset[]> {
@@ -116,17 +182,15 @@ export async function savePredisposedPicture(
     throw new Error('This image is too large. Use a photo under 4 MB.');
   }
   const id = safeAssetId(String(input.assetId));
-  const dir = assetDir(kind, id);
+  const year = currentYear();
+  const dir = assetDir(year, id);
+  await clearSlot(kind, id, input.slot);
   await mkdir(dir, { recursive: true });
-  const existing = await findSlotFile(dir, input.slot);
-  if (existing) {
-    await unlink(path.join(dir, existing)).catch(() => {});
-  }
   const fileName = `${input.slot}.${ext}`;
   await writeFile(path.join(dir, fileName), buffer);
   return {
-    url: publicUrl(kind, id, fileName),
-    path: `upload/picture/${kind}/${id}/${fileName}`,
+    url: publicUrl(year, id, fileName),
+    path: `upload/${year}/dispose/picture/${id}/${fileName}`,
   };
 }
 
@@ -134,7 +198,11 @@ export async function removePredisposedPictures(input: RemovePredisposedPictures
   await assertStaffSession();
   const kind = assertKind(input.kind);
   const id = safeAssetId(String(input.assetId));
-  await rm(assetDir(kind, id), { recursive: true, force: true });
+  const years = await listYears();
+  await Promise.all([
+    ...years.map((year) => rm(assetDir(year, id), { recursive: true, force: true })),
+    rm(legacyDir(kind, id), { recursive: true, force: true }),
+  ]);
 }
 
 export async function removePredisposedPictureSlot(
@@ -143,11 +211,29 @@ export async function removePredisposedPictureSlot(
   slot: PredisposedPictureSlot,
 ): Promise<void> {
   await assertStaffSession();
+  const safeKind = assertKind(kind);
   const id = safeAssetId(String(assetId));
-  const dir = assetDir(kind, id);
-  const existing = await findSlotFile(dir, slot);
-  if (existing) {
-    await unlink(path.join(dir, existing)).catch(() => {});
+  await clearSlot(safeKind, id, slot);
+}
+
+export async function serveDisposalAssetPicture(
+  year: string,
+  assetId: string,
+  fileName: string,
+): Promise<Response> {
+  const denied = await authorizePictureView();
+  if (denied) return denied;
+  const safeYear = path.basename(year);
+  const safeId = path.basename(assetId);
+  const safeFile = path.basename(fileName);
+  if (!YEAR_RE.test(safeYear) || !ASSET_RE.test(safeId) || !FILE_RE.test(safeFile)) {
+    return new Response('Not found', { status: 404 });
+  }
+  try {
+    const data = await readFile(path.join(assetDir(safeYear, safeId), safeFile));
+    return imageResponse(safeFile, data);
+  } catch {
+    return new Response('Not found', { status: 404 });
   }
 }
 
@@ -156,11 +242,8 @@ export async function servePredisposedPicture(
   assetId: string,
   fileName: string,
 ): Promise<Response> {
-  try {
-    await assertCanViewPictures();
-  } catch (error) {
-    return webSessionEndResponse(error) ?? new Response('Unauthorized', { status: 401 });
-  }
+  const denied = await authorizePictureView();
+  if (denied) return denied;
   const safeKind = path.basename(kind);
   const safeId = path.basename(assetId);
   const safeFile = path.basename(fileName);
@@ -168,17 +251,8 @@ export async function servePredisposedPicture(
     return new Response('Not found', { status: 404 });
   }
   try {
-    const filePath = path.join(UPLOAD_ROOT, safeKind, safeId, safeFile);
-    const data = await readFile(filePath);
-    const ext = path.extname(safeFile).toLowerCase();
-    const contentType =
-      ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
-    return new Response(data, {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'private, max-age=86400',
-      },
-    });
+    const data = await readFile(path.join(legacyDir(safeKind as AssetKind, safeId), safeFile));
+    return imageResponse(safeFile, data);
   } catch {
     return new Response('Not found', { status: 404 });
   }

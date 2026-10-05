@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeft, FileX, Laptop, Network, Search, Trash2, Tv, Upload } from 'lucide-react';
+import { ArrowLeft, Eye, FileX, Laptop, Network, Search, Trash2, Tv, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -16,6 +16,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
@@ -57,6 +64,7 @@ export function TechnicianPreDisposedPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [captureAsset, setCaptureAsset] = useState<PreDisposedAsset | null>(null);
   const [removePicturesAsset, setRemovePicturesAsset] = useState<PreDisposedAsset | null>(null);
+  const [viewPicturesAsset, setViewPicturesAsset] = useState<PreDisposedAsset | null>(null);
   const [removingPictures, setRemovingPictures] = useState(false);
 
   const load = useCallback(async () => {
@@ -362,29 +370,43 @@ export function TechnicianPreDisposedPage() {
                           <PredisposalPictureStatusBadge complete={picturesComplete(a)} />
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          {picturesComplete(a) ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-muted-foreground transition-transform duration-100 ease-out hover:text-destructive active:scale-[0.97]"
-                              aria-label={`Remove pictures for ${a.kind} ${a.assetId}`}
-                              onClick={() => setRemovePicturesAsset(a)}
-                            >
-                              <FileX className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-muted-foreground transition-transform duration-100 ease-out hover:text-foreground active:scale-[0.97]"
-                              aria-label={`Upload for ${a.kind} ${a.assetId}`}
-                              onClick={() => setCaptureAsset(a)}
-                            >
-                              <Upload className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <div className="flex items-center">
+                            {a.imageWholeAsset || a.imageSerialNumber ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg text-muted-foreground transition-transform duration-100 ease-out hover:text-foreground active:scale-[0.97]"
+                                aria-label={`View pictures for ${a.kind} ${a.assetId}`}
+                                onClick={() => setViewPicturesAsset(a)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            ) : null}
+                            {picturesComplete(a) ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg text-muted-foreground transition-transform duration-100 ease-out hover:text-destructive active:scale-[0.97]"
+                                aria-label={`Remove pictures for ${a.kind} ${a.assetId}`}
+                                onClick={() => setRemovePicturesAsset(a)}
+                              >
+                                <FileX className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg text-muted-foreground transition-transform duration-100 ease-out hover:text-foreground active:scale-[0.97]"
+                                aria-label={`Upload for ${a.kind} ${a.assetId}`}
+                                onClick={() => setCaptureAsset(a)}
+                              >
+                                <Upload className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -448,6 +470,30 @@ export function TechnicianPreDisposedPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={viewPicturesAsset != null}
+        onOpenChange={(open) => {
+          if (!open) setViewPicturesAsset(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[14px] sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Uploaded pictures</DialogTitle>
+            <DialogDescription>
+              {viewPicturesAsset
+                ? `${ASSET_KIND_LABEL[viewPicturesAsset.kind]} · ${viewPicturesAsset.assetId}`
+                : 'Whole asset and serial number'}
+            </DialogDescription>
+          </DialogHeader>
+          {viewPicturesAsset ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <RemovePicturePreview title="Whole asset" src={viewPicturesAsset.imageWholeAsset} large />
+              <RemovePicturePreview title="Serial number" src={viewPicturesAsset.imageSerialNumber} large />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <PredisposedPictureDialog
         asset={captureAsset}
@@ -521,14 +567,34 @@ function PredisposalPictureStatusBadge({ complete }: { complete: boolean }) {
   );
 }
 
-function RemovePicturePreview({ title, src }: { title: string; src: string | null }) {
+function RemovePicturePreview({
+  title,
+  src,
+  large = false,
+}: {
+  title: string;
+  src: string | null;
+  large?: boolean;
+}) {
+  const frame = large ? 'aspect-[4/3] h-auto' : 'h-32';
   return (
     <div className="min-w-0">
-      <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">{title}</p>
+      <p className={cn('mb-1.5 font-medium text-muted-foreground', large ? 'text-xs' : 'text-[11px]')}>
+        {title}
+      </p>
       {src ? (
-        <img src={src} alt={title} className="h-32 w-full rounded-[8px] border border-border object-cover" />
+        <img
+          src={src}
+          alt={title}
+          className={cn('w-full rounded-[8px] border border-border object-cover', frame)}
+        />
       ) : (
-        <div className="flex h-32 items-center justify-center rounded-[8px] border border-dashed border-border text-xs text-muted-foreground">
+        <div
+          className={cn(
+            'flex items-center justify-center rounded-[8px] border border-dashed border-border text-xs text-muted-foreground',
+            frame,
+          )}
+        >
           No photo
         </div>
       )}

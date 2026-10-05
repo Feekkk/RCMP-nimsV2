@@ -84,6 +84,7 @@ import { Route as ApiV1RequestsPoolMarkRouteImport } from './routes/api/v1/reque
 import { Route as ApiV1RequestsPoolRemoveRouteImport } from './routes/api/v1/requests.pool.remove'
 import { Route as UploadDisposeYearBatchFileNameRouteImport } from './routes/upload/dispose.$year.$batch.$fileName'
 import { Route as UploadPictureKindAssetIdFileNameRouteImport } from './routes/upload/picture.$kind.$assetId.$fileName'
+import { Route as UploadYearDisposePictureAssetIdFileNameRouteImport } from './routes/upload/$year.dispose.picture.$assetId.$fileName'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -471,6 +472,12 @@ const UploadPictureKindAssetIdFileNameRoute =
     path: '/upload/picture/$kind/$assetId/$fileName',
     getParentRoute: () => rootRouteImport,
   } as any)
+const UploadYearDisposePictureAssetIdFileNameRoute =
+  UploadYearDisposePictureAssetIdFileNameRouteImport.update({
+    id: '/upload/$year/dispose/picture/$assetId/$fileName',
+    path: '/upload/$year/dispose/picture/$assetId/$fileName',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -548,6 +555,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
   '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
   '/upload/picture/$kind/$assetId/$fileName': typeof UploadPictureKindAssetIdFileNameRoute
+  '/upload/$year/dispose/picture/$assetId/$fileName': typeof UploadYearDisposePictureAssetIdFileNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -625,6 +633,7 @@ export interface FileRoutesByTo {
   '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
   '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
   '/upload/picture/$kind/$assetId/$fileName': typeof UploadPictureKindAssetIdFileNameRoute
+  '/upload/$year/dispose/picture/$assetId/$fileName': typeof UploadYearDisposePictureAssetIdFileNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -703,6 +712,7 @@ export interface FileRoutesById {
   '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
   '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
   '/upload/picture/$kind/$assetId/$fileName': typeof UploadPictureKindAssetIdFileNameRoute
+  '/upload/$year/dispose/picture/$assetId/$fileName': typeof UploadYearDisposePictureAssetIdFileNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -782,6 +792,7 @@ export interface FileRouteTypes {
     | '/api/v1/requests/pool/remove'
     | '/upload/dispose/$year/$batch/$fileName'
     | '/upload/picture/$kind/$assetId/$fileName'
+    | '/upload/$year/dispose/picture/$assetId/$fileName'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -859,6 +870,7 @@ export interface FileRouteTypes {
     | '/api/v1/requests/pool/remove'
     | '/upload/dispose/$year/$batch/$fileName'
     | '/upload/picture/$kind/$assetId/$fileName'
+    | '/upload/$year/dispose/picture/$assetId/$fileName'
   id:
     | '__root__'
     | '/'
@@ -936,6 +948,7 @@ export interface FileRouteTypes {
     | '/api/v1/requests/pool/remove'
     | '/upload/dispose/$year/$batch/$fileName'
     | '/upload/picture/$kind/$assetId/$fileName'
+    | '/upload/$year/dispose/picture/$assetId/$fileName'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1012,6 +1025,7 @@ export interface RootRouteChildren {
   ApiV1AuthMicrosoftTokenRoute: typeof ApiV1AuthMicrosoftTokenRoute
   UploadDisposeYearBatchFileNameRoute: typeof UploadDisposeYearBatchFileNameRoute
   UploadPictureKindAssetIdFileNameRoute: typeof UploadPictureKindAssetIdFileNameRoute
+  UploadYearDisposePictureAssetIdFileNameRoute: typeof UploadYearDisposePictureAssetIdFileNameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1541,6 +1555,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadPictureKindAssetIdFileNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upload/$year/dispose/picture/$assetId/$fileName': {
+      id: '/upload/$year/dispose/picture/$assetId/$fileName'
+      path: '/upload/$year/dispose/picture/$assetId/$fileName'
+      fullPath: '/upload/$year/dispose/picture/$assetId/$fileName'
+      preLoaderRoute: typeof UploadYearDisposePictureAssetIdFileNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1631,6 +1652,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1AuthMicrosoftTokenRoute: ApiV1AuthMicrosoftTokenRoute,
   UploadDisposeYearBatchFileNameRoute: UploadDisposeYearBatchFileNameRoute,
   UploadPictureKindAssetIdFileNameRoute: UploadPictureKindAssetIdFileNameRoute,
+  UploadYearDisposePictureAssetIdFileNameRoute:
+    UploadYearDisposePictureAssetIdFileNameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

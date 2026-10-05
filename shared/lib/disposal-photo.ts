@@ -1,5 +1,5 @@
 const PHOTO_PATH =
-  /^\/upload\/picture\/(laptop|av|network)\/[A-Za-z0-9._-]{1,64}\/(whole|serial)\.(jpe?g|png|webp)$/i;
+  /^\/upload\/(?:\d{4}\/dispose\/picture\/[A-Za-z0-9._-]{1,64}|picture\/(?:laptop|av|network)\/[A-Za-z0-9._-]{1,64})\/(?:whole|serial)\.(?:jpe?g|png|webp)$/i;
 
 export const DISPOSAL_PHOTO_MAX_BYTES = 4 * 1024 * 1024;
 

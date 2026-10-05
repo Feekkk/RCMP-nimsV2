@@ -122,6 +122,25 @@ function devServerFnErrorLogger() {
     },
     transform(code: string, id: string) {
       const normalizedId = id.replace(/\\/g, "/");
+      const resolverReturn = "return mod[devServerFn.export]";
+      if (
+        normalizedId.includes("tanstack-start-server-fn-resolver") &&
+        code.includes(resolverReturn)
+      ) {
+        return code.replace(
+          resolverReturn,
+          `let action = mod[devServerFn.export]
+  for (let attempt = 0; !action && attempt < 20; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 25))
+    action = mod[devServerFn.export]
+  }
+  if (!action) {
+    throw new Error('Server function export not ready: ' + devServerFn.export + ' from ' + devServerFn.file)
+  }
+  return action`,
+        );
+      }
+
       const isTargetModule =
         normalizedId.includes(
           "/@tanstack/start-server-core/src/server-functions-handler.ts",
