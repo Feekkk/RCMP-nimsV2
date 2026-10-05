@@ -1350,19 +1350,19 @@ export function TechnicianRequestPage() {
             className="flex flex-wrap justify-start gap-1"
           >
             <ToggleGroupItem value="all" className="rounded-[8px] px-3 text-xs">
-              All ({searched.length})
+              All
             </ToggleGroupItem>
             <ToggleGroupItem value="pending" className="gap-1.5 rounded-[8px] px-3 text-xs">
               <ClipboardList className="h-3.5 w-3.5" />
-              Pending ({queues.pending.length})
+              Pending
             </ToggleGroupItem>
             <ToggleGroupItem value="to_return" className="gap-1.5 rounded-[8px] px-3 text-xs">
               <RotateCcw className="h-3.5 w-3.5" />
-              To return ({queues.toReturn.length})
+              To return
             </ToggleGroupItem>
             <ToggleGroupItem value="overdue" className="gap-1.5 rounded-[8px] px-3 text-xs">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Overdue ({queues.overdue.length})
+              Overdue
             </ToggleGroupItem>
           </ToggleGroup>
         </CardHeader>
