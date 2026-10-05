@@ -26,7 +26,6 @@ import { cn } from '@/lib/utils';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
 import { DatePickerField } from '@/technician/deploy-return-fields';
 import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
-import { ScopedAskAiButton } from '@/prompt/scoped-ask-ai';
 import { TechnicianShell } from '@/technician/technician-shell';
 import { listRequestLogFn } from '@backend/server/requests/request.functions';
 
@@ -309,22 +308,12 @@ function RequestLogDetail({ entry }: { entry: RequestLogEntry }) {
   return (
     <>
       <DialogHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3 pr-6">
-          <div className="min-w-0 space-y-1.5">
-            <DialogTitle>{entry.requesterName}</DialogTitle>
-            <DialogDescription>
-              #{entry.requestId} · {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}{' '}
-              · {entry.programType} · {entry.usageLocation}
-            </DialogDescription>
-          </div>
-          <ScopedAskAiButton
-            target={{
-              type: 'request',
-              requestId: entry.requestId,
-              requesterName: entry.requesterName,
-            }}
-            label="Ask about this request"
-          />
+        <div className="min-w-0 space-y-1.5 pr-6">
+          <DialogTitle>{entry.requesterName}</DialogTitle>
+          <DialogDescription>
+            #{entry.requestId} · {formatDateLabel(entry.borrowDate)} → {formatDateLabel(entry.returnDate)}{' '}
+            · {entry.programType} · {entry.usageLocation}
+          </DialogDescription>
         </div>
       </DialogHeader>
 

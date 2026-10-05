@@ -220,7 +220,6 @@ export default defineConfig(({ mode }) => {
     "CRON_",
     "OVERDUE_",
     "DATABASE_",
-    "OPENROUTER_",
     "API_JWT_",
     "SESSION_",
     "ENABLE_DEV_LOGIN",
@@ -238,7 +237,7 @@ export default defineConfig(({ mode }) => {
     },
     define: envDefine,
     ssr: {
-      external: ['mysql2', 'mysql2/promise', 'nodemailer', 'exceljs', 'better-sqlite3'],
+      external: ['mysql2', 'mysql2/promise', 'nodemailer', 'exceljs'],
     },
     resolve: {
       alias: {
@@ -264,7 +263,7 @@ export default defineConfig(({ mode }) => {
           path.resolve(__dirname, 'backend/plugins/overdue-email-scheduler.ts'),
         ],
         rollupConfig: {
-          external: ['mysql2', 'mysql2/promise', 'nodemailer', 'better-sqlite3'],
+          external: ['mysql2', 'mysql2/promise', 'nodemailer'],
         },
         routeRules: {
           '/**': {

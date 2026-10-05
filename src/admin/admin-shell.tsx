@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AdminSideBar } from '@/components/ui/adminSidebar';
 import { Toaster } from '@/components/ui/sonner';
-import { AdminDock } from '@/admin/admin-dock';
 import { clearAllSessions, getPostLoginPath, hasAdminSession, readPrivilegedSession } from '@shared/lib/auth-session';
 
 export function AdminShell({ children }: { children: ReactNode }) {
@@ -59,8 +58,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="relative w-full flex-1 px-4 pb-28 pt-8 sm:px-6 sm:pb-28 sm:pt-10 md:px-8">{children}</main>
-        <AdminDock />
+        <main className="relative w-full flex-1 px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-10 md:px-8">{children}</main>
       </div>
       <Toaster />
     </div>

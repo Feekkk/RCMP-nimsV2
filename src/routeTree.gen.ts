@@ -17,7 +17,6 @@ import { Route as AdminDisposedRouteImport } from './routes/admin/disposed'
 import { Route as AdminExportRouteImport } from './routes/admin/export'
 import { Route as AdminLaptopRouteImport } from './routes/admin/laptop'
 import { Route as AdminNetworkRouteImport } from './routes/admin/network'
-import { Route as AdminPromptRouteImport } from './routes/admin/prompt'
 import { Route as AdminRequestRouteImport } from './routes/admin/request'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
@@ -124,11 +123,6 @@ const AdminLaptopRoute = AdminLaptopRouteImport.update({
 const AdminNetworkRoute = AdminNetworkRouteImport.update({
   id: '/admin/network',
   path: '/admin/network',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminPromptRoute = AdminPromptRouteImport.update({
-  id: '/admin/prompt',
-  path: '/admin/prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRequestRoute = AdminRequestRouteImport.update({
@@ -487,7 +481,6 @@ export interface FileRoutesByFullPath {
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
-  '/admin/prompt': typeof AdminPromptRoute
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -565,7 +558,6 @@ export interface FileRoutesByTo {
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
-  '/admin/prompt': typeof AdminPromptRoute
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -644,7 +636,6 @@ export interface FileRoutesById {
   '/admin/export': typeof AdminExportRoute
   '/admin/laptop': typeof AdminLaptopRoute
   '/admin/network': typeof AdminNetworkRoute
-  '/admin/prompt': typeof AdminPromptRoute
   '/admin/request': typeof AdminRequestRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -724,7 +715,6 @@ export interface FileRouteTypes {
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
-    | '/admin/prompt'
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
@@ -802,7 +792,6 @@ export interface FileRouteTypes {
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
-    | '/admin/prompt'
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
@@ -880,7 +869,6 @@ export interface FileRouteTypes {
     | '/admin/export'
     | '/admin/laptop'
     | '/admin/network'
-    | '/admin/prompt'
     | '/admin/request'
     | '/admin/settings'
     | '/admin/users'
@@ -959,7 +947,6 @@ export interface RootRouteChildren {
   AdminExportRoute: typeof AdminExportRoute
   AdminLaptopRoute: typeof AdminLaptopRoute
   AdminNetworkRoute: typeof AdminNetworkRoute
-  AdminPromptRoute: typeof AdminPromptRoute
   AdminRequestRoute: typeof AdminRequestRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -1083,13 +1070,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/network'
       fullPath: '/admin/network'
       preLoaderRoute: typeof AdminNetworkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/prompt': {
-      id: '/admin/prompt'
-      path: '/admin/prompt'
-      fullPath: '/admin/prompt'
-      preLoaderRoute: typeof AdminPromptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/request': {
@@ -1586,7 +1566,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminExportRoute: AdminExportRoute,
   AdminLaptopRoute: AdminLaptopRoute,
   AdminNetworkRoute: AdminNetworkRoute,
-  AdminPromptRoute: AdminPromptRoute,
   AdminRequestRoute: AdminRequestRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
