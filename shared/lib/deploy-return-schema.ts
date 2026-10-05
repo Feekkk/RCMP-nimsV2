@@ -8,7 +8,7 @@ export type DeployReturnSearch = {
 
 export const RETURN_CONDITIONS = ['Good', 'Bad'] as const;
 
-export const CAMPUS_BUILDINGS = ['Al Razi', 'Avicenna', 'Al Zahrawi'] as const;
+export const CAMPUS_BUILDINGS = ['Al Razi', 'Avicenna', 'Al Zahrawi', 'Taiping'] as const;
 
 export type CampusBuilding = (typeof CAMPUS_BUILDINGS)[number];
 
