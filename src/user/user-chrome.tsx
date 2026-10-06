@@ -20,10 +20,13 @@ export function UserPageChrome({
   return (
     <>
       <header className="sticky top-0 z-10 border-b border-border/80 bg-card/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between gap-3 px-4">
           <Link to="/user/request" className="flex shrink-0 items-center gap-2">
             <NimsLogo size="sm" variant="light" />
           </Link>
+          <p className="min-w-0 flex-1 text-center text-xs font-bold leading-tight text-foreground sm:text-sm">
+            Information Technology Department
+          </p>
           <Button
             type="button"
             variant="ghost"

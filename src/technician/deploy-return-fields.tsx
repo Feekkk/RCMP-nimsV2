@@ -30,18 +30,23 @@ import { cn } from '@/lib/utils';
 export function FormField({
   label,
   required,
+  hint,
   children,
 }: {
   label: string;
   required?: boolean;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs">
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-      </Label>
+      <div className="space-y-1">
+        <Label className="text-xs">
+          {label}
+          {required && <span className="text-destructive"> *</span>}
+        </Label>
+        {hint ? <p className="text-xs leading-snug text-foreground/80">{hint}</p> : null}
+      </div>
       {children}
     </div>
   );
@@ -53,6 +58,7 @@ export function DatePickerField({
   value,
   onChange,
   required,
+  hint,
   minDate,
   holidays = [],
 }: {
@@ -60,6 +66,7 @@ export function DatePickerField({
   value: string;
   onChange: (isoDate: string) => void;
   required?: boolean;
+  hint?: string;
   minDate?: string;
   holidays?: { date: string; name: string }[];
 }) {
@@ -72,7 +79,7 @@ export function DatePickerField({
     .filter((date): date is Date => date != null);
 
   return (
-    <FormField label={label} required={required}>
+    <FormField label={label} required={required} hint={hint}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button

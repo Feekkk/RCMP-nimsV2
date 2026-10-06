@@ -378,8 +378,8 @@ function StepIndicator({
             <span
               className={cn(
                 'relative z-[1] flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200',
-                active && 'bg-[oklch(0.45_0.12_290)] text-white ring-4 ring-[oklch(0.45_0.12_290)]/20',
-                done && !active && 'bg-[oklch(0.45_0.12_290)] text-white',
+                active && 'bg-amber-400 text-amber-950 ring-4 ring-amber-400/30',
+                done && !active && 'bg-emerald-600 text-white dark:bg-emerald-500',
                 !active && !done && 'border border-border bg-card text-muted-foreground',
               )}
             >
@@ -394,7 +394,7 @@ function StepIndicator({
                   <span
                     className={cn(
                       'absolute right-1/2 left-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full transition-colors duration-200',
-                      i <= currentStep ? 'bg-[oklch(0.45_0.12_290)]' : 'bg-border',
+                      i <= currentStep ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-border',
                     )}
                     aria-hidden
                   />
@@ -403,7 +403,7 @@ function StepIndicator({
                   <span
                     className={cn(
                       'absolute left-1/2 right-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full transition-colors duration-200',
-                      i < currentStep ? 'bg-[oklch(0.45_0.12_290)]' : 'bg-border',
+                      i < currentStep ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-border',
                     )}
                     aria-hidden
                   />
@@ -424,7 +424,11 @@ function StepIndicator({
               <span
                 className={cn(
                   'mt-2 flex items-center gap-1 text-[11px] font-medium',
-                  active ? 'text-foreground' : 'text-muted-foreground',
+                  done && !active
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : active
+                      ? 'text-foreground'
+                      : 'text-muted-foreground',
                 )}
               >
                 <Icon className="hidden h-3 w-3 sm:block" aria-hidden />
@@ -562,6 +566,7 @@ function DetailsStep({
       <div className="grid gap-4 sm:grid-cols-2">
         <DatePickerField
           label="Borrow date"
+          hint="Pick your start borrow date. You may take the items early"
           value={borrowDate}
           onChange={onBorrowDateChange}
           minDate={todayIso}
@@ -570,6 +575,7 @@ function DetailsStep({
         />
         <DatePickerField
           label="Return date"
+          hint="Please return the items follow this date."
           value={returnDate}
           onChange={onReturnDateChange}
           minDate={minReturnDate}
@@ -746,7 +752,9 @@ function EquipmentCatalogCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-snug">{entry.assetType}</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{entry.description}</p>
+          <p className="mt-1.5 rounded-[8px] bg-amber-50 px-2 py-1.5 text-xs font-medium leading-relaxed text-amber-950 dark:bg-amber-950/40 dark:text-amber-50">
+            {entry.description}
+          </p>
           <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground/90">
             <span className="font-medium text-foreground/80">Includes:</span> {entry.includes}
           </p>
@@ -878,7 +886,7 @@ function PreviewStep({
                   <span className="shrink-0 tabular-nums text-muted-foreground">× {i.quantity}</span>
                 </div>
                 {info && (
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  <p className="mt-1.5 rounded-[8px] bg-amber-50 px-2 py-1.5 text-xs font-medium leading-relaxed text-amber-950 dark:bg-amber-950/40 dark:text-amber-50">
                     {info.description}
                   </p>
                 )}

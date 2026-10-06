@@ -206,7 +206,10 @@ const TechSideBar = React.forwardRef<HTMLElement, TechSideBarProps>(function Tec
     <>
       <div className="shrink-0 border-b border-black/[0.06] px-4 py-4">
         <NimsLogo size="sm" variant="light" className="mx-auto" />
-        <p className="mt-2 text-center text-xs font-medium text-muted-foreground">
+        <p className="mt-2 text-center text-xs font-bold leading-snug text-foreground">
+          Information Technology Department
+        </p>
+        <p className="mt-1 text-center text-xs font-medium text-muted-foreground">
           {fullName ?? 'Technical officer'}
         </p>
       </div>

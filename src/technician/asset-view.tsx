@@ -1,8 +1,7 @@
-import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   ArrowLeft,
-  ChevronDown,
   Clock,
   ExternalLink,
   History,
@@ -298,14 +297,11 @@ function TrailEventLinks({ event, readOnly }: { event: AssetTrailEvent; readOnly
 }
 
 function TrailsTable({ trails, readOnly }: { trails: AssetTrailEvent[]; readOnly?: boolean }) {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-
   return (
     <div className="overflow-x-auto rounded-[10px] border border-border">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-8" />
             <TableHead className="w-44 whitespace-nowrap">When</TableHead>
             <TableHead className="w-36">Category</TableHead>
             <TableHead className="w-32">Event</TableHead>
@@ -315,68 +311,32 @@ function TrailsTable({ trails, readOnly }: { trails: AssetTrailEvent[]; readOnly
         <TableBody>
           {trails.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+              <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
                 No trail events recorded yet.
               </TableCell>
             </TableRow>
           ) : (
             trails.map((ev, idx) => {
-              const isOpen = openIndex === idx;
-              const hasLink = ev.requestId != null;
+              const detail = [ev.detail, ev.actor ? `Attended by ${ev.actor}` : null]
+                .filter(Boolean)
+                .join(' · ');
 
               return (
-                <Fragment key={`${ev.category}-${ev.title}-${ev.at}-${idx}`}>
-                  <TableRow
-                    className={cn(
-                      'cursor-pointer hover:bg-muted/50',
-                      isOpen && 'bg-muted/30',
-                    )}
-                    onClick={() => setOpenIndex(isOpen ? null : idx)}
-                  >
-                    <TableCell className="py-2 pr-0">
-                      <ChevronDown
-                        className={cn(
-                          'h-4 w-4 text-muted-foreground transition-transform',
-                          isOpen && 'rotate-180',
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatTrailWhen(ev.at)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="rounded-[6px] text-[10px] font-normal">
-                        {ev.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm font-medium">{ev.title}</TableCell>
-                    <TableCell className="max-w-[280px] truncate text-sm text-muted-foreground sm:max-w-none">
-                      {[ev.detail, ev.actor ? `Attended by ${ev.actor}` : null]
-                        .filter(Boolean)
-                        .join(' · ') || '—'}
-                      {hasLink && !isOpen && (
-                        <span className="ml-2 text-xs text-[oklch(0.45_0.12_290)]">View</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                  {isOpen && (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={5} className="bg-muted/20 px-6 py-4">
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            {ev.category} · {ev.title}
-                          </p>
-                          <p className="text-sm text-foreground">{ev.detail ?? 'No additional details.'}</p>
-                          {ev.actor ? (
-                            <p className="text-sm text-muted-foreground">Attended by {ev.actor}</p>
-                          ) : null}
-                          <p className="text-xs text-muted-foreground">{formatTrailWhen(ev.at)}</p>
-                          <TrailEventLinks event={ev} readOnly={readOnly} />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </Fragment>
+                <TableRow key={`${ev.category}-${ev.title}-${ev.at}-${idx}`} className="hover:bg-transparent">
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap align-top">
+                    {formatTrailWhen(ev.at)}
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Badge variant="outline" className="rounded-[6px] text-[10px] font-normal">
+                      {ev.category}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm font-medium align-top">{ev.title}</TableCell>
+                  <TableCell className="whitespace-normal text-sm text-foreground align-top">
+                    <p className="break-words">{detail || '—'}</p>
+                    <TrailEventLinks event={ev} readOnly={readOnly} />
+                  </TableCell>
+                </TableRow>
               );
             })
           )}
@@ -619,9 +579,6 @@ export function AssetViewContent({
                   ) : null}
                 </CardHeader>
                 <CardContent>
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    Click a row to view full event details.
-                  </p>
                   <TrailsTable trails={data.trails} readOnly={readOnly} />
                 </CardContent>
               </Card>

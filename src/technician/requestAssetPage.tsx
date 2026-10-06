@@ -225,7 +225,6 @@ export function TechnicianRequestAssetPage() {
                   </TableHead>
                   <TableHead className="font-semibold">Kind</TableHead>
                   <TableHead className="font-semibold">ID</TableHead>
-                  <TableHead className="font-semibold">Old ID</TableHead>
                   <TableHead className="font-semibold">Model</TableHead>
                   <TableHead className="font-semibold">Brand</TableHead>
                   <TableHead className="font-semibold">Category</TableHead>
@@ -235,13 +234,13 @@ export function TechnicianRequestAssetPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                       {assets.length === 0
                         ? 'No new or return laptop or AV assets found.'
                         : 'No assets match your filters.'}
@@ -266,13 +265,9 @@ export function TechnicianRequestAssetPage() {
                         <KindCell kind={a.kind} />
                         <TableCell>
                           <code className="text-xs">{a.assetId}</code>
-                        </TableCell>
-                        <TableCell>
                           {a.assetIdOld ? (
-                            <code className="text-xs">{a.assetIdOld}</code>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                            <p className="text-[10px] text-muted-foreground">{a.assetIdOld}</p>
+                          ) : null}
                         </TableCell>
                         <TableCell className="font-medium">{a.model ?? '—'}</TableCell>
                         <TableCell className="text-muted-foreground">{a.brand ?? '—'}</TableCell>
