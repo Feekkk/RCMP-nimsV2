@@ -51,7 +51,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
 import { isStaffRole, readTechnicianSession } from '@shared/lib/auth-session';
-import { malaysiaWhatsappHref } from '@shared/lib/phone';
 import {
   REQUEST_STATUS_ACTIVE,
   REQUEST_STATUS_BOOKED,
@@ -99,7 +98,6 @@ function outlookComposeHref(email: string): string {
 function RequesterContactLinks({ email, phone }: { email: string; phone: string | null }) {
   const viewer = readTechnicianSession();
   if (!viewer || !isStaffRole(viewer.roleId)) return null;
-  const whatsappHref = malaysiaWhatsappHref(phone);
   if (!email && !phone) return null;
   return (
     <p className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -114,21 +112,7 @@ function RequesterContactLinks({ email, phone }: { email: string; phone: string 
           {email}
         </a>
       ) : null}
-      {phone ? (
-        whatsappHref ? (
-          <a
-            href={whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline-offset-2 hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {phone}
-          </a>
-        ) : (
-          <span className="text-muted-foreground">{phone}</span>
-        )
-      ) : null}
+      {phone ? <span className="text-muted-foreground">{phone}</span> : null}
     </p>
   );
 }
