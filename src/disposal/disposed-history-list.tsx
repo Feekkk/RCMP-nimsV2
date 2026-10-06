@@ -62,7 +62,7 @@ function AssetIdLink({
     return (
       <Link
         to="/admin/asset/$kind/$assetId"
-        params={{ kind, assetId }}
+        params={{ kind, assetId: String(assetId) }}
         className="text-foreground underline-offset-2 hover:underline"
       >
         {children}
@@ -73,7 +73,7 @@ function AssetIdLink({
   return (
     <Link
       to="/technician/asset/$kind/$assetId"
-      params={{ kind, assetId }}
+      params={{ kind, assetId: String(assetId) }}
       className="text-foreground underline-offset-2 hover:underline"
     >
       {children}

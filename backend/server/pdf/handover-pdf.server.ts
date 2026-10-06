@@ -6,12 +6,14 @@ import { loadLogoBase64 } from '@backend/server/pdf/pdf-form-common.server';
 
 const UNIKL_HEADER = 'UNIVERSITY KUALA LUMPUR ROYAL COLLEGE OF MEDICINE PERAK';
 
+const DEPARTMENT_HEADER = ['UNIKL ROYAL COLLEGE OF MEDICINE PERAK', 'INFORMATION TECHNOLOGY DEPARTMENT'];
+
 /** Inline-markdown bold for schema.content (readOnly fields use content, not inputs). */
 function boldContent(text: string): string {
   return `**${text}**`;
 }
 
-const COMPUTER_GENERATED_FOOTER = 'This is computer generated no need any signature';
+const COMPUTER_GENERATED_FOOTER = 'THIS IS COMPUTER GENERATED NO NEED ANY SIGNATURE';
 
 /** A4 with padding — one schema[] per page; one inputs[] entry for the whole document. */
 const BASE_PDF = { width: 210, height: 297, padding: [12, 12, 12, 12] as [number, number, number, number] };
@@ -30,7 +32,7 @@ const COMPLIANCE_POINTS = `1. UNIKL RCMP licenses the use of computer software f
 
 4. UNIKL RCMP employees learning of any misuse of software or company IT equipment (which includes vandalism of the certificate of authenticity sticker on the PC casing chassis, PC monitors, CD media etc) which could be detrimental to the business of the company shall notify their immediate supervisor.
 
-5. Under the Copyright Act 1987, offenders can be fined from RM2,000 to RM20,000 for each infringing copy and/or face imprisonment of up to 5 years. UNIKL RCMP does not condone the illegal duplication of software. UNIKL RCMP employees who make, acquire, or use unauthorized copies of computer software shall be disciplined as appropriate under the circumstances. Such discipline action may include termination.
+5. Under the Copyright Act 1987, offenders can be fined from RM2,000 to RM20,000 for each infringing copy and/or face imprisonment of up to 5 years. UNIKL RCMP does not condone the illegal duplication of software. UNIKL RCMP employees who make, acquire, or use authorized copies of computer software shall be disciplined as appropriate under the circumstances. Such discipline action may include termination.
 
 6. Any doubts concerning whether any employee may copy/duplicate or use a given software program should be raised with the immediate supervisor before proceeding.`;
 
@@ -39,21 +41,22 @@ const COMPLIANCE_AGREE =
 
 const REQUIREMENTS_TEXT = `Please comply with the following company's requirements: -
 
-i. To comply with Company Notebook/Desktop Usage Policy. (Please refer to itd.rcmp@unikl.edu.my)
+i. To comply with Company Notebook/Desktop Usage Policy. (Please refer to it.rcmp.unikl.edu.my)
 
 ii. To use this Notebook/Desktop for working purposes only.
 
-iii. To use for teaching purposes and use at appropriate place only. (If related)
+iii. To use for teaching purposes and use at appropriate places only. (If related)
 
 iv. Installation of any unauthorized/illegal software into this Notebook/Desktop is strictly prohibited.
 
 v. Any request for repair due to mechanical defect must be forwarded to the IT Department by filling in the requisition form and subject to approval by the management.
 
-vi. The user is responsible for repairing or replacement cost of the damage or loss due to negligence or intentional misconduct.`;
+vi. The user is responsible for repairing or replacing the cost of the damage or loss due to negligence or intentional misconduct.`;
 
 type TextOpts = {
   align?: 'left' | 'center' | 'right';
   backgroundColor?: string;
+  fontColor?: string;
   lineHeight?: number;
   fontSize?: number;
   overflow?: 'visible' | 'expand';
@@ -89,6 +92,7 @@ function T(
         }
       : {}),
     ...(opts.backgroundColor ? { backgroundColor: opts.backgroundColor } : {}),
+    ...(opts.fontColor ? { fontColor: opts.fontColor } : {}),
   };
 }
 
@@ -105,6 +109,14 @@ function Img(name: string, x: number, y: number, w: number, h: number) {
 
 function pageHeaderFields(prefix: string, title?: string) {
   const fields = [
+    ...(['left', 'right'] as const).map((align, i) =>
+      T(`${prefix}_deptHeader_${align}`, 14, 4, 182, 4, 6, {
+        align,
+        fontColor: '#666666',
+        markdown: true,
+        content: `***${DEPARTMENT_HEADER[i]}***`,
+      }),
+    ),
     Img(`${prefix}_logo`, 83, 4, 44, 40),
     T(`${prefix}_uni`, 10, 46, 190, 8, 10, {
       align: 'center',
@@ -120,7 +132,7 @@ function pageHeaderFields(prefix: string, title?: string) {
 }
 
 function buildPage3Schemas(data: HandoverPdfData) {
-  const liabilityQuoted = `'I, ${data.recipientName} agree to pay all costs associated with damage to the above peripherals or its associated peripheral equipment. I also agree to pay for replacement cost of the equipment should it be lost or stolen.'`;
+  const liabilityQuoted = `'I, ${data.recipientName} agree to pay all costs associated with damage to the above peripherals or its associated peripheral equipment. I also agree to pay for the replacement cost of the equipment should it be lost or stolen.'`;
 
   return [
     ...pageHeaderFields('p3'),
@@ -135,8 +147,6 @@ function buildPage3Schemas(data: HandoverPdfData) {
       content: boldContent(liabilityQuoted),
     }),
     T('p3_liabNote', 14, 170, 182, 10, 9),
-    T('p3_sigLeft', 14, FOOTER_Y + 8, 95, 8, 10),
-    T('p3_dateRight', 110, FOOTER_Y + 8, 86, 8, 10, { align: 'right' }),
     pageFooterField('p3'),
   ];
 }
@@ -147,12 +157,6 @@ const PAGE1_SCHEMA = [
   T('p1_intro', 14, 70, 182, 10, 9),
   T('p1_points', 14, 82, 182, 148, 8.5, { lineHeight: 1.3 }),
   T('p1_agree', 14, 232, 182, 12, 9),
-  T('p1_sigLine', 14, FOOTER_Y, 182, 5, 9),
-  T('p1_sigLabel', 14, FOOTER_Y + 5, 182, 5, 9),
-  T('p1_empName', 14, FOOTER_Y + 11, 182, 5, 9),
-  T('p1_empDesig', 14, FOOTER_Y + 17, 182, 5, 9),
-  T('p1_staffId', 14, FOOTER_Y + 23, 182, 5, 9),
-  T('p1_date', 14, FOOTER_Y + 29, 182, 5, 9),
   pageFooterField('p1'),
 ];
 
@@ -173,8 +177,8 @@ const PAGE2_SCHEMA = [
   T('p2_footerTitle', 14, FOOTER_Y, 90, 6, 9),
   T('p2_footerName', 14, FOOTER_Y + 7, 90, 5, 9),
   T('p2_footerDesig', 14, FOOTER_Y + 13, 90, 5, 9),
-  T('p2_footerDate', 14, FOOTER_Y + 19, 90, 5, 9),
-  T('p2_footerSig', 120, FOOTER_Y + 19, 76, 6, 9, { align: 'right' }),
+  T('p2_footerStaffId', 14, FOOTER_Y + 19, 90, 5, 9),
+  T('p2_footerDate', 14, FOOTER_Y + 25, 90, 5, 9),
   pageFooterField('p2'),
 ];
 
@@ -208,24 +212,27 @@ function buildInputs(data: HandoverPdfData, logo: string): Record<string, string
     p2_brand: `   Brand Name: ${data.brandName}`,
     p2_model: `   Model Name: ${data.modelName}`,
     p2_serial: `   Serial Number: ${data.serialNumber}`,
+    p2_adapter: `   Adapter: ${data.adapter}`,
+    p2_remark: `   Remark: ${data.remark}`,
     p2_closing: 'to be used for your daily work.',
     p2_requirements: REQUIREMENTS_TEXT,
     p2_footerTitle: 'Hand over by:',
     p2_footerName: `Name: ${data.handoverByName}`,
     p2_footerDesig: `Designation: ${data.handoverByDesignation}`,
+    p2_footerStaffId: 'Staff ID:',
     p2_footerDate: `Date: ${data.handoverDate}`,
   };
 
   const page3: Record<string, string> = {
     p3_logo: logo,
     p3_ack:
-      "I, received the above mentioned Notebook/Desktop in satisfactory condition and agree to abide by the UNIKL Royal College of Medicine Perak regulations on the usage of company's equipment.",
+      "I received the above-mentioned Notebook/Desktop in satisfactory condition and agreed to abide by the UNIKL Royal College of Medicine Perak regulations on the usage of company's equipment.",
     p3_name: `Name: ${data.recipientName}`,
     p3_desig: `Designation: ${data.employeeDesignation}`,
-    p3_staffNo: `Staff Number: ${data.employeeNo}`,
-    p3_liabTitle: 'Liability Statement :',
+    p3_staffNo: `Staff ID: ${data.employeeNo}`,
+    p3_liabTitle: 'Liability Statement :-',
     p3_liabNote:
-      'This form indicates my agreement with the above liability statement',
+      'My statement above indicates my agreement with the above liability statement',
   };
 
   return [{ ...page1, ...page2, ...page3, ...genFooter }];

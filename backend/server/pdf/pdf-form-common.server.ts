@@ -44,6 +44,7 @@ export function loadLogoBuffer(): Buffer {
 export type TextOpts = {
   align?: 'left' | 'center' | 'right';
   backgroundColor?: string;
+  fontColor?: string;
   lineHeight?: number;
   fontSize?: number;
   overflow?: 'visible' | 'expand';
@@ -78,7 +79,21 @@ export function T(
         }
       : {}),
     ...(opts.backgroundColor ? { backgroundColor: opts.backgroundColor } : {}),
+    ...(opts.fontColor ? { fontColor: opts.fontColor } : {}),
   };
+}
+
+const RUNNING_HEADER = ['UNIKL ROYAL COLLEGE OF MEDICINE PERAK', IT_DEPT_HEADER];
+
+export function runningHeaderFields(prefix: string, fontSize: number) {
+  return (['left', 'right'] as const).map((align, i) =>
+    T(`${prefix}_runHeader_${align}`, 14, 4, 182, 4, fontSize, {
+      align,
+      fontColor: '#666666',
+      markdown: true,
+      content: `***${RUNNING_HEADER[i]}***`,
+    }),
+  );
 }
 
 export function Img(name: string, x: number, y: number, w: number, h: number) {
