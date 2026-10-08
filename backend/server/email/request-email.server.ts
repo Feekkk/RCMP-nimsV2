@@ -221,28 +221,17 @@ function wait(ms: number) {
 const REQUEST_EMAIL_ATTEMPTS = 3;
 
 async function deliverRequestEmail(requestId: number): Promise<void> {
-  const { clearRequestEmailFailure, recordRequestEmailFailure } = await import(
-    '@backend/server/email/request-email-failure.server'
-  );
-  let lastError: unknown = new Error('The confirmation email could not be sent.');
   for (let attempt = 1; attempt <= REQUEST_EMAIL_ATTEMPTS; attempt += 1) {
     try {
       await sendRequestEmail(requestId);
-      await clearRequestEmailFailure(requestId);
       return;
     } catch (err) {
-      lastError = err;
       console.error(
         `[request-email] send failed for request ${requestId} (attempt ${attempt}/${REQUEST_EMAIL_ATTEMPTS}):`,
         err,
       );
       if (attempt < REQUEST_EMAIL_ATTEMPTS) await wait(400 * attempt);
     }
-  }
-  try {
-    await recordRequestEmailFailure(requestId, lastError, REQUEST_EMAIL_ATTEMPTS);
-  } catch (err) {
-    console.error(`[request-email] could not record the failure for request ${requestId}:`, err);
   }
 }
 

@@ -52,12 +52,6 @@ async function endWebSession(reason: 'timeout' | 'revoked'): Promise<void> {
   window.location.replace(reason === 'timeout' ? '/login?reason=timeout' : '/login');
 }
 
-function requestUrl(input: RequestInfo | URL): string {
-  if (typeof input === 'string') return input;
-  if (input instanceof URL) return input.href;
-  return input.url;
-}
-
 export function SessionIdleMonitor() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
@@ -101,8 +95,6 @@ export function SessionIdleMonitor() {
     const original = window.fetch.bind(window);
     window.fetch = async (input, init) => {
       const response = await original(input, init);
-      const url = requestUrl(input);
-      if (url.includes('/api/v1/')) return response;
       if (response.status !== 401 && response.status !== 500) return response;
       const text = await response.clone().text().catch(() => '');
       if (text.includes(SESSION_TIMEOUT_CODE)) void endWebSession('timeout');

@@ -3,7 +3,6 @@ import { deleteCookie, getCookie, setCookie } from '@tanstack/react-start/server
 import {
   getMicrosoftAuthConfig,
   microsoftAuthority,
-  resolveMicrosoftRedirectUri,
   type MicrosoftAuthConfig,
 } from '@backend/lib/microsoft-auth-config';
 import { loginMicrosoftUser, type MicrosoftLoginResult } from '@backend/server/auth/auth-repo.server';
@@ -16,8 +15,6 @@ const SCOPES = ['openid', 'profile', 'email', 'offline_access', 'User.Read'];
 type OAuthStatePayload = {
   nonce: string;
   exp: number;
-  /** Set for React Native callers so the web callback page forwards the code to the app. */
-  mobile?: true;
 };
 
 type TokenResponse = {
@@ -40,11 +37,10 @@ function stateSecret(config: MicrosoftAuthConfig): string {
   return config.clientSecret;
 }
 
-export function createMicrosoftOAuthState(config: MicrosoftAuthConfig, mobile = false): string {
+export function createMicrosoftOAuthState(config: MicrosoftAuthConfig): string {
   const payload: OAuthStatePayload = {
     nonce: randomBytes(16).toString('hex'),
     exp: Date.now() + OAUTH_STATE_TTL_MS,
-    ...(mobile ? { mobile: true as const } : {}),
   };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = createHmac('sha256', stateSecret(config)).update(body).digest('base64url');
@@ -149,60 +145,27 @@ function resolveEmail(profile: GraphMe, allowedDomains: string[]): string {
   return raw;
 }
 
-export function buildMicrosoftAuthorizeUrlForRedirect(
-  config: MicrosoftAuthConfig,
-  state: string,
-  redirectUri: string,
-): string {
-  const params = new URLSearchParams({
-    client_id: config.clientId,
-    response_type: 'code',
-    redirect_uri: redirectUri,
-    response_mode: 'query',
-    scope: SCOPES.join(' '),
-    state,
-    prompt: 'select_account',
-  });
-  return `${microsoftAuthority(config.tenantId)}/authorize?${params.toString()}`;
-}
-
 function setOAuthNonceCookie(nonce: string): void {
-  try {
-    setCookie(OAUTH_NONCE_COOKIE, nonce, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: Math.ceil(OAUTH_STATE_TTL_MS / 1000),
-    });
-  } catch {
-    // No request context available (e.g. non-browser/mobile callers) — state TTL still bounds replay.
-  }
+  setCookie(OAUTH_NONCE_COOKIE, nonce, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: Math.ceil(OAUTH_STATE_TTL_MS / 1000),
+  });
 }
 
-/**
- * Starts sign-in. When `bindBrowserCookie` is true (browser web login), an HttpOnly nonce cookie
- * is set so the callback can be checked against the browser that started the flow, preventing
- * login CSRF. Mobile/native callers use their own app-controlled redirect and skip the cookie.
- */
-export function getMicrosoftLoginRedirect(
-  redirectUri?: string | null,
-  bindBrowserCookie = false,
-  mobile = false,
-): { url: string; state: string } {
+export function getMicrosoftLoginRedirect(): { url: string; state: string } {
   const config = getMicrosoftAuthConfig();
   if (!config) {
     throw new Error(
       'Microsoft sign-in is not set up on this server. Contact your administrator or use another sign-in option.',
     );
   }
-  const resolvedRedirect = resolveMicrosoftRedirectUri(config, redirectUri);
-  const state = createMicrosoftOAuthState(config, mobile);
-  if (bindBrowserCookie) {
-    const payload = parseOAuthStatePayload(config, state);
-    if (payload) setOAuthNonceCookie(payload.nonce);
-  }
-  return { url: buildMicrosoftAuthorizeUrlForRedirect(config, state, resolvedRedirect), state };
+  const state = createMicrosoftOAuthState(config);
+  const payload = parseOAuthStatePayload(config, state);
+  if (payload) setOAuthNonceCookie(payload.nonce);
+  return { url: buildMicrosoftAuthorizeUrl(config, state), state };
 }
 
 function parseOAuthStatePayload(config: MicrosoftAuthConfig, state: string): OAuthStatePayload | null {
@@ -219,7 +182,6 @@ function parseOAuthStatePayload(config: MicrosoftAuthConfig, state: string): OAu
 export async function completeMicrosoftLogin(
   code: string,
   state: string,
-  redirectUri?: string | null,
 ): Promise<MicrosoftLoginResult> {
   const config = getMicrosoftAuthConfig();
   if (!config) {
@@ -232,25 +194,13 @@ export async function completeMicrosoftLogin(
     throw new Error('Your sign-in session expired. Go back to the sign-in page and start again.');
   }
 
-  let nonceCookie: string | undefined;
-  try {
-    nonceCookie = getCookie(OAUTH_NONCE_COOKIE);
-  } catch {
-    nonceCookie = undefined;
+  const nonceCookie = getCookie(OAUTH_NONCE_COOKIE);
+  if (!nonceCookie || nonceCookie !== statePayload.nonce) {
+    throw new Error('Your sign-in session expired. Go back to the sign-in page and start again.');
   }
-  if (nonceCookie !== undefined) {
-    if (nonceCookie !== statePayload.nonce) {
-      throw new Error('Your sign-in session expired. Go back to the sign-in page and start again.');
-    }
-    try {
-      deleteCookie(OAUTH_NONCE_COOKIE, { path: '/' });
-    } catch {
-      // best-effort cleanup
-    }
-  }
+  deleteCookie(OAUTH_NONCE_COOKIE, { path: '/' });
 
-  const resolvedRedirect = resolveMicrosoftRedirectUri(config, redirectUri);
-  const tokens = await exchangeCodeForTokens(config, code, resolvedRedirect);
+  const tokens = await exchangeCodeForTokens(config, code, config.redirectUri);
   const profile = await fetchGraphProfile(tokens.access_token!);
   const email = resolveEmail(profile, config.allowedEmailDomains);
 

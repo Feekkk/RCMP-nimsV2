@@ -239,7 +239,6 @@ export default defineConfig(({ mode }) => {
     "CRON_",
     "OVERDUE_",
     "DATABASE_",
-    "API_JWT_",
     "SESSION_",
     "ENABLE_DEV_LOGIN",
   ]);

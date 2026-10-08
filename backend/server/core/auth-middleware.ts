@@ -57,7 +57,7 @@ export const disposalUnitMiddleware = createMiddleware({ type: 'function' })
     return next();
   });
 
-/** "Requester" accounts only (not staff or disposal unit) — mirrors the mobile API's requireUser guard. */
+/** Requester accounts only (not staff or disposal unit). */
 export const requesterMiddleware = createMiddleware({ type: 'function' })
   .middleware([sessionMiddleware])
   .server(async ({ next, context }) => {

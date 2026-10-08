@@ -5,7 +5,7 @@ import { destroySession, establishSession, evaluateWebSession } from '@backend/s
 
 export const getMicrosoftLoginUrlFn = createServerFn({ method: 'POST' }).handler(async () => {
   const { getMicrosoftLoginRedirect } = await import('@backend/server/auth/microsoft-auth.server');
-  return getMicrosoftLoginRedirect(null, true);
+  return getMicrosoftLoginRedirect();
 });
 
 export const completeMicrosoftLoginFn = createServerFn({ method: 'POST' })

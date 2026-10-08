@@ -48,38 +48,10 @@ import { Route as UserEditProfileRouteImport } from './routes/user/edit-profile'
 import { Route as UserHistoryRouteImport } from './routes/user/history'
 import { Route as UserRequestRouteImport } from './routes/user/request'
 import { Route as ApiCronOverdueReturnEmailsRouteImport } from './routes/api/cron/overdue-return-emails'
-import { Route as ApiV1DashboardRouteImport } from './routes/api/v1/dashboard'
-import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
-import { Route as ApiV1ProfileRouteImport } from './routes/api/v1/profile'
 import { Route as AdminAssetKindAssetIdRouteImport } from './routes/admin/asset.$kind.$assetId'
 import { Route as ApiAuthMicrosoftCallbackRouteImport } from './routes/api/auth/microsoft.callback'
 import { Route as ApiAuthSessionPingRouteImport } from './routes/api/auth/session.ping'
-import { Route as ApiV1AdminDashboardRouteImport } from './routes/api/v1/admin.dashboard'
-import { Route as ApiV1AssetsIndexRouteImport } from './routes/api/v1/assets.index'
-import { Route as ApiV1AssetsLookupRouteImport } from './routes/api/v1/assets.lookup'
-import { Route as ApiV1AuthDevLoginRouteImport } from './routes/api/v1/auth.dev-login'
-import { Route as ApiV1AuthLogoutRouteImport } from './routes/api/v1/auth.logout'
-import { Route as ApiV1AuthMeRouteImport } from './routes/api/v1/auth.me'
-import { Route as ApiV1AuthRefreshRouteImport } from './routes/api/v1/auth.refresh'
-import { Route as ApiV1RequestsIndexRouteImport } from './routes/api/v1/requests.index'
-import { Route as ApiV1RequestsBookRouteImport } from './routes/api/v1/requests.book'
-import { Route as ApiV1RequestsCancelNotTakenRouteImport } from './routes/api/v1/requests.cancel-not-taken'
-import { Route as ApiV1RequestsCancelUnavailableRouteImport } from './routes/api/v1/requests.cancel-unavailable'
-import { Route as ApiV1RequestsCheckoutRouteImport } from './routes/api/v1/requests.checkout'
-import { Route as ApiV1RequestsLogRouteImport } from './routes/api/v1/requests.log'
-import { Route as ApiV1RequestsPendingRouteImport } from './routes/api/v1/requests.pending'
-import { Route as ApiV1RequestsPoolRouteImport } from './routes/api/v1/requests.pool'
-import { Route as ApiV1RequestsRejectRouteImport } from './routes/api/v1/requests.reject'
-import { Route as ApiV1RequestsReturnRouteImport } from './routes/api/v1/requests.return'
-import { Route as ApiV1RequestsSlotNotTakenRouteImport } from './routes/api/v1/requests.slot-not-taken'
-import { Route as ApiV1RequestsSlotUnavailableRouteImport } from './routes/api/v1/requests.slot-unavailable'
-import { Route as ApiV1StaffIndexRouteImport } from './routes/api/v1/staff.index'
 import { Route as TechnicianAssetKindAssetIdRouteImport } from './routes/technician/asset.$kind.$assetId'
-import { Route as ApiV1AssetsKindAssetIdRouteImport } from './routes/api/v1/assets.$kind.$assetId'
-import { Route as ApiV1AuthMicrosoftStartRouteImport } from './routes/api/v1/auth.microsoft.start'
-import { Route as ApiV1AuthMicrosoftTokenRouteImport } from './routes/api/v1/auth.microsoft.token'
-import { Route as ApiV1RequestsPoolMarkRouteImport } from './routes/api/v1/requests.pool.mark'
-import { Route as ApiV1RequestsPoolRemoveRouteImport } from './routes/api/v1/requests.pool.remove'
 import { Route as UploadDisposeYearBatchFileNameRouteImport } from './routes/upload/dispose.$year.$batch.$fileName'
 import { Route as UploadPictureKindAssetIdFileNameRouteImport } from './routes/upload/picture.$kind.$assetId.$fileName'
 import { Route as UploadYearDisposePictureAssetIdFileNameRouteImport } from './routes/upload/$year.dispose.picture.$assetId.$fileName'
@@ -282,21 +254,6 @@ const ApiCronOverdueReturnEmailsRoute =
     path: '/api/cron/overdue-return-emails',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiV1DashboardRoute = ApiV1DashboardRouteImport.update({
-  id: '/api/v1/dashboard',
-  path: '/api/v1/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1HealthRoute = ApiV1HealthRouteImport.update({
-  id: '/api/v1/health',
-  path: '/api/v1/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1ProfileRoute = ApiV1ProfileRouteImport.update({
-  id: '/api/v1/profile',
-  path: '/api/v1/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminAssetKindAssetIdRoute = AdminAssetKindAssetIdRouteImport.update({
   id: '/admin/asset/$kind/$assetId',
   path: '/admin/asset/$kind/$assetId',
@@ -313,141 +270,12 @@ const ApiAuthSessionPingRoute = ApiAuthSessionPingRouteImport.update({
   path: '/api/auth/session/ping',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1AdminDashboardRoute = ApiV1AdminDashboardRouteImport.update({
-  id: '/api/v1/admin/dashboard',
-  path: '/api/v1/admin/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AssetsIndexRoute = ApiV1AssetsIndexRouteImport.update({
-  id: '/api/v1/assets/',
-  path: '/api/v1/assets/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AssetsLookupRoute = ApiV1AssetsLookupRouteImport.update({
-  id: '/api/v1/assets/lookup',
-  path: '/api/v1/assets/lookup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthDevLoginRoute = ApiV1AuthDevLoginRouteImport.update({
-  id: '/api/v1/auth/dev-login',
-  path: '/api/v1/auth/dev-login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthLogoutRoute = ApiV1AuthLogoutRouteImport.update({
-  id: '/api/v1/auth/logout',
-  path: '/api/v1/auth/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthMeRoute = ApiV1AuthMeRouteImport.update({
-  id: '/api/v1/auth/me',
-  path: '/api/v1/auth/me',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthRefreshRoute = ApiV1AuthRefreshRouteImport.update({
-  id: '/api/v1/auth/refresh',
-  path: '/api/v1/auth/refresh',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsIndexRoute = ApiV1RequestsIndexRouteImport.update({
-  id: '/api/v1/requests/',
-  path: '/api/v1/requests/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsBookRoute = ApiV1RequestsBookRouteImport.update({
-  id: '/api/v1/requests/book',
-  path: '/api/v1/requests/book',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsCancelNotTakenRoute =
-  ApiV1RequestsCancelNotTakenRouteImport.update({
-    id: '/api/v1/requests/cancel-not-taken',
-    path: '/api/v1/requests/cancel-not-taken',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1RequestsCancelUnavailableRoute =
-  ApiV1RequestsCancelUnavailableRouteImport.update({
-    id: '/api/v1/requests/cancel-unavailable',
-    path: '/api/v1/requests/cancel-unavailable',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1RequestsCheckoutRoute = ApiV1RequestsCheckoutRouteImport.update({
-  id: '/api/v1/requests/checkout',
-  path: '/api/v1/requests/checkout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsLogRoute = ApiV1RequestsLogRouteImport.update({
-  id: '/api/v1/requests/log',
-  path: '/api/v1/requests/log',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsPendingRoute = ApiV1RequestsPendingRouteImport.update({
-  id: '/api/v1/requests/pending',
-  path: '/api/v1/requests/pending',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsPoolRoute = ApiV1RequestsPoolRouteImport.update({
-  id: '/api/v1/requests/pool',
-  path: '/api/v1/requests/pool',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsRejectRoute = ApiV1RequestsRejectRouteImport.update({
-  id: '/api/v1/requests/reject',
-  path: '/api/v1/requests/reject',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsReturnRoute = ApiV1RequestsReturnRouteImport.update({
-  id: '/api/v1/requests/return',
-  path: '/api/v1/requests/return',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsSlotNotTakenRoute =
-  ApiV1RequestsSlotNotTakenRouteImport.update({
-    id: '/api/v1/requests/slot-not-taken',
-    path: '/api/v1/requests/slot-not-taken',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1RequestsSlotUnavailableRoute =
-  ApiV1RequestsSlotUnavailableRouteImport.update({
-    id: '/api/v1/requests/slot-unavailable',
-    path: '/api/v1/requests/slot-unavailable',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiV1StaffIndexRoute = ApiV1StaffIndexRouteImport.update({
-  id: '/api/v1/staff/',
-  path: '/api/v1/staff/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TechnicianAssetKindAssetIdRoute =
   TechnicianAssetKindAssetIdRouteImport.update({
     id: '/technician/asset/$kind/$assetId',
     path: '/technician/asset/$kind/$assetId',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiV1AssetsKindAssetIdRoute = ApiV1AssetsKindAssetIdRouteImport.update({
-  id: '/api/v1/assets/$kind/$assetId',
-  path: '/api/v1/assets/$kind/$assetId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthMicrosoftStartRoute = ApiV1AuthMicrosoftStartRouteImport.update({
-  id: '/api/v1/auth/microsoft/start',
-  path: '/api/v1/auth/microsoft/start',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1AuthMicrosoftTokenRoute = ApiV1AuthMicrosoftTokenRouteImport.update({
-  id: '/api/v1/auth/microsoft/token',
-  path: '/api/v1/auth/microsoft/token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1RequestsPoolMarkRoute = ApiV1RequestsPoolMarkRouteImport.update({
-  id: '/mark',
-  path: '/mark',
-  getParentRoute: () => ApiV1RequestsPoolRoute,
-} as any)
-const ApiV1RequestsPoolRemoveRoute = ApiV1RequestsPoolRemoveRouteImport.update({
-  id: '/remove',
-  path: '/remove',
-  getParentRoute: () => ApiV1RequestsPoolRoute,
-} as any)
 const UploadDisposeYearBatchFileNameRoute =
   UploadDisposeYearBatchFileNameRouteImport.update({
     id: '/upload/dispose/$year/$batch/$fileName',
@@ -507,38 +335,10 @@ export interface FileRoutesByFullPath {
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
-  '/api/v1/dashboard': typeof ApiV1DashboardRoute
-  '/api/v1/health': typeof ApiV1HealthRoute
-  '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
   '/api/auth/session/ping': typeof ApiAuthSessionPingRoute
-  '/api/v1/admin/dashboard': typeof ApiV1AdminDashboardRoute
-  '/api/v1/assets/lookup': typeof ApiV1AssetsLookupRoute
-  '/api/v1/auth/dev-login': typeof ApiV1AuthDevLoginRoute
-  '/api/v1/auth/logout': typeof ApiV1AuthLogoutRoute
-  '/api/v1/auth/me': typeof ApiV1AuthMeRoute
-  '/api/v1/auth/refresh': typeof ApiV1AuthRefreshRoute
-  '/api/v1/requests/book': typeof ApiV1RequestsBookRoute
-  '/api/v1/requests/cancel-not-taken': typeof ApiV1RequestsCancelNotTakenRoute
-  '/api/v1/requests/cancel-unavailable': typeof ApiV1RequestsCancelUnavailableRoute
-  '/api/v1/requests/checkout': typeof ApiV1RequestsCheckoutRoute
-  '/api/v1/requests/log': typeof ApiV1RequestsLogRoute
-  '/api/v1/requests/pending': typeof ApiV1RequestsPendingRoute
-  '/api/v1/requests/pool': typeof ApiV1RequestsPoolRouteWithChildren
-  '/api/v1/requests/reject': typeof ApiV1RequestsRejectRoute
-  '/api/v1/requests/return': typeof ApiV1RequestsReturnRoute
-  '/api/v1/requests/slot-not-taken': typeof ApiV1RequestsSlotNotTakenRoute
-  '/api/v1/requests/slot-unavailable': typeof ApiV1RequestsSlotUnavailableRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
-  '/api/v1/assets/': typeof ApiV1AssetsIndexRoute
-  '/api/v1/requests/': typeof ApiV1RequestsIndexRoute
-  '/api/v1/staff/': typeof ApiV1StaffIndexRoute
-  '/api/v1/assets/$kind/$assetId': typeof ApiV1AssetsKindAssetIdRoute
-  '/api/v1/auth/microsoft/start': typeof ApiV1AuthMicrosoftStartRoute
-  '/api/v1/auth/microsoft/token': typeof ApiV1AuthMicrosoftTokenRoute
-  '/api/v1/requests/pool/mark': typeof ApiV1RequestsPoolMarkRoute
-  '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
   '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
   '/upload/picture/$kind/$assetId/$fileName': typeof UploadPictureKindAssetIdFileNameRoute
   '/upload/$year/dispose/picture/$assetId/$fileName': typeof UploadYearDisposePictureAssetIdFileNameRoute
@@ -583,38 +383,10 @@ export interface FileRoutesByTo {
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
-  '/api/v1/dashboard': typeof ApiV1DashboardRoute
-  '/api/v1/health': typeof ApiV1HealthRoute
-  '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
   '/api/auth/session/ping': typeof ApiAuthSessionPingRoute
-  '/api/v1/admin/dashboard': typeof ApiV1AdminDashboardRoute
-  '/api/v1/assets/lookup': typeof ApiV1AssetsLookupRoute
-  '/api/v1/auth/dev-login': typeof ApiV1AuthDevLoginRoute
-  '/api/v1/auth/logout': typeof ApiV1AuthLogoutRoute
-  '/api/v1/auth/me': typeof ApiV1AuthMeRoute
-  '/api/v1/auth/refresh': typeof ApiV1AuthRefreshRoute
-  '/api/v1/requests/book': typeof ApiV1RequestsBookRoute
-  '/api/v1/requests/cancel-not-taken': typeof ApiV1RequestsCancelNotTakenRoute
-  '/api/v1/requests/cancel-unavailable': typeof ApiV1RequestsCancelUnavailableRoute
-  '/api/v1/requests/checkout': typeof ApiV1RequestsCheckoutRoute
-  '/api/v1/requests/log': typeof ApiV1RequestsLogRoute
-  '/api/v1/requests/pending': typeof ApiV1RequestsPendingRoute
-  '/api/v1/requests/pool': typeof ApiV1RequestsPoolRouteWithChildren
-  '/api/v1/requests/reject': typeof ApiV1RequestsRejectRoute
-  '/api/v1/requests/return': typeof ApiV1RequestsReturnRoute
-  '/api/v1/requests/slot-not-taken': typeof ApiV1RequestsSlotNotTakenRoute
-  '/api/v1/requests/slot-unavailable': typeof ApiV1RequestsSlotUnavailableRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
-  '/api/v1/assets': typeof ApiV1AssetsIndexRoute
-  '/api/v1/requests': typeof ApiV1RequestsIndexRoute
-  '/api/v1/staff': typeof ApiV1StaffIndexRoute
-  '/api/v1/assets/$kind/$assetId': typeof ApiV1AssetsKindAssetIdRoute
-  '/api/v1/auth/microsoft/start': typeof ApiV1AuthMicrosoftStartRoute
-  '/api/v1/auth/microsoft/token': typeof ApiV1AuthMicrosoftTokenRoute
-  '/api/v1/requests/pool/mark': typeof ApiV1RequestsPoolMarkRoute
-  '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
   '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
   '/upload/picture/$kind/$assetId/$fileName': typeof UploadPictureKindAssetIdFileNameRoute
   '/upload/$year/dispose/picture/$assetId/$fileName': typeof UploadYearDisposePictureAssetIdFileNameRoute
@@ -660,38 +432,10 @@ export interface FileRoutesById {
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
   '/api/cron/overdue-return-emails': typeof ApiCronOverdueReturnEmailsRoute
-  '/api/v1/dashboard': typeof ApiV1DashboardRoute
-  '/api/v1/health': typeof ApiV1HealthRoute
-  '/api/v1/profile': typeof ApiV1ProfileRoute
   '/admin/asset/$kind/$assetId': typeof AdminAssetKindAssetIdRoute
   '/api/auth/microsoft/callback': typeof ApiAuthMicrosoftCallbackRoute
   '/api/auth/session/ping': typeof ApiAuthSessionPingRoute
-  '/api/v1/admin/dashboard': typeof ApiV1AdminDashboardRoute
-  '/api/v1/assets/lookup': typeof ApiV1AssetsLookupRoute
-  '/api/v1/auth/dev-login': typeof ApiV1AuthDevLoginRoute
-  '/api/v1/auth/logout': typeof ApiV1AuthLogoutRoute
-  '/api/v1/auth/me': typeof ApiV1AuthMeRoute
-  '/api/v1/auth/refresh': typeof ApiV1AuthRefreshRoute
-  '/api/v1/requests/book': typeof ApiV1RequestsBookRoute
-  '/api/v1/requests/cancel-not-taken': typeof ApiV1RequestsCancelNotTakenRoute
-  '/api/v1/requests/cancel-unavailable': typeof ApiV1RequestsCancelUnavailableRoute
-  '/api/v1/requests/checkout': typeof ApiV1RequestsCheckoutRoute
-  '/api/v1/requests/log': typeof ApiV1RequestsLogRoute
-  '/api/v1/requests/pending': typeof ApiV1RequestsPendingRoute
-  '/api/v1/requests/pool': typeof ApiV1RequestsPoolRouteWithChildren
-  '/api/v1/requests/reject': typeof ApiV1RequestsRejectRoute
-  '/api/v1/requests/return': typeof ApiV1RequestsReturnRoute
-  '/api/v1/requests/slot-not-taken': typeof ApiV1RequestsSlotNotTakenRoute
-  '/api/v1/requests/slot-unavailable': typeof ApiV1RequestsSlotUnavailableRoute
   '/technician/asset/$kind/$assetId': typeof TechnicianAssetKindAssetIdRoute
-  '/api/v1/assets/': typeof ApiV1AssetsIndexRoute
-  '/api/v1/requests/': typeof ApiV1RequestsIndexRoute
-  '/api/v1/staff/': typeof ApiV1StaffIndexRoute
-  '/api/v1/assets/$kind/$assetId': typeof ApiV1AssetsKindAssetIdRoute
-  '/api/v1/auth/microsoft/start': typeof ApiV1AuthMicrosoftStartRoute
-  '/api/v1/auth/microsoft/token': typeof ApiV1AuthMicrosoftTokenRoute
-  '/api/v1/requests/pool/mark': typeof ApiV1RequestsPoolMarkRoute
-  '/api/v1/requests/pool/remove': typeof ApiV1RequestsPoolRemoveRoute
   '/upload/dispose/$year/$batch/$fileName': typeof UploadDisposeYearBatchFileNameRoute
   '/upload/picture/$kind/$assetId/$fileName': typeof UploadPictureKindAssetIdFileNameRoute
   '/upload/$year/dispose/picture/$assetId/$fileName': typeof UploadYearDisposePictureAssetIdFileNameRoute
@@ -738,38 +482,10 @@ export interface FileRouteTypes {
     | '/user/history'
     | '/user/request'
     | '/api/cron/overdue-return-emails'
-    | '/api/v1/dashboard'
-    | '/api/v1/health'
-    | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
     | '/api/auth/session/ping'
-    | '/api/v1/admin/dashboard'
-    | '/api/v1/assets/lookup'
-    | '/api/v1/auth/dev-login'
-    | '/api/v1/auth/logout'
-    | '/api/v1/auth/me'
-    | '/api/v1/auth/refresh'
-    | '/api/v1/requests/book'
-    | '/api/v1/requests/cancel-not-taken'
-    | '/api/v1/requests/cancel-unavailable'
-    | '/api/v1/requests/checkout'
-    | '/api/v1/requests/log'
-    | '/api/v1/requests/pending'
-    | '/api/v1/requests/pool'
-    | '/api/v1/requests/reject'
-    | '/api/v1/requests/return'
-    | '/api/v1/requests/slot-not-taken'
-    | '/api/v1/requests/slot-unavailable'
     | '/technician/asset/$kind/$assetId'
-    | '/api/v1/assets/'
-    | '/api/v1/requests/'
-    | '/api/v1/staff/'
-    | '/api/v1/assets/$kind/$assetId'
-    | '/api/v1/auth/microsoft/start'
-    | '/api/v1/auth/microsoft/token'
-    | '/api/v1/requests/pool/mark'
-    | '/api/v1/requests/pool/remove'
     | '/upload/dispose/$year/$batch/$fileName'
     | '/upload/picture/$kind/$assetId/$fileName'
     | '/upload/$year/dispose/picture/$assetId/$fileName'
@@ -814,38 +530,10 @@ export interface FileRouteTypes {
     | '/user/history'
     | '/user/request'
     | '/api/cron/overdue-return-emails'
-    | '/api/v1/dashboard'
-    | '/api/v1/health'
-    | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
     | '/api/auth/session/ping'
-    | '/api/v1/admin/dashboard'
-    | '/api/v1/assets/lookup'
-    | '/api/v1/auth/dev-login'
-    | '/api/v1/auth/logout'
-    | '/api/v1/auth/me'
-    | '/api/v1/auth/refresh'
-    | '/api/v1/requests/book'
-    | '/api/v1/requests/cancel-not-taken'
-    | '/api/v1/requests/cancel-unavailable'
-    | '/api/v1/requests/checkout'
-    | '/api/v1/requests/log'
-    | '/api/v1/requests/pending'
-    | '/api/v1/requests/pool'
-    | '/api/v1/requests/reject'
-    | '/api/v1/requests/return'
-    | '/api/v1/requests/slot-not-taken'
-    | '/api/v1/requests/slot-unavailable'
     | '/technician/asset/$kind/$assetId'
-    | '/api/v1/assets'
-    | '/api/v1/requests'
-    | '/api/v1/staff'
-    | '/api/v1/assets/$kind/$assetId'
-    | '/api/v1/auth/microsoft/start'
-    | '/api/v1/auth/microsoft/token'
-    | '/api/v1/requests/pool/mark'
-    | '/api/v1/requests/pool/remove'
     | '/upload/dispose/$year/$batch/$fileName'
     | '/upload/picture/$kind/$assetId/$fileName'
     | '/upload/$year/dispose/picture/$assetId/$fileName'
@@ -890,38 +578,10 @@ export interface FileRouteTypes {
     | '/user/history'
     | '/user/request'
     | '/api/cron/overdue-return-emails'
-    | '/api/v1/dashboard'
-    | '/api/v1/health'
-    | '/api/v1/profile'
     | '/admin/asset/$kind/$assetId'
     | '/api/auth/microsoft/callback'
     | '/api/auth/session/ping'
-    | '/api/v1/admin/dashboard'
-    | '/api/v1/assets/lookup'
-    | '/api/v1/auth/dev-login'
-    | '/api/v1/auth/logout'
-    | '/api/v1/auth/me'
-    | '/api/v1/auth/refresh'
-    | '/api/v1/requests/book'
-    | '/api/v1/requests/cancel-not-taken'
-    | '/api/v1/requests/cancel-unavailable'
-    | '/api/v1/requests/checkout'
-    | '/api/v1/requests/log'
-    | '/api/v1/requests/pending'
-    | '/api/v1/requests/pool'
-    | '/api/v1/requests/reject'
-    | '/api/v1/requests/return'
-    | '/api/v1/requests/slot-not-taken'
-    | '/api/v1/requests/slot-unavailable'
     | '/technician/asset/$kind/$assetId'
-    | '/api/v1/assets/'
-    | '/api/v1/requests/'
-    | '/api/v1/staff/'
-    | '/api/v1/assets/$kind/$assetId'
-    | '/api/v1/auth/microsoft/start'
-    | '/api/v1/auth/microsoft/token'
-    | '/api/v1/requests/pool/mark'
-    | '/api/v1/requests/pool/remove'
     | '/upload/dispose/$year/$batch/$fileName'
     | '/upload/picture/$kind/$assetId/$fileName'
     | '/upload/$year/dispose/picture/$assetId/$fileName'
@@ -967,36 +627,10 @@ export interface RootRouteChildren {
   UserHistoryRoute: typeof UserHistoryRoute
   UserRequestRoute: typeof UserRequestRoute
   ApiCronOverdueReturnEmailsRoute: typeof ApiCronOverdueReturnEmailsRoute
-  ApiV1DashboardRoute: typeof ApiV1DashboardRoute
-  ApiV1HealthRoute: typeof ApiV1HealthRoute
-  ApiV1ProfileRoute: typeof ApiV1ProfileRoute
   AdminAssetKindAssetIdRoute: typeof AdminAssetKindAssetIdRoute
   ApiAuthMicrosoftCallbackRoute: typeof ApiAuthMicrosoftCallbackRoute
   ApiAuthSessionPingRoute: typeof ApiAuthSessionPingRoute
-  ApiV1AdminDashboardRoute: typeof ApiV1AdminDashboardRoute
-  ApiV1AssetsLookupRoute: typeof ApiV1AssetsLookupRoute
-  ApiV1AuthDevLoginRoute: typeof ApiV1AuthDevLoginRoute
-  ApiV1AuthLogoutRoute: typeof ApiV1AuthLogoutRoute
-  ApiV1AuthMeRoute: typeof ApiV1AuthMeRoute
-  ApiV1AuthRefreshRoute: typeof ApiV1AuthRefreshRoute
-  ApiV1RequestsBookRoute: typeof ApiV1RequestsBookRoute
-  ApiV1RequestsCancelNotTakenRoute: typeof ApiV1RequestsCancelNotTakenRoute
-  ApiV1RequestsCancelUnavailableRoute: typeof ApiV1RequestsCancelUnavailableRoute
-  ApiV1RequestsCheckoutRoute: typeof ApiV1RequestsCheckoutRoute
-  ApiV1RequestsLogRoute: typeof ApiV1RequestsLogRoute
-  ApiV1RequestsPendingRoute: typeof ApiV1RequestsPendingRoute
-  ApiV1RequestsPoolRoute: typeof ApiV1RequestsPoolRouteWithChildren
-  ApiV1RequestsRejectRoute: typeof ApiV1RequestsRejectRoute
-  ApiV1RequestsReturnRoute: typeof ApiV1RequestsReturnRoute
-  ApiV1RequestsSlotNotTakenRoute: typeof ApiV1RequestsSlotNotTakenRoute
-  ApiV1RequestsSlotUnavailableRoute: typeof ApiV1RequestsSlotUnavailableRoute
   TechnicianAssetKindAssetIdRoute: typeof TechnicianAssetKindAssetIdRoute
-  ApiV1AssetsIndexRoute: typeof ApiV1AssetsIndexRoute
-  ApiV1RequestsIndexRoute: typeof ApiV1RequestsIndexRoute
-  ApiV1StaffIndexRoute: typeof ApiV1StaffIndexRoute
-  ApiV1AssetsKindAssetIdRoute: typeof ApiV1AssetsKindAssetIdRoute
-  ApiV1AuthMicrosoftStartRoute: typeof ApiV1AuthMicrosoftStartRoute
-  ApiV1AuthMicrosoftTokenRoute: typeof ApiV1AuthMicrosoftTokenRoute
   UploadDisposeYearBatchFileNameRoute: typeof UploadDisposeYearBatchFileNameRoute
   UploadPictureKindAssetIdFileNameRoute: typeof UploadPictureKindAssetIdFileNameRoute
   UploadYearDisposePictureAssetIdFileNameRoute: typeof UploadYearDisposePictureAssetIdFileNameRoute
@@ -1277,27 +911,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronOverdueReturnEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/dashboard': {
-      id: '/api/v1/dashboard'
-      path: '/api/v1/dashboard'
-      fullPath: '/api/v1/dashboard'
-      preLoaderRoute: typeof ApiV1DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/health': {
-      id: '/api/v1/health'
-      path: '/api/v1/health'
-      fullPath: '/api/v1/health'
-      preLoaderRoute: typeof ApiV1HealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/profile': {
-      id: '/api/v1/profile'
-      path: '/api/v1/profile'
-      fullPath: '/api/v1/profile'
-      preLoaderRoute: typeof ApiV1ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/asset/$kind/$assetId': {
       id: '/admin/asset/$kind/$assetId'
       path: '/admin/asset/$kind/$assetId'
@@ -1319,187 +932,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSessionPingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/admin/dashboard': {
-      id: '/api/v1/admin/dashboard'
-      path: '/api/v1/admin/dashboard'
-      fullPath: '/api/v1/admin/dashboard'
-      preLoaderRoute: typeof ApiV1AdminDashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/assets/': {
-      id: '/api/v1/assets/'
-      path: '/api/v1/assets'
-      fullPath: '/api/v1/assets/'
-      preLoaderRoute: typeof ApiV1AssetsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/assets/lookup': {
-      id: '/api/v1/assets/lookup'
-      path: '/api/v1/assets/lookup'
-      fullPath: '/api/v1/assets/lookup'
-      preLoaderRoute: typeof ApiV1AssetsLookupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/dev-login': {
-      id: '/api/v1/auth/dev-login'
-      path: '/api/v1/auth/dev-login'
-      fullPath: '/api/v1/auth/dev-login'
-      preLoaderRoute: typeof ApiV1AuthDevLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/logout': {
-      id: '/api/v1/auth/logout'
-      path: '/api/v1/auth/logout'
-      fullPath: '/api/v1/auth/logout'
-      preLoaderRoute: typeof ApiV1AuthLogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/me': {
-      id: '/api/v1/auth/me'
-      path: '/api/v1/auth/me'
-      fullPath: '/api/v1/auth/me'
-      preLoaderRoute: typeof ApiV1AuthMeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/refresh': {
-      id: '/api/v1/auth/refresh'
-      path: '/api/v1/auth/refresh'
-      fullPath: '/api/v1/auth/refresh'
-      preLoaderRoute: typeof ApiV1AuthRefreshRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/': {
-      id: '/api/v1/requests/'
-      path: '/api/v1/requests'
-      fullPath: '/api/v1/requests/'
-      preLoaderRoute: typeof ApiV1RequestsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/book': {
-      id: '/api/v1/requests/book'
-      path: '/api/v1/requests/book'
-      fullPath: '/api/v1/requests/book'
-      preLoaderRoute: typeof ApiV1RequestsBookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/cancel-not-taken': {
-      id: '/api/v1/requests/cancel-not-taken'
-      path: '/api/v1/requests/cancel-not-taken'
-      fullPath: '/api/v1/requests/cancel-not-taken'
-      preLoaderRoute: typeof ApiV1RequestsCancelNotTakenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/cancel-unavailable': {
-      id: '/api/v1/requests/cancel-unavailable'
-      path: '/api/v1/requests/cancel-unavailable'
-      fullPath: '/api/v1/requests/cancel-unavailable'
-      preLoaderRoute: typeof ApiV1RequestsCancelUnavailableRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/checkout': {
-      id: '/api/v1/requests/checkout'
-      path: '/api/v1/requests/checkout'
-      fullPath: '/api/v1/requests/checkout'
-      preLoaderRoute: typeof ApiV1RequestsCheckoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/log': {
-      id: '/api/v1/requests/log'
-      path: '/api/v1/requests/log'
-      fullPath: '/api/v1/requests/log'
-      preLoaderRoute: typeof ApiV1RequestsLogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/pending': {
-      id: '/api/v1/requests/pending'
-      path: '/api/v1/requests/pending'
-      fullPath: '/api/v1/requests/pending'
-      preLoaderRoute: typeof ApiV1RequestsPendingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/pool': {
-      id: '/api/v1/requests/pool'
-      path: '/api/v1/requests/pool'
-      fullPath: '/api/v1/requests/pool'
-      preLoaderRoute: typeof ApiV1RequestsPoolRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/reject': {
-      id: '/api/v1/requests/reject'
-      path: '/api/v1/requests/reject'
-      fullPath: '/api/v1/requests/reject'
-      preLoaderRoute: typeof ApiV1RequestsRejectRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/return': {
-      id: '/api/v1/requests/return'
-      path: '/api/v1/requests/return'
-      fullPath: '/api/v1/requests/return'
-      preLoaderRoute: typeof ApiV1RequestsReturnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/slot-not-taken': {
-      id: '/api/v1/requests/slot-not-taken'
-      path: '/api/v1/requests/slot-not-taken'
-      fullPath: '/api/v1/requests/slot-not-taken'
-      preLoaderRoute: typeof ApiV1RequestsSlotNotTakenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/slot-unavailable': {
-      id: '/api/v1/requests/slot-unavailable'
-      path: '/api/v1/requests/slot-unavailable'
-      fullPath: '/api/v1/requests/slot-unavailable'
-      preLoaderRoute: typeof ApiV1RequestsSlotUnavailableRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/staff/': {
-      id: '/api/v1/staff/'
-      path: '/api/v1/staff'
-      fullPath: '/api/v1/staff/'
-      preLoaderRoute: typeof ApiV1StaffIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/technician/asset/$kind/$assetId': {
       id: '/technician/asset/$kind/$assetId'
       path: '/technician/asset/$kind/$assetId'
       fullPath: '/technician/asset/$kind/$assetId'
       preLoaderRoute: typeof TechnicianAssetKindAssetIdRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/assets/$kind/$assetId': {
-      id: '/api/v1/assets/$kind/$assetId'
-      path: '/api/v1/assets/$kind/$assetId'
-      fullPath: '/api/v1/assets/$kind/$assetId'
-      preLoaderRoute: typeof ApiV1AssetsKindAssetIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/microsoft/start': {
-      id: '/api/v1/auth/microsoft/start'
-      path: '/api/v1/auth/microsoft/start'
-      fullPath: '/api/v1/auth/microsoft/start'
-      preLoaderRoute: typeof ApiV1AuthMicrosoftStartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/auth/microsoft/token': {
-      id: '/api/v1/auth/microsoft/token'
-      path: '/api/v1/auth/microsoft/token'
-      fullPath: '/api/v1/auth/microsoft/token'
-      preLoaderRoute: typeof ApiV1AuthMicrosoftTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/requests/pool/mark': {
-      id: '/api/v1/requests/pool/mark'
-      path: '/mark'
-      fullPath: '/api/v1/requests/pool/mark'
-      preLoaderRoute: typeof ApiV1RequestsPoolMarkRouteImport
-      parentRoute: typeof ApiV1RequestsPoolRoute
-    }
-    '/api/v1/requests/pool/remove': {
-      id: '/api/v1/requests/pool/remove'
-      path: '/remove'
-      fullPath: '/api/v1/requests/pool/remove'
-      preLoaderRoute: typeof ApiV1RequestsPoolRemoveRouteImport
-      parentRoute: typeof ApiV1RequestsPoolRoute
     }
     '/upload/dispose/$year/$batch/$fileName': {
       id: '/upload/dispose/$year/$batch/$fileName'
@@ -1524,19 +962,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface ApiV1RequestsPoolRouteChildren {
-  ApiV1RequestsPoolMarkRoute: typeof ApiV1RequestsPoolMarkRoute
-  ApiV1RequestsPoolRemoveRoute: typeof ApiV1RequestsPoolRemoveRoute
-}
-
-const ApiV1RequestsPoolRouteChildren: ApiV1RequestsPoolRouteChildren = {
-  ApiV1RequestsPoolMarkRoute: ApiV1RequestsPoolMarkRoute,
-  ApiV1RequestsPoolRemoveRoute: ApiV1RequestsPoolRemoveRoute,
-}
-
-const ApiV1RequestsPoolRouteWithChildren =
-  ApiV1RequestsPoolRoute._addFileChildren(ApiV1RequestsPoolRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1578,36 +1003,10 @@ const rootRouteChildren: RootRouteChildren = {
   UserHistoryRoute: UserHistoryRoute,
   UserRequestRoute: UserRequestRoute,
   ApiCronOverdueReturnEmailsRoute: ApiCronOverdueReturnEmailsRoute,
-  ApiV1DashboardRoute: ApiV1DashboardRoute,
-  ApiV1HealthRoute: ApiV1HealthRoute,
-  ApiV1ProfileRoute: ApiV1ProfileRoute,
   AdminAssetKindAssetIdRoute: AdminAssetKindAssetIdRoute,
   ApiAuthMicrosoftCallbackRoute: ApiAuthMicrosoftCallbackRoute,
   ApiAuthSessionPingRoute: ApiAuthSessionPingRoute,
-  ApiV1AdminDashboardRoute: ApiV1AdminDashboardRoute,
-  ApiV1AssetsLookupRoute: ApiV1AssetsLookupRoute,
-  ApiV1AuthDevLoginRoute: ApiV1AuthDevLoginRoute,
-  ApiV1AuthLogoutRoute: ApiV1AuthLogoutRoute,
-  ApiV1AuthMeRoute: ApiV1AuthMeRoute,
-  ApiV1AuthRefreshRoute: ApiV1AuthRefreshRoute,
-  ApiV1RequestsBookRoute: ApiV1RequestsBookRoute,
-  ApiV1RequestsCancelNotTakenRoute: ApiV1RequestsCancelNotTakenRoute,
-  ApiV1RequestsCancelUnavailableRoute: ApiV1RequestsCancelUnavailableRoute,
-  ApiV1RequestsCheckoutRoute: ApiV1RequestsCheckoutRoute,
-  ApiV1RequestsLogRoute: ApiV1RequestsLogRoute,
-  ApiV1RequestsPendingRoute: ApiV1RequestsPendingRoute,
-  ApiV1RequestsPoolRoute: ApiV1RequestsPoolRouteWithChildren,
-  ApiV1RequestsRejectRoute: ApiV1RequestsRejectRoute,
-  ApiV1RequestsReturnRoute: ApiV1RequestsReturnRoute,
-  ApiV1RequestsSlotNotTakenRoute: ApiV1RequestsSlotNotTakenRoute,
-  ApiV1RequestsSlotUnavailableRoute: ApiV1RequestsSlotUnavailableRoute,
   TechnicianAssetKindAssetIdRoute: TechnicianAssetKindAssetIdRoute,
-  ApiV1AssetsIndexRoute: ApiV1AssetsIndexRoute,
-  ApiV1RequestsIndexRoute: ApiV1RequestsIndexRoute,
-  ApiV1StaffIndexRoute: ApiV1StaffIndexRoute,
-  ApiV1AssetsKindAssetIdRoute: ApiV1AssetsKindAssetIdRoute,
-  ApiV1AuthMicrosoftStartRoute: ApiV1AuthMicrosoftStartRoute,
-  ApiV1AuthMicrosoftTokenRoute: ApiV1AuthMicrosoftTokenRoute,
   UploadDisposeYearBatchFileNameRoute: UploadDisposeYearBatchFileNameRoute,
   UploadPictureKindAssetIdFileNameRoute: UploadPictureKindAssetIdFileNameRoute,
   UploadYearDisposePictureAssetIdFileNameRoute:

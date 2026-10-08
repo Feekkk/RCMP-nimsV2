@@ -799,11 +799,6 @@ export function TechnicianRequestPage() {
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border px-4 py-4">
           <RequesterContactLinks email={req.requesterEmail} phone={req.requesterPhone} />
-          {req.confirmationEmailError ? (
-            <p className="mb-3 text-xs text-amber-800 dark:text-amber-200">
-              Confirmation email failed after retry: {req.confirmationEmailError}
-            </p>
-          ) : null}
           <p className="mb-3 text-xs text-muted-foreground">
             {formatDateLabel(req.borrowDate)} → {formatDateLabel(req.returnDate)} · {req.programType}{' '}
             · {req.usageLocation}

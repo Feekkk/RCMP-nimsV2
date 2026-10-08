@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { NimsLogo } from '@/components/brand/NimsLogo';
 import { getPostLoginPath, persistSession } from '@shared/lib/auth-session';
-import { buildMobileAppCallbackUrl, isMobileOAuthState } from '@/lib/mobile-auth';
 import { completeMicrosoftLoginFn } from '@backend/server/auth/auth.functions';
 
 export const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
@@ -13,7 +12,6 @@ export const MICROSOFT_OAUTH_STATE_KEY = 'nims-microsoft-oauth-state';
 export function MicrosoftCallbackPage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const [handingOff, setHandingOff] = useState(false);
   const started = useRef(false);
 
   useEffect(() => {
@@ -24,19 +22,6 @@ export function MicrosoftCallbackPage() {
     const oauthError = params.get('error_description') ?? params.get('error');
     const code = params.get('code');
     const returnedState = params.get('state');
-
-    // Mobile flows exchange the code from the app itself, so hand the result straight over.
-    if (returnedState && isMobileOAuthState(returnedState)) {
-      setHandingOff(true);
-      window.location.replace(
-        buildMobileAppCallbackUrl(
-          oauthError
-            ? { error_description: oauthError, state: returnedState }
-            : { code: code ?? '', state: returnedState },
-        ),
-      );
-      return;
-    }
 
     if (oauthError) {
       setError(oauthError);
@@ -85,9 +70,7 @@ export function MicrosoftCallbackPage() {
         ) : (
           <>
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              {handingOff ? 'Returning you to the NIMS app…' : 'Completing Microsoft sign-in…'}
-            </p>
+            <p className="text-sm text-muted-foreground">Completing Microsoft sign-in…</p>
           </>
         )}
       </div>
