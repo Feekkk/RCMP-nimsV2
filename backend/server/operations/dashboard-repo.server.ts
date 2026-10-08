@@ -156,21 +156,21 @@ async function loadPlaceDeployBuildingCounts(
   pool: ReturnType<typeof getDbPool>,
   kind: 'av' | 'network',
 ): Promise<{ building: string; count: number }[]> {
-  const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
-  const returnTable = kind === 'av' ? 'av_return' : 'network_return';
-
   const [rows] = await pool.query<(RowDataPacket & { building: string | null; cnt: number })[]>(
     `SELECT d.building AS building, COUNT(*) AS cnt
-     FROM \`${deployTable}\` d
+     FROM it_deploy d
      INNER JOIN (
        SELECT d2.asset_id, MAX(d2.deployment_id) AS deployment_id
-       FROM \`${deployTable}\` d2
-       WHERE NOT EXISTS (
-         SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d2.deployment_id
-       )
+       FROM it_deploy d2
+       WHERE d2.asset_type = ?
+         AND NOT EXISTS (
+           SELECT 1 FROM it_return r WHERE r.deployment_id = d2.deployment_id
+         )
        GROUP BY d2.asset_id
      ) open_d ON open_d.deployment_id = d.deployment_id
+     WHERE d.asset_type = ?
      GROUP BY d.building`,
+    [kind, kind],
   );
 
   const countByBuilding = new Map<string, number>();

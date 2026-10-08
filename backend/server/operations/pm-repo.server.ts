@@ -53,33 +53,37 @@ async function listOpenPlaceAssets(): Promise<PlaceRow[]> {
   const [rows] = await pool.query<PlaceRow[]>(
     `SELECT 'av' AS asset_type, a.asset_id, a.category, a.brand, a.model, a.serial_num,
             d.building, d.level, d.zone
-     FROM av_deployment d
+     FROM it_deploy d
      INNER JOIN (
        SELECT d2.asset_id, MAX(d2.deployment_id) AS deployment_id
-       FROM av_deployment d2
-       WHERE NOT EXISTS (
-         SELECT 1 FROM av_return r WHERE r.deployment_id = d2.deployment_id
-       )
+       FROM it_deploy d2
+       WHERE d2.asset_type = 'av'
+         AND NOT EXISTS (
+           SELECT 1 FROM it_return r WHERE r.deployment_id = d2.deployment_id
+         )
        GROUP BY d2.asset_id
      ) open_d ON open_d.deployment_id = d.deployment_id
      INNER JOIN av a ON a.asset_id = d.asset_id
-     WHERE TRIM(d.building) <> '' AND TRIM(d.level) <> '' AND TRIM(d.zone) <> ''
+     WHERE d.asset_type = 'av'
+       AND TRIM(d.building) <> '' AND TRIM(d.level) <> '' AND TRIM(d.zone) <> ''
 
      UNION ALL
 
      SELECT 'network' AS asset_type, a.asset_id, a.category, a.brand, a.model, a.serial_num,
             d.building, d.level, d.zone
-     FROM network_deployment d
+     FROM it_deploy d
      INNER JOIN (
        SELECT d2.asset_id, MAX(d2.deployment_id) AS deployment_id
-       FROM network_deployment d2
-       WHERE NOT EXISTS (
-         SELECT 1 FROM network_return r WHERE r.deployment_id = d2.deployment_id
-       )
+       FROM it_deploy d2
+       WHERE d2.asset_type = 'network'
+         AND NOT EXISTS (
+           SELECT 1 FROM it_return r WHERE r.deployment_id = d2.deployment_id
+         )
        GROUP BY d2.asset_id
      ) open_d ON open_d.deployment_id = d.deployment_id
      INNER JOIN network a ON a.asset_id = d.asset_id
-     WHERE TRIM(d.building) <> '' AND TRIM(d.level) <> '' AND TRIM(d.zone) <> ''
+     WHERE d.asset_type = 'network'
+       AND TRIM(d.building) <> '' AND TRIM(d.level) <> '' AND TRIM(d.zone) <> ''
 
      UNION ALL
 

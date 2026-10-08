@@ -222,11 +222,12 @@ export async function exportAdminCsv(kind: AdminExportKind): Promise<AdminExport
               CASE WHEN r.return_id IS NULL THEN 'deployed' ELSE 'returned' END AS deployment_status,
               r.return_date, r.return_time, r.return_place, r.\`condition\` AS return_condition,
               r.return_remarks, ru.email AS returned_by, d.created_at, d.updated_at
-       FROM av_deployment d
+       FROM it_deploy d
        INNER JOIN av a ON a.asset_id = d.asset_id
        INNER JOIN users u ON u.id = d.user_id
-       LEFT JOIN av_return r ON r.deployment_id = d.deployment_id
+       LEFT JOIN it_return r ON r.deployment_id = d.deployment_id
        LEFT JOIN users ru ON ru.id = r.returned_by
+       WHERE d.asset_type = 'av'
        UNION ALL
        SELECT 'network' AS asset_type, d.deployment_id, d.asset_id, NULL AS category, a.brand,
               a.model, a.serial_num, d.building, d.level, d.zone, d.deployment_date,
@@ -234,11 +235,12 @@ export async function exportAdminCsv(kind: AdminExportKind): Promise<AdminExport
               CASE WHEN r.return_id IS NULL THEN 'deployed' ELSE 'returned' END AS deployment_status,
               r.return_date, r.return_time, r.return_place, r.\`condition\` AS return_condition,
               r.return_remarks, ru.email AS returned_by, d.created_at, d.updated_at
-       FROM network_deployment d
+       FROM it_deploy d
        INNER JOIN network a ON a.asset_id = d.asset_id
        INNER JOIN users u ON u.id = d.user_id
-       LEFT JOIN network_return r ON r.deployment_id = d.deployment_id
+       LEFT JOIN it_return r ON r.deployment_id = d.deployment_id
        LEFT JOIN users ru ON ru.id = r.returned_by
+       WHERE d.asset_type = 'network'
        ORDER BY deployment_date DESC, deployment_id DESC`,
     );
     const headers = [

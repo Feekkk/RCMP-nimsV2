@@ -365,7 +365,7 @@ export function TechnicianReturnPage() {
               {statusIsDeployed && (
                 <p className="text-muted-foreground">
                   Status is &quot;deploy&quot; but there is no row in{' '}
-                  {kind === 'laptop' ? 'handover' : kind === 'av' ? 'av_deployment' : 'network_deployment'}.
+                  {kind === 'laptop' ? 'handover' : 'it_deploy'}.
                   Use the Deploy form first, or fix status if it was changed manually.
                 </p>
               )}

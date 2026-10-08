@@ -309,8 +309,6 @@ async function loadDeployEvents(
   categoryDeploy: ActivityLogCategory,
 ) {
   const pool = getDbPool();
-  const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
-  const returnTable = kind === 'av' ? 'av_return' : 'network_return';
   const assetTable = kind === 'av' ? 'av' : 'network';
 
   const [deployments] = await pool.query<
@@ -329,11 +327,13 @@ async function loadDeployEvents(
   >(
     `SELECT d.deployment_id, d.asset_id, d.building, d.level, d.zone, d.deployment_date,
             d.created_at, u.oid AS staff_oid, a.model
-     FROM \`${deployTable}\` d
+     FROM it_deploy d
      INNER JOIN users u ON u.id = d.user_id
      INNER JOIN \`${assetTable}\` a ON a.asset_id = d.asset_id
+     WHERE d.asset_type = ?
      ORDER BY d.deployment_id DESC
      LIMIT 150`,
+    [kind],
   );
   await attachDisplayNames(deployments, 'staff_oid', 'staff_name');
 
@@ -367,12 +367,14 @@ async function loadDeployEvents(
   >(
     `SELECT r.return_id, d.asset_id, r.return_date, r.return_time, r.created_at,
             u.oid AS returned_oid, r.return_place, r.\`condition\`, a.model
-     FROM \`${returnTable}\` r
-     INNER JOIN \`${deployTable}\` d ON d.deployment_id = r.deployment_id
+     FROM it_return r
+     INNER JOIN it_deploy d ON d.deployment_id = r.deployment_id
      INNER JOIN \`${assetTable}\` a ON a.asset_id = d.asset_id
      INNER JOIN users u ON u.id = r.returned_by
+     WHERE d.asset_type = ?
      ORDER BY r.return_id DESC
      LIMIT 150`,
+    [kind],
   );
   await attachDisplayNames(returns, 'returned_oid', 'returned_by');
 

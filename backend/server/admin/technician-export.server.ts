@@ -304,8 +304,6 @@ async function fetchPlaceDeployContext(
   if (!assetIds.length) return map;
 
   const pool = getDbPool();
-  const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
-  const returnTable = kind === 'av' ? 'av_return' : 'network_return';
   const placeholders = assetIds.map(() => '?').join(', ');
 
   const [rows] = await pool.query<
@@ -319,18 +317,20 @@ async function fetchPlaceDeployContext(
     })[]
   >(
     `SELECT d.asset_id, u.oid AS handler_oid, d.building, d.level, d.zone
-     FROM \`${deployTable}\` d
+     FROM it_deploy d
      INNER JOIN (
        SELECT d2.asset_id, MAX(d2.deployment_id) AS deployment_id
-       FROM \`${deployTable}\` d2
-       WHERE d2.asset_id IN (${placeholders})
+       FROM it_deploy d2
+       WHERE d2.asset_type = ?
+         AND d2.asset_id IN (${placeholders})
          AND NOT EXISTS (
-           SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d2.deployment_id
+           SELECT 1 FROM it_return r WHERE r.deployment_id = d2.deployment_id
          )
        GROUP BY d2.asset_id
      ) open_d ON open_d.deployment_id = d.deployment_id
-     INNER JOIN users u ON u.id = d.user_id`,
-    assetIds,
+     INNER JOIN users u ON u.id = d.user_id
+     WHERE d.asset_type = ?`,
+    [kind, ...assetIds, kind],
   );
 
   await attachDisplayNames(rows, 'handler_oid', 'handler_name');

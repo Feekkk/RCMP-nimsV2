@@ -173,9 +173,6 @@ export async function getOpenReturnContext(
     return null;
   }
 
-  const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
-  const returnTable = kind === 'av' ? 'av_return' : 'network_return';
-
   const [rows] = await pool.query<
     (RowDataPacket & {
       deployment_id: number;
@@ -190,15 +187,15 @@ export async function getOpenReturnContext(
   >(
     `SELECT d.deployment_id, d.building, d.level, d.zone, d.deployment_date, d.deployment_remarks,
             u.oid AS technician_oid
-     FROM \`${deployTable}\` d
+     FROM it_deploy d
      INNER JOIN users u ON u.id = d.user_id
-     WHERE d.asset_id = ?
+     WHERE d.asset_id = ? AND d.asset_type = ?
        AND NOT EXISTS (
-         SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d.deployment_id
+         SELECT 1 FROM it_return r WHERE r.deployment_id = d.deployment_id
        )
      ORDER BY d.deployment_id DESC
      LIMIT 1`,
-    [assetId],
+    [assetId, kind],
   );
   await attachDisplayNames(rows, 'technician_oid', 'technician_name');
 
@@ -284,16 +281,16 @@ export async function deployLaptopToPlace(input: DeployLaptopPlaceInput) {
 
 export async function deployToPlace(input: DeployPlaceInput) {
   const pool = getDbPool();
-  const table = input.kind === 'av' ? 'av_deployment' : 'network_deployment';
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
     const [result] = await conn.execute(
-      `INSERT INTO \`${table}\`
-        (asset_id, building, level, zone, deployment_date, deployment_remarks, user_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO it_deploy
+        (asset_id, asset_type, building, level, zone, deployment_date, deployment_remarks, user_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         input.assetId,
+        input.kind,
         input.building,
         input.level,
         input.zone,
@@ -425,14 +422,12 @@ export async function returnLaptopPlace(input: ReturnLaptopPlaceInput) {
 
 export async function returnPlaceAsset(input: ReturnPlaceInput) {
   const pool = getDbPool();
-  const returnTable = input.kind === 'av' ? 'av_return' : 'network_return';
-  const deployTable = input.kind === 'av' ? 'av_deployment' : 'network_deployment';
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
     const [dRows] = await pool.query<(RowDataPacket & { asset_id: number })[]>(
-      `SELECT asset_id FROM \`${deployTable}\` WHERE deployment_id = ?`,
-      [input.deploymentId],
+      `SELECT asset_id FROM it_deploy WHERE deployment_id = ? AND asset_type = ?`,
+      [input.deploymentId, input.kind],
     );
     const row = dRows[0];
     if (!row) {
@@ -442,7 +437,7 @@ export async function returnPlaceAsset(input: ReturnPlaceInput) {
     const statusId = getReturnStatusIdForCondition(input.condition);
 
     await conn.execute(
-      `INSERT INTO \`${returnTable}\`
+      `INSERT INTO it_return
         (deployment_id, returned_by, return_date, return_time, return_place, \`condition\`, return_remarks)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -645,27 +640,25 @@ async function updatePlaceDeployment(input: Extract<UpdateOpenDeploymentInput, {
   if (!level) throw new Error('Level is required.');
   if (!zone) throw new Error('Zone is required.');
   const deploymentDate = requireDate(input.deploymentDate, 'Deployment date');
-  const deployTable = input.kind === 'av' ? 'av_deployment' : 'network_deployment';
-  const returnTable = input.kind === 'av' ? 'av_return' : 'network_return';
   const pool = getDbPool();
   const [rows] = await pool.query<(RowDataPacket & { asset_id: number })[]>(
     `SELECT d.asset_id
-     FROM \`${deployTable}\` d
-     WHERE d.deployment_id = ?
+     FROM it_deploy d
+     WHERE d.deployment_id = ? AND d.asset_type = ?
        AND NOT EXISTS (
-         SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d.deployment_id
+         SELECT 1 FROM it_return r WHERE r.deployment_id = d.deployment_id
        )
      LIMIT 1`,
-    [input.deploymentId],
+    [input.deploymentId, input.kind],
   );
   const row = rows[0];
   if (!row || Number(row.asset_id) !== Number(input.assetId)) {
     throw new Error('This deployment is no longer open. Refresh the page and try again.');
   }
   await pool.execute(
-    `UPDATE \`${deployTable}\`
+    `UPDATE it_deploy
      SET building = ?, level = ?, zone = ?, deployment_date = ?, deployment_remarks = ?
-     WHERE deployment_id = ?`,
+     WHERE deployment_id = ? AND asset_type = ?`,
     [
       building,
       level,
@@ -673,6 +666,7 @@ async function updatePlaceDeployment(input: Extract<UpdateOpenDeploymentInput, {
       deploymentDate,
       trimOrNull(input.deploymentRemarks),
       input.deploymentId,
+      input.kind,
     ],
   );
 }

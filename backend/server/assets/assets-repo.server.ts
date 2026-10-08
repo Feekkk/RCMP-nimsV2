@@ -239,13 +239,13 @@ async function insertPlaceDeployment(
   deployment: BulkPlaceDeploymentImport,
 ) {
   const userId = await resolveUserIdByEmail(conn, deployment.deploymentStaffEmail);
-  const table = kind === 'av' ? 'av_deployment' : 'network_deployment';
   await conn.execute(
-    `INSERT INTO \`${table}\`
-      (asset_id, building, level, zone, deployment_date, deployment_remarks, user_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO it_deploy
+      (asset_id, asset_type, building, level, zone, deployment_date, deployment_remarks, user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       assetId,
+      kind,
       deployment.building,
       deployment.level,
       deployment.zone,
@@ -424,23 +424,24 @@ async function fetchOpenPlaceDeployments(
   kind: 'av' | 'network',
 ): Promise<Map<AssetId, { building: string; level: string; zone: string }>> {
   const pool = getDbPool();
-  const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
-  const returnTable = kind === 'av' ? 'av_return' : 'network_return';
   const map = new Map<AssetId, { building: string; level: string; zone: string }>();
 
   const [rows] = await pool.query<
     (RowDataPacket & { asset_id: AssetId; building: string; level: string; zone: string })[]
   >(
     `SELECT d.asset_id, d.building, d.level, d.zone
-     FROM \`${deployTable}\` d
+     FROM it_deploy d
      INNER JOIN (
        SELECT d2.asset_id, MAX(d2.deployment_id) AS deployment_id
-       FROM \`${deployTable}\` d2
-       WHERE NOT EXISTS (
-         SELECT 1 FROM \`${returnTable}\` r WHERE r.deployment_id = d2.deployment_id
-       )
+       FROM it_deploy d2
+       WHERE d2.asset_type = ?
+         AND NOT EXISTS (
+           SELECT 1 FROM it_return r WHERE r.deployment_id = d2.deployment_id
+         )
        GROUP BY d2.asset_id
-     ) open_d ON open_d.deployment_id = d.deployment_id`,
+     ) open_d ON open_d.deployment_id = d.deployment_id
+     WHERE d.asset_type = ?`,
+    [kind, kind],
   );
 
   for (const row of rows) {
@@ -1423,8 +1424,6 @@ async function listPlaceDeployTrails(
   assetId: AssetId,
 ): Promise<AssetTrailEvent[]> {
   const pool = getDbPool();
-  const deployTable = kind === 'av' ? 'av_deployment' : 'network_deployment';
-  const returnTable = kind === 'av' ? 'av_return' : 'network_return';
   const label = kind === 'av' ? 'AV deployment' : 'Network deployment';
   const events: AssetTrailEvent[] = [];
 
@@ -1443,11 +1442,11 @@ async function listPlaceDeployTrails(
   >(
     `SELECT d.deployment_id, d.building, d.level, d.zone, d.deployment_date, d.deployment_remarks,
             d.created_at, u.oid AS staff_oid
-     FROM \`${deployTable}\` d
+     FROM it_deploy d
      INNER JOIN users u ON u.id = d.user_id
-     WHERE d.asset_id = ?
+     WHERE d.asset_id = ? AND d.asset_type = ?
      ORDER BY d.deployment_id`,
-    [assetId],
+    [assetId, kind],
   );
   await attachDisplayNames(deployments, 'staff_oid', 'staff_name');
 
@@ -1480,12 +1479,12 @@ async function listPlaceDeployTrails(
   >(
     `SELECT r.return_date, r.return_time, r.return_place, r.\`condition\`, r.return_remarks, r.created_at,
             ub.oid AS returned_oid, d.building, d.level, d.zone
-     FROM \`${returnTable}\` r
-     INNER JOIN \`${deployTable}\` d ON d.deployment_id = r.deployment_id
+     FROM it_return r
+     INNER JOIN it_deploy d ON d.deployment_id = r.deployment_id
      INNER JOIN users ub ON ub.id = r.returned_by
-     WHERE d.asset_id = ?
+     WHERE d.asset_id = ? AND d.asset_type = ?
      ORDER BY r.return_id`,
-    [assetId],
+    [assetId, kind],
   );
   await attachDisplayNames(returns, 'returned_oid', 'returned_by');
 
