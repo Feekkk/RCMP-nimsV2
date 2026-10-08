@@ -2,13 +2,11 @@ import { useCallback, useEffect, useMemo, useState, type ElementType, Fragment }
 import { Link } from '@tanstack/react-router';
 import {
   ClipboardList,
-  Hammer,
   History,
   MapPin,
   Package,
   Reply,
   Search,
-  Shield,
   Truck,
   Wrench,
 } from 'lucide-react';
@@ -56,9 +54,7 @@ const CATEGORY_META: Record<ActivityLogCategory, { icon: ElementType; dot: strin
   handover: { icon: Truck, dot: 'bg-sky-500' },
   deployment: { icon: MapPin, dot: 'bg-indigo-500' },
   return: { icon: Reply, dot: 'bg-emerald-500' },
-  repair: { icon: Hammer, dot: 'bg-amber-500' },
   maintenance: { icon: Wrench, dot: 'bg-teal-500' },
-  warranty: { icon: Shield, dot: 'bg-violet-500' },
   inventory: { icon: Package, dot: 'bg-slate-500' },
 };
 

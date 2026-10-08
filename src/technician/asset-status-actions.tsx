@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -6,13 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import { formatStatusLabel } from '@shared/lib/inventory-schema';
-import {
-  getAssetStatusActions,
-  getRepairOrWarrantyAction,
-  isFaultyServiceStatus,
-  type AssetStatusAction,
-} from '@shared/lib/asset-status-actions';
-import { getWarrantyContextFn } from '@backend/server/requests/warranty-repair.functions';
+import { getAssetStatusActions, type AssetStatusAction } from '@shared/lib/asset-status-actions';
 
 type AssetStatusActionsProps = {
   kind: AssetKind;
@@ -30,37 +24,9 @@ export function AssetStatusActions({
   disabled,
 }: AssetStatusActionsProps) {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
-  const [warrantyActive, setWarrantyActive] = useState<boolean | null>(null);
-  const lifecycle = getAssetStatusActions(kind, statusId);
-  const needsFaultyService = isFaultyServiceStatus(statusId);
+  const actions: AssetStatusAction[] = getAssetStatusActions(kind, statusId);
 
-  useEffect(() => {
-    if (!needsFaultyService) {
-      setWarrantyActive(null);
-      return;
-    }
-    let cancelled = false;
-    setWarrantyActive(null);
-    void getWarrantyContextFn({ data: { kind, assetId } })
-      .then((ctx) => {
-        if (!cancelled) setWarrantyActive(ctx.isActive);
-      })
-      .catch(() => {
-        if (!cancelled) setWarrantyActive(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [needsFaultyService, kind, assetId]);
-
-  const actions: AssetStatusAction[] = [
-    ...lifecycle,
-    ...(needsFaultyService && warrantyActive !== null
-      ? [getRepairOrWarrantyAction(warrantyActive)]
-      : []),
-  ];
-
-  if (actions.length === 0 && !(needsFaultyService && warrantyActive === null)) {
+  if (actions.length === 0) {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
 
@@ -128,9 +94,6 @@ export function AssetStatusActions({
             </Tooltip>
           );
         })}
-        {needsFaultyService && warrantyActive === null ? (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Checking warranty" />
-        ) : null}
       </div>
     </TooltipProvider>
   );

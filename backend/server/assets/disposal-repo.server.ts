@@ -445,13 +445,6 @@ type ReportQueryRow = RowDataPacket & {
   purchase_cost: number | string | null;
 };
 
-type RepairQueryRow = RowDataPacket & {
-  asset_id: string;
-  asset_type: string;
-  repair_date: Date | string | null;
-  issue_summary: string | null;
-};
-
 export async function getDisposalReport(noRujukanPelupusan: string): Promise<DisposalReport> {
   const rujukan = noRujukanPelupusan.trim();
   if (!rujukan) throw new Error('Missing disposal reference number.');
@@ -484,30 +477,6 @@ export async function getDisposalReport(noRujukanPelupusan: string): Promise<Dis
     throw new Error('No submitted disposal was found for this reference number.');
   }
 
-  const repairParams = rows.flatMap((row) => [row.asset_type, row.asset_id]);
-  const repairPlaceholders = rows.map(() => '(?, ?)').join(', ');
-  const [repairs] =
-    rows.length === 0
-      ? [[]]
-      : await pool.query<RepairQueryRow[]>(
-          `SELECT asset_id, asset_type, repair_date, issue_summary
-           FROM repair
-           WHERE (asset_type, ${sqlUtf8AssetId('asset_id')}) IN (${repairPlaceholders})
-           ORDER BY repair_date ASC, repair_id ASC`,
-          repairParams,
-        );
-
-  const repairsByKey = new Map<string, DisposalReportAsset['repairs']>();
-  for (const repair of repairs) {
-    const key = `${repair.asset_type}:${repair.asset_id}`;
-    const list = repairsByKey.get(key) ?? [];
-    list.push({
-      repairDate: formatSqlDate(repair.repair_date),
-      issueSummary: repair.issue_summary,
-    });
-    repairsByKey.set(key, list);
-  }
-
   const assets: DisposalReportAsset[] = rows.map((row) => {
     if (!isAssetKind(row.asset_type)) {
       throw new Error('A disposal row has an unknown asset type.');
@@ -535,7 +504,6 @@ export async function getDisposalReport(noRujukanPelupusan: string): Promise<Dis
       imageSerialNumber: disposalPhotoPath(row.image_serial_number),
       latarBelakang: row.latar_belakang,
       rekodFizikalHarta: row.rekod_fizikal_harta,
-      repairs: repairsByKey.get(`${row.asset_type}:${row.asset_id}`) ?? [],
     };
   });
 

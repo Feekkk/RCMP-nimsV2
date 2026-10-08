@@ -1,4 +1,4 @@
-import { parseAssetIdParam, parseAssetKindParam, type AssetId, type AssetKind } from '@shared/lib/inventory-schema';
+import type { AssetId, AssetKind } from '@shared/lib/inventory-schema';
 import type { WarrantyInput } from '@/lib/warranty-field-utils';
 
 export type { WarrantyInput };
@@ -13,51 +13,7 @@ export type WarrantyRecord = {
   remarks: string | null;
 };
 
-export type WarrantyClaimInput = {
-  kind: AssetKind;
-  assetId: AssetId;
-  claimDate: string;
-  claimTime?: string | null;
-  issueSummary: string;
-  claimRemarks?: string | null;
-  claimedBy: string;
-};
-
-export type RepairInput = {
-  kind: AssetKind;
-  assetId: AssetId;
-  repairDate: string;
-  issueSummary: string;
-  repairRemarks?: string | null;
-  staffId: string;
-  /** When set, marks the repair as completed on this date. */
-  completedDate?: string | null;
-};
-
-export type FaultyRepairSearch = {
-  kind: AssetKind;
-  assetId: AssetId;
-};
-
-/** Parsed from /technician/warranty | /repair search params. */
-export function parseFaultyAssetRouteSearch(
-  search: Record<string, unknown>,
-): FaultyRepairSearch | null {
-  const kind = parseAssetKindParam(search.kind);
-  const assetId = parseAssetIdParam(search.assetId);
-  if (!kind || !assetId) {
-    return null;
-  }
-  return { kind, assetId };
-}
-
 export type WarrantyContext = {
   warranty: WarrantyRecord | null;
   isActive: boolean;
-  recentClaims: {
-    claimId: number;
-    claimDate: string;
-    issueSummary: string;
-    claimRemarks: string | null;
-  }[];
 };

@@ -29,7 +29,7 @@ async function main() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   );
 
-  const dir = resolve(process.cwd(), 'backend/migrations');
+  const dir = resolve(process.cwd(), 'database/migration');
   const files = (await readdir(dir)).filter((name) => name.endsWith('.sql')).sort();
   const [appliedRows] = await pool.query<(RowDataPacket & { filename: string })[]>(
     'SELECT filename FROM schema_migrations',

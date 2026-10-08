@@ -14,7 +14,7 @@ export function WarrantyFieldsSection({
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vendor warranty (Optional)</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Stored on first registration. Required for warranty claims while in date range.
+          Stored on first registration. Start date, end date, and remarks.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

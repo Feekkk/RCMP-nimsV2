@@ -38,14 +38,12 @@ import { Route as TechnicianNetworkRouteImport } from './routes/technician/netwo
 import { Route as TechnicianPmFormRouteImport } from './routes/technician/pm-form'
 import { Route as TechnicianPreDisposedRouteImport } from './routes/technician/pre-disposed'
 import { Route as TechnicianPreventiveMaintenanceRouteImport } from './routes/technician/preventive-maintenance'
-import { Route as TechnicianRepairRouteImport } from './routes/technician/repair'
 import { Route as TechnicianReportRouteImport } from './routes/technician/report'
 import { Route as TechnicianRequestAssetsRouteImport } from './routes/technician/request-assets'
 import { Route as TechnicianRequestLogRouteImport } from './routes/technician/request-log'
 import { Route as TechnicianRequestViewRouteImport } from './routes/technician/request-view'
 import { Route as TechnicianRequestsRouteImport } from './routes/technician/requests'
 import { Route as TechnicianReturnRouteImport } from './routes/technician/return'
-import { Route as TechnicianWarrantyRouteImport } from './routes/technician/warranty'
 import { Route as UserEditProfileRouteImport } from './routes/user/edit-profile'
 import { Route as UserHistoryRouteImport } from './routes/user/history'
 import { Route as UserRequestRouteImport } from './routes/user/request'
@@ -233,11 +231,6 @@ const TechnicianPreventiveMaintenanceRoute =
     path: '/technician/preventive-maintenance',
     getParentRoute: () => rootRouteImport,
   } as any)
-const TechnicianRepairRoute = TechnicianRepairRouteImport.update({
-  id: '/technician/repair',
-  path: '/technician/repair',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TechnicianReportRoute = TechnicianReportRouteImport.update({
   id: '/technician/report',
   path: '/technician/report',
@@ -266,11 +259,6 @@ const TechnicianRequestsRoute = TechnicianRequestsRouteImport.update({
 const TechnicianReturnRoute = TechnicianReturnRouteImport.update({
   id: '/technician/return',
   path: '/technician/return',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TechnicianWarrantyRoute = TechnicianWarrantyRouteImport.update({
-  id: '/technician/warranty',
-  path: '/technician/warranty',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UserEditProfileRoute = UserEditProfileRouteImport.update({
@@ -509,14 +497,12 @@ export interface FileRoutesByFullPath {
   '/technician/pm-form': typeof TechnicianPmFormRoute
   '/technician/pre-disposed': typeof TechnicianPreDisposedRoute
   '/technician/preventive-maintenance': typeof TechnicianPreventiveMaintenanceRoute
-  '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
-  '/technician/warranty': typeof TechnicianWarrantyRoute
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
@@ -587,14 +573,12 @@ export interface FileRoutesByTo {
   '/technician/pm-form': typeof TechnicianPmFormRoute
   '/technician/pre-disposed': typeof TechnicianPreDisposedRoute
   '/technician/preventive-maintenance': typeof TechnicianPreventiveMaintenanceRoute
-  '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
-  '/technician/warranty': typeof TechnicianWarrantyRoute
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
@@ -666,14 +650,12 @@ export interface FileRoutesById {
   '/technician/pm-form': typeof TechnicianPmFormRoute
   '/technician/pre-disposed': typeof TechnicianPreDisposedRoute
   '/technician/preventive-maintenance': typeof TechnicianPreventiveMaintenanceRoute
-  '/technician/repair': typeof TechnicianRepairRoute
   '/technician/report': typeof TechnicianReportRoute
   '/technician/request-assets': typeof TechnicianRequestAssetsRoute
   '/technician/request-log': typeof TechnicianRequestLogRoute
   '/technician/request-view': typeof TechnicianRequestViewRoute
   '/technician/requests': typeof TechnicianRequestsRoute
   '/technician/return': typeof TechnicianReturnRoute
-  '/technician/warranty': typeof TechnicianWarrantyRoute
   '/user/edit-profile': typeof UserEditProfileRoute
   '/user/history': typeof UserHistoryRoute
   '/user/request': typeof UserRequestRoute
@@ -746,14 +728,12 @@ export interface FileRouteTypes {
     | '/technician/pm-form'
     | '/technician/pre-disposed'
     | '/technician/preventive-maintenance'
-    | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
-    | '/technician/warranty'
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
@@ -824,14 +804,12 @@ export interface FileRouteTypes {
     | '/technician/pm-form'
     | '/technician/pre-disposed'
     | '/technician/preventive-maintenance'
-    | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
-    | '/technician/warranty'
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
@@ -902,14 +880,12 @@ export interface FileRouteTypes {
     | '/technician/pm-form'
     | '/technician/pre-disposed'
     | '/technician/preventive-maintenance'
-    | '/technician/repair'
     | '/technician/report'
     | '/technician/request-assets'
     | '/technician/request-log'
     | '/technician/request-view'
     | '/technician/requests'
     | '/technician/return'
-    | '/technician/warranty'
     | '/user/edit-profile'
     | '/user/history'
     | '/user/request'
@@ -981,14 +957,12 @@ export interface RootRouteChildren {
   TechnicianPmFormRoute: typeof TechnicianPmFormRoute
   TechnicianPreDisposedRoute: typeof TechnicianPreDisposedRoute
   TechnicianPreventiveMaintenanceRoute: typeof TechnicianPreventiveMaintenanceRoute
-  TechnicianRepairRoute: typeof TechnicianRepairRoute
   TechnicianReportRoute: typeof TechnicianReportRoute
   TechnicianRequestAssetsRoute: typeof TechnicianRequestAssetsRoute
   TechnicianRequestLogRoute: typeof TechnicianRequestLogRoute
   TechnicianRequestViewRoute: typeof TechnicianRequestViewRoute
   TechnicianRequestsRoute: typeof TechnicianRequestsRoute
   TechnicianReturnRoute: typeof TechnicianReturnRoute
-  TechnicianWarrantyRoute: typeof TechnicianWarrantyRoute
   UserEditProfileRoute: typeof UserEditProfileRoute
   UserHistoryRoute: typeof UserHistoryRoute
   UserRequestRoute: typeof UserRequestRoute
@@ -1233,13 +1207,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnicianPreventiveMaintenanceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/technician/repair': {
-      id: '/technician/repair'
-      path: '/technician/repair'
-      fullPath: '/technician/repair'
-      preLoaderRoute: typeof TechnicianRepairRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/technician/report': {
       id: '/technician/report'
       path: '/technician/report'
@@ -1280,13 +1247,6 @@ declare module '@tanstack/react-router' {
       path: '/technician/return'
       fullPath: '/technician/return'
       preLoaderRoute: typeof TechnicianReturnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technician/warranty': {
-      id: '/technician/warranty'
-      path: '/technician/warranty'
-      fullPath: '/technician/warranty'
-      preLoaderRoute: typeof TechnicianWarrantyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/user/edit-profile': {
@@ -1608,14 +1568,12 @@ const rootRouteChildren: RootRouteChildren = {
   TechnicianPmFormRoute: TechnicianPmFormRoute,
   TechnicianPreDisposedRoute: TechnicianPreDisposedRoute,
   TechnicianPreventiveMaintenanceRoute: TechnicianPreventiveMaintenanceRoute,
-  TechnicianRepairRoute: TechnicianRepairRoute,
   TechnicianReportRoute: TechnicianReportRoute,
   TechnicianRequestAssetsRoute: TechnicianRequestAssetsRoute,
   TechnicianRequestLogRoute: TechnicianRequestLogRoute,
   TechnicianRequestViewRoute: TechnicianRequestViewRoute,
   TechnicianRequestsRoute: TechnicianRequestsRoute,
   TechnicianReturnRoute: TechnicianReturnRoute,
-  TechnicianWarrantyRoute: TechnicianWarrantyRoute,
   UserEditProfileRoute: UserEditProfileRoute,
   UserHistoryRoute: UserHistoryRoute,
   UserRequestRoute: UserRequestRoute,

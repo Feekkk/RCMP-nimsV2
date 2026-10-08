@@ -391,81 +391,6 @@ async function loadDeployEvents(
   }
 }
 
-async function loadMaintenanceEvents(events: ActivityLogEntry[]) {
-  const pool = getDbPool();
-
-  const [repairs] = await pool.query<
-    (RowDataPacket & {
-      repair_id: number;
-      asset_id: number;
-      asset_type: string;
-      repair_date: Date | string;
-      issue_summary: string;
-      staff_oid: string | null;
-      staff_name: string;
-    })[]
-  >(
-    `SELECT r.repair_id, r.asset_id, r.asset_type, r.repair_date,
-            r.issue_summary, u.oid AS staff_oid
-     FROM repair r
-     INNER JOIN users u ON u.id = r.user_id
-     ORDER BY r.repair_id DESC
-     LIMIT 150`,
-  );
-  await attachDisplayNames(repairs, 'staff_oid', 'staff_name');
-
-  for (const row of repairs) {
-    const kind = parseKind(row.asset_type);
-    push(events, {
-      id: `repair-${row.repair_id}`,
-      category: 'repair',
-      title: 'Repair logged',
-      detail: row.issue_summary,
-      actor: row.staff_name,
-      assetKind: kind,
-      assetId: row.asset_id,
-      requestId: null,
-      at: trailAt(row.repair_date),
-    });
-  }
-
-  const [claims] = await pool.query<
-    (RowDataPacket & {
-      claim_id: number;
-      asset_id: number;
-      asset_type: string;
-      claim_date: Date | string;
-      claim_time: string | null;
-      issue_summary: string;
-      claimed_oid: string | null;
-      claimed_by: string;
-    })[]
-  >(
-    `SELECT c.claim_id, c.asset_id, c.asset_type, c.claim_date, c.claim_time,
-            c.issue_summary, u.oid AS claimed_oid
-     FROM warranty_claim c
-     INNER JOIN users u ON u.id = c.claimed_by
-     ORDER BY c.claim_id DESC
-     LIMIT 100`,
-  );
-  await attachDisplayNames(claims, 'claimed_oid', 'claimed_by');
-
-  for (const c of claims) {
-    const kind = parseKind(c.asset_type);
-    push(events, {
-      id: `claim-${c.claim_id}`,
-      category: 'warranty',
-      title: 'Warranty claim',
-      detail: c.issue_summary,
-      actor: c.claimed_by,
-      assetKind: kind,
-      assetId: c.asset_id,
-      requestId: null,
-      at: atFromDateAndTime(c.claim_date, c.claim_time),
-    });
-  }
-}
-
 async function loadPreventiveMaintenanceEvents(events: ActivityLogEntry[]) {
   const pool = getDbPool();
 
@@ -561,7 +486,6 @@ export async function listActivityLog(options?: {
     loadHandoverEvents(events),
     loadDeployEvents(events, 'av', 'deployment'),
     loadDeployEvents(events, 'network', 'deployment'),
-    loadMaintenanceEvents(events),
     loadPreventiveMaintenanceEvents(events),
     loadInventoryEvents(events),
   ]);

@@ -32,8 +32,6 @@ function laptopRegistrar(session: { staffId?: string; fullName?: string } | null
   };
 }
 
-const DISPOSAL_FORM_NAMES = new Set(['lampiran1', 'lampiran2', 'tpa10']);
-
 export const listAssetsFn = createServerFn({ method: 'GET' })
   .middleware([staffMiddleware])
   .inputValidator((kind: AssetKind) => kind)
@@ -235,25 +233,6 @@ export const getDisposalReportFn = createServerFn({ method: 'GET' })
     }
     const { getDisposalReport } = await import('@backend/server/assets/disposal-repo.server');
     return getDisposalReport(noRujukanPelupusan);
-  });
-
-export const logDisposalFormDownloadFn = createServerFn({ method: 'POST' })
-  .middleware([disposalUnitMiddleware])
-  .inputValidator((input: { noRujukanPelupusan: string; form: string }) => {
-    const noRujukanPelupusan = input?.noRujukanPelupusan?.trim() ?? '';
-    const form = input?.form?.trim() ?? '';
-    if (!noRujukanPelupusan || noRujukanPelupusan.length > 64 || !DISPOSAL_FORM_NAMES.has(form)) {
-      throw new Error('This disposal form could not be recorded.');
-    }
-    return { noRujukanPelupusan, form };
-  })
-  .handler(async ({ data, context }) => {
-    if (!isDisposalUnitRole(context.roleId)) {
-      throw new Error('Disposal unit access is required. Sign in with a disposal unit account to continue.');
-    }
-    const { logDisposalFormDownload } = await import('@backend/server/assets/disposal-download-log.server');
-    await logDisposalFormDownload({ ...data, staffId: context.staffId });
-    return { ok: true as const };
   });
 
 export const uploadPredisposedPictureFn = createServerFn({ method: 'POST' })

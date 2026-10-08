@@ -55,7 +55,7 @@ import {
   sqlUtf8AssetId,
   withAssetPredisposalTransaction,
 } from '@backend/server/assets/disposal-repo.server';
-import { attachDisplayNames, getDisplayNameByOid, getDisplayNamesByOids } from '@backend/server/core/azure-directory.server';
+import { attachDisplayNames, getDisplayNamesByOids } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 import { insertWarranty } from '@backend/server/requests/warranty-repair-repo.server';
 
@@ -1505,75 +1505,6 @@ async function listPlaceDeployTrails(
   return events;
 }
 
-async function listMaintenanceTrails(kind: AssetKind, assetId: AssetId): Promise<AssetTrailEvent[]> {
-  const pool = getDbPool();
-  const events: AssetTrailEvent[] = [];
-
-  const [repairs] = await pool.query<
-    (RowDataPacket & {
-      repair_date: Date | string;
-      issue_summary: string;
-      repair_remarks: string | null;
-      created_at: Date | string;
-      staff_oid: string | null;
-      staff_email: string | null;
-    })[]
-  >(
-    `SELECT r.repair_date, r.issue_summary, r.repair_remarks, r.created_at,
-            u.oid AS staff_oid, u.email AS staff_email
-     FROM repair r
-     INNER JOIN users u ON u.id = r.user_id
-     WHERE r.asset_type = ? AND r.asset_id = ?
-     ORDER BY r.repair_id`,
-    [kind, assetId],
-  );
-
-  for (const row of repairs) {
-    const attendedBy = await getDisplayNameByOid(row.staff_oid, row.staff_email);
-    pushTrail(events, {
-      at: trailAt(row.repair_date) || trailAt(row.created_at),
-      category: 'Repair',
-      title: 'Repair logged',
-      detail: [row.issue_summary, row.repair_remarks].filter(Boolean).join(' · ') || null,
-      actor: attendedBy || null,
-    });
-  }
-
-  const [claims] = await pool.query<
-    (RowDataPacket & {
-      claim_date: Date | string;
-      claim_time: string | null;
-      issue_summary: string;
-      claim_remarks: string | null;
-      created_at: Date | string;
-      claimed_oid: string | null;
-      claimed_email: string | null;
-    })[]
-  >(
-    `SELECT c.claim_date, c.claim_time, c.issue_summary, c.claim_remarks, c.created_at,
-            u.oid AS claimed_oid, u.email AS claimed_email
-     FROM warranty_claim c
-     INNER JOIN users u ON u.id = c.claimed_by
-     WHERE c.asset_type = ? AND c.asset_id = ?
-     ORDER BY c.claim_id`,
-    [kind, assetId],
-  );
-
-  for (const c of claims) {
-    const attendedBy = await getDisplayNameByOid(c.claimed_oid, c.claimed_email);
-    const at = sqlDateToIso(c.claim_date) || trailAt(c.created_at);
-    pushTrail(events, {
-      at,
-      category: 'Warranty',
-      title: 'Warranty claim',
-      detail: [c.issue_summary, c.claim_remarks].filter(Boolean).join(' · ') || null,
-      actor: attendedBy || null,
-    });
-  }
-
-  return events;
-}
-
 export async function getAssetDetail(kind: AssetKind, assetId: AssetId): Promise<AssetDetailResponse | null> {
   const pool = getDbPool();
 
@@ -1716,7 +1647,6 @@ async function buildAssetTrails(
   const chunks = await Promise.all([
     kind === 'laptop' ? listLaptopTrails(assetId) : listPlaceDeployTrails(kind, assetId),
     listRequestTrails(assetId),
-    listMaintenanceTrails(kind, assetId),
   ]);
 
   for (const chunk of chunks) {

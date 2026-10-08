@@ -566,7 +566,7 @@ export function AssetViewContent({
                       Activity trail
                     </CardTitle>
                     <CardDescription>
-                      Handovers, deployments, borrow requests, repairs, and warranty events
+                      Handovers, deployments, and borrow requests
                     </CardDescription>
                   </div>
                   {!readOnly ? (

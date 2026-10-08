@@ -37,7 +37,6 @@ function createFiller(xml: string) {
 
 function fillAssetPage(page: string, asset: DisposalReportAsset, report: DisposalReport) {
   const [condition = '', secondLine = '', thirdLine = ''] = (asset.rekodFizikalHarta ?? '').split(/\r?\n/);
-  const repairs = asset.repairs;
   const filler = createFiller(page);
 
   filler.replace('RUJ: ………………………………………… ', `RUJ: ${report.noRujukanPelupusan}`);
@@ -53,8 +52,8 @@ function fillAssetPage(page: string, asset: DisposalReportAsset, report: Disposa
   filler.replace('Keadaan fizikal masih dalam keadaan baik', condition);
   filler.replace('       2)', `       2) ${secondLine}`);
   filler.replace('       3) ', `       3) ${thirdLine}`);
-  filler.afterLabel('TARIKH', repairs.map((repair) => repair.repairDate ?? '—').join(', '));
-  filler.afterLabel('JENIS PEMBAIKAN', repairs.map((repair) => repair.issueSummary ?? '—').join('; '));
+  filler.afterLabel('TARIKH', '');
+  filler.afterLabel('JENIS PEMBAIKAN', '');
 
   return filler.toString();
 }

@@ -181,11 +181,6 @@ export type DisposalHistoryBatch = {
   assets: DisposalHistoryAsset[];
 };
 
-export type DisposalReportRepair = {
-  repairDate: string | null;
-  issueSummary: string | null;
-};
-
 export type DisposalReportAsset = {
   kind: AssetKind;
   assetId: AssetId;
@@ -203,7 +198,6 @@ export type DisposalReportAsset = {
   imageSerialNumber: string | null;
   latarBelakang: string | null;
   rekodFizikalHarta: string | null;
-  repairs: DisposalReportRepair[];
 };
 
 export type DisposalReport = {
