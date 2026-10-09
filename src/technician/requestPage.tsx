@@ -67,6 +67,8 @@ import {
   assetCategoryMatchesRequestType,
   kindGroupLabel,
   requestItemKindFromAssetType,
+  avRequestCategoryChoices,
+  requestCategoryLabel,
 } from '@shared/lib/request-asset-types';
 import { formatDateLabel, isoToLocalDate, localDateToIso } from '@shared/lib/date-format';
 import { cn } from '@/lib/utils';
@@ -84,6 +86,7 @@ import {
   checkoutUserRequestFn,
   listAvailablePoolAssetsFn,
   listPendingRequestsFn,
+  updateRequestAssetCategoryFn,
   markRequestSlotNotTakenFn,
   markRequestSlotUnavailableFn,
   rejectUserRequestFn,
@@ -328,6 +331,35 @@ function classifyRequests(requests: PendingRequest[]): RequestQueues {
   return { overdue, toReturn, pending };
 }
 
+type CategoryAssignPrompt = {
+  kind: RequestAssignableKind;
+  assetId: number;
+  currentCategory: string | null;
+  requestedType: string;
+  nextCategory: string;
+  mode: 'book' | 'swap';
+  requestId: number;
+  requestItemId: number;
+  assignmentId?: number;
+};
+
+function categoryChoicesForRequest(requestedType: string): string[] {
+  const requested = requestCategoryLabel(requestedType);
+  const rest = avRequestCategoryChoices().filter(
+    (type) => !assetCategoryMatchesRequestType(type, requestedType),
+  );
+  return [requested, ...rest];
+}
+
+function needsCategoryChange(
+  kind: RequestAssignableKind,
+  category: string | null | undefined,
+  requestedType?: string | null,
+) {
+  if (!requestedType || kind === 'laptop') return false;
+  return !assetCategoryMatchesRequestType(category, requestedType);
+}
+
 function matchesSearch(req: PendingRequest, query: string): boolean {
   if (!query) return true;
   return [
@@ -364,6 +396,9 @@ export function TechnicianRequestPage() {
   const [returnCondition, setReturnCondition] = useState('Good');
   const [returnRemarks, setReturnRemarks] = useState('');
   const [returning, setReturning] = useState(false);
+  const [categoryPrompt, setCategoryPrompt] = useState<CategoryAssignPrompt | null>(null);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [slotSelectKey, setSlotSelectKey] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -436,6 +471,24 @@ export function TechnicianRequestPage() {
     const assetId = Number(idStr);
     if ((kind !== 'laptop' && kind !== 'av') || Number.isNaN(assetId)) return;
     if (kind !== group.kind) return;
+
+    const poolAsset = pool.find(
+      (asset) => asset.kind === kind && String(asset.assetId) === String(assetId),
+    );
+    if (poolAsset && needsCategoryChange(kind, poolAsset.category, resolved.item.assetType)) {
+      setCategoryPrompt({
+        kind,
+        assetId,
+        currentCategory: poolAsset.category,
+        requestedType: resolved.item.assetType,
+        nextCategory: requestCategoryLabel(resolved.item.assetType),
+        mode: 'book',
+        requestId: req.requestId,
+        requestItemId: resolved.item.requestItemId,
+      });
+      setSlotSelectKey((key) => key + 1);
+      return;
+    }
 
     const key = `book-${req.requestId}-${resolved.item.requestItemId}`;
     setActionKey(key);
@@ -565,6 +618,7 @@ export function TechnicianRequestPage() {
   const handleChangeBooked = async (
     assignment: RequestAssignmentRow,
     pick: string,
+    requestedItem?: RequestItemRow | null,
   ) => {
     if (!pick || assignment.unavailable) return;
     const current = `${assignment.kind}:${assignment.assetId}`;
@@ -573,6 +627,28 @@ export function TechnicianRequestPage() {
     const [kind, idStr] = pick.split(':');
     const assetId = Number(idStr);
     if ((kind !== 'laptop' && kind !== 'av') || Number.isNaN(assetId)) return;
+
+    const poolAsset = pool.find(
+      (asset) => asset.kind === kind && String(asset.assetId) === String(assetId),
+    );
+    if (
+      poolAsset &&
+      requestedItem &&
+      needsCategoryChange(kind, poolAsset.category, requestedItem.assetType)
+    ) {
+      setCategoryPrompt({
+        kind,
+        assetId,
+        currentCategory: poolAsset.category,
+        requestedType: requestedItem.assetType,
+        nextCategory: requestCategoryLabel(requestedItem.assetType),
+        mode: 'swap',
+        requestId: 0,
+        requestItemId: requestedItem.requestItemId,
+        assignmentId: assignment.assignmentId,
+      });
+      return;
+    }
 
     const session = readTechnicianSession();
     if (!session?.staffId) {
@@ -596,6 +672,66 @@ export function TechnicianRequestPage() {
       toast.error(e instanceof Error ? e.message : 'Could not change booking');
     } finally {
       setChangingAssignmentId(null);
+    }
+  };
+
+  const confirmCategoryAssign = async () => {
+    if (!categoryPrompt) return;
+    if (!assetCategoryMatchesRequestType(categoryPrompt.nextCategory, categoryPrompt.requestedType)) {
+      toast.error(`Choose ${requestCategoryLabel(categoryPrompt.requestedType)} before assigning this asset.`);
+      return;
+    }
+    const session = readTechnicianSession();
+    if (!session?.staffId) {
+      toast.error('Your technician session could not be verified. Sign out and sign in again.');
+      return;
+    }
+    setSavingCategory(true);
+    try {
+      await updateRequestAssetCategoryFn({
+        data: {
+          kind: categoryPrompt.kind,
+          assetId: categoryPrompt.assetId,
+          category: categoryPrompt.nextCategory,
+        },
+      });
+      if (categoryPrompt.mode === 'swap' && categoryPrompt.assignmentId != null) {
+        await changeBookedAssignmentFn({
+          data: {
+            assignmentId: categoryPrompt.assignmentId,
+            kind: categoryPrompt.kind,
+            assetId: categoryPrompt.assetId,
+            changedBy: session.staffId,
+          },
+        });
+        toast.success(
+          `Category set to ${categoryPrompt.nextCategory} and booking changed to ${categoryPrompt.kind} #${categoryPrompt.assetId}`,
+        );
+      } else {
+        const booked = await bookPoolAssetToRequestFn({
+          data: {
+            requestId: categoryPrompt.requestId,
+            requestItemId: categoryPrompt.requestItemId,
+            kind: categoryPrompt.kind,
+            assetId: categoryPrompt.assetId,
+            assignedBy: session.staffId,
+            remarks: null,
+          },
+        });
+        if (booked.collectionReady) {
+          toast.success('All items booked — notifying requester to collect at ITD');
+        } else {
+          toast.success(
+            `Category set to ${categoryPrompt.nextCategory}. Booked ${categoryPrompt.kind} #${categoryPrompt.assetId}`,
+          );
+        }
+      }
+      setCategoryPrompt(null);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not update the category and assign this asset.');
+    } finally {
+      setSavingCategory(false);
     }
   };
 
@@ -672,7 +808,13 @@ export function TechnicianRequestPage() {
   const optionsForSlot = (kind: RequestAssignableKind, requestedType?: string | null) => {
     const ofKind = optionsForKind(kind);
     if (!requestedType || kind === 'laptop') return ofKind;
-    return ofKind.filter((a) => assetCategoryMatchesRequestType(a.category, requestedType));
+    const matching: RequestPoolAsset[] = [];
+    const other: RequestPoolAsset[] = [];
+    for (const asset of ofKind) {
+      if (assetCategoryMatchesRequestType(asset.category, requestedType)) matching.push(asset);
+      else other.push(asset);
+    }
+    return [...matching, ...other];
   };
 
   const openReturnForm = (req: PendingRequest) => {
@@ -898,7 +1040,7 @@ export function TechnicianRequestPage() {
                                   disabled={
                                     changingAssignmentId === a.assignmentId || options.length === 0
                                   }
-                                  onValueChange={(v) => void handleChangeBooked(a, v)}
+                                  onValueChange={(v) => void handleChangeBooked(a, v, requestedItem)}
                                 >
                                   <SelectTrigger className="h-auto min-h-8 max-w-md rounded-[6px] py-1.5 text-xs [&>span]:line-clamp-none">
                                     <SelectValue />
@@ -1029,6 +1171,7 @@ export function TechnicianRequestPage() {
                           <>
                             <TableCell>
                               <Select
+                                key={`${slotId}-${slotSelectKey}`}
                                 disabled={actionKey === bookKey}
                                 onValueChange={(v) =>
                                   void handleBookOnSelect(req, group, v, requestedItem)
@@ -1049,7 +1192,7 @@ export function TechnicianRequestPage() {
                                   {options.length === 0 ? (
                                     <SelectItem value="_none" disabled>
                                       {requestedItem
-                                        ? `No ${requestedItem.assetType} in pool`
+                                        ? `No ${group.kind === 'laptop' ? 'laptop' : 'AV'} assets in pool`
                                         : 'No assets in pool'}
                                     </SelectItem>
                                   ) : (
@@ -1403,6 +1546,82 @@ export function TechnicianRequestPage() {
               onClick={() => void handleReturnSubmit()}
             >
               {returning ? 'Returning…' : 'Confirm return'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={categoryPrompt != null}
+        onOpenChange={(open) => {
+          if (!open && !savingCategory) setCategoryPrompt(null);
+        }}
+      >
+        <DialogContent className="rounded-[14px] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Category does not match</DialogTitle>
+            <DialogDescription>
+              {categoryPrompt
+                ? `${categoryPrompt.kind === 'laptop' ? 'Laptop' : 'AV'} #${categoryPrompt.assetId} is categorized as ${categoryPrompt.currentCategory?.trim() || 'blank'}. This request needs ${requestCategoryLabel(categoryPrompt.requestedType)}. Change the category before assigning it.`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {categoryPrompt ? (
+            <div className="space-y-2">
+              <Label htmlFor="request-asset-category">Category</Label>
+              <Select
+                value={categoryPrompt.nextCategory}
+                onValueChange={(value) =>
+                  setCategoryPrompt((current) =>
+                    current ? { ...current, nextCategory: value } : current,
+                  )
+                }
+              >
+                <SelectTrigger id="request-asset-category" className="rounded-[8px]">
+                  <SelectValue placeholder="Set category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryChoicesForRequest(categoryPrompt.requestedType).map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!assetCategoryMatchesRequestType(
+                categoryPrompt.nextCategory,
+                categoryPrompt.requestedType,
+              ) ? (
+                <p className="text-xs text-muted-foreground">
+                  Choose {requestCategoryLabel(categoryPrompt.requestedType)} to assign this asset to the request.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[8px]"
+              disabled={savingCategory}
+              onClick={() => setCategoryPrompt(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[8px]"
+              disabled={
+                savingCategory ||
+                !categoryPrompt ||
+                !assetCategoryMatchesRequestType(
+                  categoryPrompt.nextCategory,
+                  categoryPrompt.requestedType,
+                )
+              }
+              onClick={() => void confirmCategoryAssign()}
+            >
+              {savingCategory ? 'Assigning…' : 'Update category and assign'}
             </Button>
           </DialogFooter>
         </DialogContent>

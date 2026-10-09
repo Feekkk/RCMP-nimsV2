@@ -5,6 +5,7 @@ import type {
   BookPoolAssetResult,
   MarkAssetForRequestInput,
   PendingRequest,
+  UpdateRequestAssetCategoryInput,
   RemoveAssetFromRequestPoolInput,
   RequestAssignableKind,
   RequestAssignmentRow,
@@ -23,7 +24,11 @@ import {
   REQUEST_STATUS_BOOKED,
   REQUEST_STATUS_CHECKOUT,
 } from '@shared/lib/request-schema';
-import { assetIdNewestYearFirstSql } from '@/hooks/assetid-generator';
+import {
+  assetIdNewestYearFirstSql,
+  canonicalizeLaptopCategory,
+  isKnownLaptopCategory,
+} from '@/hooks/assetid-generator';
 import { STATUS_ID } from '@shared/lib/asset-status-actions';
 import type {
   ChangeBookedAssignmentInput,
@@ -40,7 +45,12 @@ import type {
   ReturnUserRequestInput,
   ReturnUserRequestResult,
 } from '@shared/lib/request-schema';
-import { requestItemKindFromAssetType } from '@shared/lib/request-asset-types';
+import {
+  assetCategoryMatchesRequestType,
+  avCategoryMatchesRequestCatalog,
+  canonicalAvRequestCategory,
+  requestItemKindFromAssetType,
+} from '@shared/lib/request-asset-types';
 import { isUserProfileComplete } from '@shared/lib/user-profile';
 import { attachDisplayNames, resolveAccountProfile } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
@@ -228,19 +238,123 @@ export async function listAssignedRequestPoolAssets(): Promise<RequestPoolAsset[
   return all.filter((a) => a.assignmentId != null);
 }
 
-export async function markAssetForRequest(input: MarkAssetForRequestInput): Promise<void> {
+function resolvedRequestCategory(kind: RequestAssignableKind, category: string): string | null {
+  const trimmed = category.trim();
+  if (!trimmed) return null;
+  if (kind === 'laptop') {
+    const canonical = canonicalizeLaptopCategory(trimmed);
+    return isKnownLaptopCategory(canonical) ? canonical : null;
+  }
+  return canonicalAvRequestCategory(trimmed);
+}
+
+function categoryFitsRequestPool(kind: RequestAssignableKind, category: string | null | undefined): boolean {
+  if (kind === 'laptop') return isKnownLaptopCategory(category);
+  return avCategoryMatchesRequestCatalog(category);
+}
+
+export async function updateRequestAssetCategory(
+  input: UpdateRequestAssetCategoryInput,
+): Promise<string> {
+  const category = resolvedRequestCategory(input.kind, input.category);
+  if (!category) {
+    throw new Error(
+      input.kind === 'laptop'
+        ? 'Choose a laptop category such as Notebook or Desktop AIO before assigning this asset.'
+        : 'Choose a request category such as PORTABLE SPEAKER or PROJECTOR before assigning this asset.',
+    );
+  }
+
   const pool = getDbPool();
   const table = input.kind === 'laptop' ? 'laptop' : 'av';
-
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT status_id FROM \`${table}\` WHERE asset_id = ?`,
     [bindAssetId(input.assetId)],
   );
   const row = rows[0] as { status_id: number } | undefined;
   if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
+  if (!isRequestPoolEligibleStatus(row.status_id) && row.status_id !== REQUEST_STATUS_ACTIVE) {
+    throw new Error(
+      'This asset category can only be changed while it is new, returned, or waiting in the request pool.',
+    );
+  }
+
+  const [openAssign] = await pool.query<RowDataPacket[]>(
+    `SELECT assignment_id FROM request_assignment
+     WHERE asset_id = ? AND returned_at IS NULL LIMIT 1`,
+    [bindAssetId(input.assetId)],
+  );
+  if (openAssign[0]) {
+    throw new Error(
+      'This asset is already booked on an open request. Release that booking before changing its category.',
+    );
+  }
+
+  await pool.execute(`UPDATE \`${table}\` SET category = ? WHERE asset_id = ?`, [
+    category,
+    bindAssetId(input.assetId),
+  ]);
+  return category;
+}
+
+async function assertAssetCategoryMatchesRequestItem(
+  kind: RequestAssignableKind,
+  assetId: number,
+  requestId: number,
+  requestItemId: number,
+): Promise<void> {
+  const pool = getDbPool();
+  const [items] = await pool.query<(RowDataPacket & { asset_type: string })[]>(
+    `SELECT asset_type FROM request_item WHERE request_item_id = ? AND request_id = ?`,
+    [requestItemId, requestId],
+  );
+  const assetType = items[0]?.asset_type?.trim();
+  if (!assetType) {
+    throw new Error('This request line could not be found. Refresh the page and try again.');
+  }
+  const expectedKind = requestItemKindFromAssetType(assetType);
+  if (expectedKind !== kind) {
+    throw new Error(
+      expectedKind === 'laptop'
+        ? 'This request line needs a laptop.'
+        : `This request line needs ${assetType}.`,
+    );
+  }
+  if (expectedKind === 'laptop') return;
+
+  const [assetRows] = await pool.query<(RowDataPacket & { category: string | null })[]>(
+    `SELECT category FROM av WHERE asset_id = ?`,
+    [bindAssetId(assetId)],
+  );
+  const category = assetRows[0]?.category ?? null;
+  if (!assetCategoryMatchesRequestType(category, assetType)) {
+    const current = category?.trim() || 'blank';
+    throw new Error(
+      `This asset is categorized as ${current}. Change it to ${assetType} before assigning it.`,
+    );
+  }
+}
+
+export async function markAssetForRequest(input: MarkAssetForRequestInput): Promise<void> {
+  const pool = getDbPool();
+  const table = input.kind === 'laptop' ? 'laptop' : 'av';
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT status_id, category FROM \`${table}\` WHERE asset_id = ?`,
+    [bindAssetId(input.assetId)],
+  );
+  const row = rows[0] as { status_id: number; category: string | null } | undefined;
+  if (!row) throw new Error('This asset could not be found. Refresh the page and check the asset ID.');
   if (!isRequestPoolEligibleStatus(row.status_id)) {
     throw new Error(
       'This asset is not available for requests — only new or return assets can be added. Check its status or choose a different asset.',
+    );
+  }
+  if (!categoryFitsRequestPool(input.kind, row.category)) {
+    throw new Error(
+      input.kind === 'laptop'
+        ? `Set a laptop category for #${input.assetId} before adding it to the request pool.`
+        : `Set a request category for AV #${input.assetId} before adding it to the request pool.`,
     );
   }
 
@@ -398,6 +512,14 @@ export async function bookPoolAssetToRequest(
   }
 
   await assertAssetInPool(input.kind, input.assetId);
+  if (input.requestItemId != null) {
+    await assertAssetCategoryMatchesRequestItem(
+      input.kind,
+      input.assetId,
+      input.requestId,
+      input.requestItemId,
+    );
+  }
 
   const [existing] = await pool.query<RowDataPacket[]>(
     `SELECT assignment_id FROM request_assignment
@@ -454,6 +576,7 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
   const [rows] = await pool.query<
     (RowDataPacket & {
       request_id: number;
+      request_item_id: number | null;
       asset_id: number;
       checkout_at: Date | string | null;
       rejected_at: Date | string | null;
@@ -461,7 +584,7 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
       old_status_id: number;
     })[]
   >(
-    `SELECT ra.request_id, ra.asset_id, ra.checkout_at, r.rejected_at,
+    `SELECT ra.request_id, ra.request_item_id, ra.asset_id, ra.checkout_at, r.rejected_at,
             IF(l.asset_id IS NOT NULL, 'laptop', 'av') AS old_kind,
             COALESCE(l.status_id, av.status_id) AS old_status_id
      FROM request_assignment ra
@@ -495,6 +618,14 @@ export async function changeBookedAssignment(input: ChangeBookedAssignmentInput)
   }
 
   await assertAssetInPool(input.kind, input.assetId);
+  if (row.request_item_id != null) {
+    await assertAssetCategoryMatchesRequestItem(
+      input.kind,
+      input.assetId,
+      row.request_id,
+      row.request_item_id,
+    );
+  }
 
   const [existing] = await pool.query<RowDataPacket[]>(
     `SELECT assignment_id FROM request_assignment

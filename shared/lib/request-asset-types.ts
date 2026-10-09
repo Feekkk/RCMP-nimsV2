@@ -109,6 +109,27 @@ export const USER_REQUEST_AV_TYPES = USER_REQUEST_ASSET_TYPES.filter(
   (t) => requestItemKindFromAssetType(t) === 'av',
 );
 
+export function avCategoryMatchesRequestCatalog(
+  category: string | null | undefined,
+): boolean {
+  return USER_REQUEST_AV_TYPES.some((type) => assetCategoryMatchesRequestType(category, type));
+}
+
+export function requestCategoryLabel(category: string): string {
+  return category.trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
+export function avRequestCategoryChoices(): string[] {
+  return USER_REQUEST_AV_TYPES.map((type) => requestCategoryLabel(type));
+}
+
+export function canonicalAvRequestCategory(category: string | null | undefined): string | null {
+  const key = normalizeAssetCategory(category);
+  if (!key) return null;
+  const match = USER_REQUEST_AV_TYPES.find((type) => normalizeAssetCategory(type) === key);
+  return match ? requestCategoryLabel(match) : null;
+}
+
 export function kindGroupLabel(kind: RequestAssignableKind): string {
   return kind === 'laptop' ? 'Laptop' : 'AV';
 }

@@ -162,6 +162,12 @@ export type MarkAssetForRequestInput = {
   assetId: number;
 };
 
+export type UpdateRequestAssetCategoryInput = {
+  kind: RequestAssignableKind;
+  assetId: number;
+  category: string;
+};
+
 export type RemoveAssetFromRequestPoolInput = {
   kind: RequestAssignableKind;
   assetId: number;

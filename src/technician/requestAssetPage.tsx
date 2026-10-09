@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Table,
@@ -15,6 +22,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { ActiveForRequestAsset, RequestAssignableKind } from '@shared/lib/request-schema';
+import {
+  avCategoryMatchesRequestCatalog,
+  avRequestCategoryChoices,
+} from '@shared/lib/request-asset-types';
+import { isKnownLaptopCategory, LAPTOP_CATEGORY_OPTIONS } from '@/hooks/assetid-generator';
 import { usePagination } from '@/hooks/use-pagination';
 import { AssetStatusBadge } from '@/technician/asset-status-badge';
 import { AssetTablePagination } from '@/technician/asset-table-pagination';
@@ -23,7 +35,17 @@ import { RequestToolbarActions } from '@/technician/request-toolbar-actions';
 import {
   listActiveForRequestPoolFn,
   markAssetsForRequestFn,
+  updateRequestAssetCategoryFn,
 } from '@backend/server/requests/request.functions';
+
+function categoryChoices(kind: RequestAssignableKind): readonly string[] {
+  return kind === 'laptop' ? LAPTOP_CATEGORY_OPTIONS : avRequestCategoryChoices();
+}
+
+function categoryFitsRequest(kind: RequestAssignableKind, category: string | null | undefined) {
+  if (kind === 'laptop') return isKnownLaptopCategory(category);
+  return avCategoryMatchesRequestCatalog(category);
+}
 
 function assetKey(kind: RequestAssignableKind, assetId: number) {
   return `${kind}:${assetId}`;
@@ -37,6 +59,7 @@ export function TechnicianRequestAssetPage() {
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [categoryDraft, setCategoryDraft] = useState<Record<string, string>>({});
   const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
@@ -45,6 +68,7 @@ export function TechnicianRequestAssetPage() {
       const rows = await listActiveForRequestPoolFn();
       setAssets(rows);
       setSelected(new Set());
+      setCategoryDraft({});
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load assets');
     } finally {
@@ -120,8 +144,25 @@ export function TechnicianRequestAssetPage() {
       toast.error('Select at least one asset');
       return;
     }
+    const missingCategory = selectedAssets.filter((asset) => {
+      const key = assetKey(asset.kind, asset.assetId);
+      const nextCategory = categoryDraft[key] || asset.category;
+      return !categoryFitsRequest(asset.kind, nextCategory);
+    });
+    if (missingCategory.length > 0) {
+      toast.error('Set a request category for assets that do not match before adding them.');
+      return;
+    }
     setAdding(true);
     try {
+      for (const asset of selectedAssets) {
+        const key = assetKey(asset.kind, asset.assetId);
+        const nextCategory = categoryDraft[key];
+        if (!nextCategory || categoryFitsRequest(asset.kind, asset.category)) continue;
+        await updateRequestAssetCategoryFn({
+          data: { kind: asset.kind, assetId: asset.assetId, category: nextCategory },
+        });
+      }
       const result = await markAssetsForRequestFn({
         data: {
           assets: selectedAssets.map((a) => ({ kind: a.kind, assetId: a.assetId })),
@@ -151,7 +192,8 @@ export function TechnicianRequestAssetPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Add assets for request</h1>
           <p className="mt-1 max-w-xl text-xs text-muted-foreground sm:text-sm">
-            Select new or return laptop or AV assets and add them to the request pool.
+            Select new or return laptop or AV assets. If a category does not match a request
+            category, set it before adding the asset to the request pool.
           </p>
         </div>
         <RequestToolbarActions />
@@ -271,7 +313,13 @@ export function TechnicianRequestAssetPage() {
                         </TableCell>
                         <TableCell className="font-medium">{a.model ?? '—'}</TableCell>
                         <TableCell className="text-muted-foreground">{a.brand ?? '—'}</TableCell>
-                        <TableCell className="text-muted-foreground">{a.category ?? '—'}</TableCell>
+                        <CategoryCell
+                          asset={a}
+                          draft={categoryDraft[key] ?? ''}
+                          onDraft={(category) =>
+                            setCategoryDraft((prev) => ({ ...prev, [key]: category }))
+                          }
+                        />
                         <TableCell>
                           <AssetStatusBadge statusId={a.statusId} />
                         </TableCell>
@@ -296,6 +344,39 @@ export function TechnicianRequestAssetPage() {
         </CardContent>
       </Card>
     </TechnicianShell>
+  );
+}
+
+function CategoryCell({
+  asset,
+  draft,
+  onDraft,
+}: {
+  asset: ActiveForRequestAsset;
+  draft: string;
+  onDraft: (category: string) => void;
+}) {
+  if (categoryFitsRequest(asset.kind, asset.category)) {
+    return <TableCell className="text-muted-foreground">{asset.category ?? '—'}</TableCell>;
+  }
+  return (
+    <TableCell onClick={(e) => e.stopPropagation()}>
+      <Select value={draft || undefined} onValueChange={onDraft}>
+        <SelectTrigger className="h-8 w-[11.5rem] rounded-[8px] text-xs">
+          <SelectValue placeholder="Set category" />
+        </SelectTrigger>
+        <SelectContent>
+          {categoryChoices(asset.kind).map((category) => (
+            <SelectItem key={category} value={category}>
+              {category}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {asset.category?.trim() ? (
+        <p className="mt-1 text-[10px] text-muted-foreground">Now: {asset.category}</p>
+      ) : null}
+    </TableCell>
   );
 }
 
