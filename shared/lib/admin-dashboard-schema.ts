@@ -6,7 +6,15 @@ export type AdminDashboardStats = {
   totalAssets: number;
   registeredUsers: number;
   requestsInPeriod: number;
+  rejectedInPeriod: number;
   onLoanNow: number;
+  onLoanDueSoon: number;
+  onLoanOverdue: number;
+};
+
+export type ProgramCountSlice = {
+  programType: string;
+  count: number;
 };
 
 export type RoleCountSlice = {
@@ -33,10 +41,23 @@ export type LifecycleSnapshot = {
   warrantiesExpiringSoon: number;
 };
 
+export type AssetKindStatusCount = {
+  statusName: string;
+  count: number;
+};
+
+export type AssetKindDetail = {
+  kind: 'laptop' | 'av' | 'network';
+  total: number;
+  byStatus: AssetKindStatusCount[];
+};
+
 export type AdminDashboardData = {
   periodDays: AdminPeriodDays;
   stats: AdminDashboardStats;
   charts: TechnicianDashboardCharts;
+  assetsByKind: AssetKindDetail[];
+  programBreakdown: ProgramCountSlice[];
   usersByRole: RoleCountSlice[];
   topRequesters: TopRequesterRow[];
   recentRejections: RecentRejectionRow[];

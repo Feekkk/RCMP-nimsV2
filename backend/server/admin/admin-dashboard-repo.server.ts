@@ -3,13 +3,16 @@ import type {
   AdminDashboardData,
   AdminDashboardStats,
   AdminPeriodDays,
+  AssetKindDetail,
   LifecycleSnapshot,
+  ProgramCountSlice,
   RecentRejectionRow,
   RoleCountSlice,
   TopRequesterRow,
 } from '@shared/lib/admin-dashboard-schema';
 import { ROLE_USER } from '@shared/lib/auth-session';
 import { sqlDateToIso as formatDate } from '@shared/lib/date-format';
+import { formatStatusLabel } from '@shared/lib/inventory-schema';
 import { attachDisplayNames } from '@backend/server/core/azure-directory.server';
 import { getDbPool } from '@backend/server/core/db';
 import { loadDashboardCharts } from '@backend/server/operations/dashboard-charts.server';
@@ -55,6 +58,39 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
     [ROLE_USER, rangeStart],
   );
   const statRow = statRows[0];
+
+  const [rejectedRows] = await pool.query<(RowDataPacket & { cnt: number })[]>(
+    `SELECT COUNT(*) AS cnt FROM request
+     WHERE rejected_at IS NOT NULL AND created_at >= ?`,
+    [rangeStart],
+  );
+
+  const todayIso = formatDate(new Date());
+  const dueSoonEnd = formatDate(new Date(new Date().setDate(new Date().getDate() + 7)));
+  const [loanRows] = await pool.query<(RowDataPacket & { due_soon: number; overdue: number })[]>(
+    `SELECT
+      COALESCE(SUM(r.return_date >= ? AND r.return_date <= ?), 0) AS due_soon,
+      COALESCE(SUM(r.return_date < ?), 0) AS overdue
+     FROM request_assignment ra
+     INNER JOIN request r ON r.request_id = ra.request_id
+     WHERE ra.checkout_at IS NOT NULL AND ra.returned_at IS NULL AND r.rejected_at IS NULL`,
+    [todayIso, dueSoonEnd, todayIso],
+  );
+
+  const [programRows] = await pool.query<(RowDataPacket & { program_type: string; cnt: number })[]>(
+    `SELECT program_type, COUNT(*) AS cnt
+     FROM request
+     WHERE rejected_at IS NULL AND created_at >= ?
+     GROUP BY program_type
+     ORDER BY cnt DESC`,
+    [rangeStart],
+  );
+  const programBreakdown: ProgramCountSlice[] = programRows.map((r) => ({
+    programType: r.program_type,
+    count: Number(r.cnt),
+  }));
+
+  const loan = loanRows[0];
   const stats: AdminDashboardStats = {
     totalAssets:
       Number(statRow?.laptop_total ?? 0) +
@@ -62,8 +98,25 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
       Number(statRow?.network_total ?? 0),
     registeredUsers: Number(statRow?.registered_users ?? 0),
     requestsInPeriod: Number(statRow?.requests_in_period ?? 0),
+    rejectedInPeriod: Number(rejectedRows[0]?.cnt ?? 0),
     onLoanNow: Number(statRow?.checked_out ?? 0),
+    onLoanDueSoon: Number(loan?.due_soon ?? 0),
+    onLoanOverdue: Number(loan?.overdue ?? 0),
   };
+
+  const assetsByKind = await Promise.all(
+    (['laptop', 'av', 'network'] as const).map(async (kind): Promise<AssetKindDetail> => {
+      const [rows] = await pool.query<(RowDataPacket & { status_id: number; cnt: number })[]>(
+        `SELECT status_id, COUNT(*) AS cnt FROM \`${kind}\` GROUP BY status_id ORDER BY status_id`,
+      );
+      const byStatus = rows.map((r) => ({
+        statusName: formatStatusLabel(Number(r.status_id)),
+        count: Number(r.cnt),
+      }));
+      const total = byStatus.reduce((sum, r) => sum + r.count, 0);
+      return { kind, total, byStatus };
+    }),
+  );
 
   const [roleRows] = await pool.query<(RowDataPacket & { role_name: string; cnt: number })[]>(
     `SELECT r.name AS role_name, COUNT(*) AS cnt
@@ -152,6 +205,8 @@ export async function getAdminDashboard(periodDays: AdminPeriodDays): Promise<Ad
     periodDays,
     stats,
     charts,
+    assetsByKind,
+    programBreakdown,
     usersByRole,
     topRequesters,
     recentRejections,
